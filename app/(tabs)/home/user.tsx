@@ -15,9 +15,7 @@ export default function CitizenHome() {
   //   const user = useAuthStore((s) => s.user);
 
   if (currentScreen === 'track') {
-    return (
-      <ViewRequestRescueScreen onBack={() => setCurrentScreen('home')} />
-    );
+    return <ViewRequestRescueScreen onBack={() => setCurrentScreen('home')} />;
   }
 
   return (
@@ -114,7 +112,9 @@ export default function CitizenHome() {
           className="mt-4 h-16 flex-row items-center justify-center gap-3 rounded-xl border border-primary bg-white"
         >
           <Ionicons name="heart" size={26} color="#DA251D" />
-          <Text className="text-xl font-black text-primary">ỦNG HỘ CỨU TRỢ</Text>
+          <Text className="text-xl font-black text-primary">
+            ỦNG HỘ CỨU TRỢ
+          </Text>
         </TouchableOpacity>
 
         <Text className="mt-2 text-center text-xs text-gray-400">
@@ -139,7 +139,8 @@ function RequestHistoryItem({
   date: string;
 }) {
   const bgColor = statusColor === 'green' ? 'bg-green-50' : 'bg-gray-50';
-  const textColor = statusColor === 'green' ? 'text-green-700' : 'text-gray-700';
+  const textColor =
+    statusColor === 'green' ? 'text-green-700' : 'text-gray-700';
 
   return (
     <TouchableOpacity className="flex-row items-center justify-between rounded-xl bg-white p-4 shadow-sm">
@@ -158,4 +159,3 @@ function RequestHistoryItem({
     </TouchableOpacity>
   );
 }
-

@@ -1,4 +1,5 @@
 import '@/global.css';
+import { authService } from '@/src/services/authService';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -21,6 +22,7 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -31,6 +33,7 @@ export default function RegisterScreen() {
       !fullName.trim() ||
       !phone.trim() ||
       !email.trim() ||
+      !username.trim() ||
       !password ||
       !confirmPassword
     ) {
@@ -47,14 +50,25 @@ export default function RegisterScreen() {
 
     try {
       // TODO: gọi API register
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const result = await authService.register({
+        fullName,
+        phone,
+        email,
+        username,
+        password,
+      });
 
-      Alert.alert('Thành công', 'Đăng ký tài khoản thành công', [
-        {
-          text: 'Đăng nhập',
-          onPress: () => router.replace('/login'),
-        },
-      ]);
+      if (!result.success) {
+        Alert.alert('Lỗi', result.message);
+        return;
+      }
+
+      if (result.status == 201 || result.status == 200) {
+        router.replace({
+          pathname: '/otp-verification',
+          params: { email: email.trim() },
+        });
+      }
     } catch {
       Alert.alert('Lỗi', 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
@@ -112,6 +126,21 @@ export default function RegisterScreen() {
                 placeholderTextColor="#9CA3AF"
                 value={fullName}
                 onChangeText={setFullName}
+                editable={!loading}
+              />
+            </View>
+
+            {/* UserName */}
+            <View>
+              <Text className="mb-2 text-base font-medium text-text-primary">
+                Tên tài khoản
+              </Text>
+              <TextInput
+                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
+                placeholder="Nhâp tên tài khoản"
+                placeholderTextColor="#9CA3AF"
+                value={username}
+                onChangeText={setUsername}
                 editable={!loading}
               />
             </View>

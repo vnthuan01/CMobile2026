@@ -1,8 +1,11 @@
 import '@/global.css';
+import { authService } from '@/src/services/authService';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,11 +17,16 @@ import {
 
 export default function OTPScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ email?: string }>();
+
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const [counter, setCounter] = useState(30);
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
   const inputsRef = useRef<TextInput[]>([]);
 
-  /* Countdown resend */
+  const email = Array.isArray(params.email) ? params.email[0] : params.email;
+
   useEffect(() => {
     if (counter === 0) return;
     const timer = setTimeout(() => setCounter((c) => c - 1), 1000);
@@ -28,9 +36,9 @@ export default function OTPScreen() {
   const handleChange = (value: string, index: number) => {
     if (!/^\d?$/.test(value)) return;
 
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
+    const next = [...otp];
+    next[index] = value;
+    setOtp(next);
 
     if (value && index < 5) {
       inputsRef.current[index + 1]?.focus();
@@ -43,16 +51,58 @@ export default function OTPScreen() {
     }
   };
 
-  const handlePaste = (text: string) => {
-    if (!/^\d{6}$/.test(text)) return;
-    setOtp(text.split(''));
-    inputsRef.current[5]?.focus();
+  const handleVerify = async () => {
+    if (!email) {
+      Alert.alert(
+        'Lỗi',
+        'Không tìm thấy email để xác thực. Vui lòng đăng ký lại.',
+      );
+      return;
+    }
+
+    const code = otp.join('');
+    if (code.length < 6) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đủ 6 số OTP.');
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const result = await authService.verifyEmailOtp({ email, code });
+      if (!result.success) {
+        Alert.alert('Lỗi', result.message || 'Xác thực OTP thất bại.');
+        return;
+      }
+
+      Alert.alert('Thành công', result.message || 'Xác thực OTP thành công.', [
+        {
+          text: 'Đăng nhập',
+          onPress: () => router.replace('/login'),
+        },
+      ]);
+    } finally {
+      setVerifying(false);
+    }
   };
 
-  const handleVerify = () => {
-    const code = otp.join('');
-    if (code.length < 6) return;
-    // TODO: verify OTP
+  const handleResend = async () => {
+    if (!email || counter > 0 || resending) return;
+
+    setResending(true);
+    try {
+      const result = await authService.resendEmailOtp(email);
+      if (!result.success) {
+        Alert.alert('Lỗi', result.message || 'Không thể gửi lại OTP.');
+        return;
+      }
+
+      setCounter(30);
+      setOtp(Array(6).fill(''));
+      inputsRef.current[0]?.focus();
+      Alert.alert('Thông báo', result.message || 'Đã gửi lại mã OTP.');
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -62,7 +112,6 @@ export default function OTPScreen() {
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View className="w-full max-w-md flex-1 self-center bg-white">
-          {/* Header */}
           <View className="sticky top-0 z-10 flex-row items-center px-4 py-3">
             <TouchableOpacity
               onPress={() => router.back()}
@@ -76,27 +125,23 @@ export default function OTPScreen() {
             </Text>
           </View>
 
-          {/* Content */}
           <View className="flex-1 items-center px-6 pt-10">
-            {/* Icon */}
             <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-              <Ionicons name="lock-closed-outline" size={40} color="#1565C0" />
+              <Ionicons name="mail-outline" size={40} color="#1565C0" />
             </View>
 
-            {/* Title */}
             <Text className="mb-3 text-center text-2xl font-bold text-text-primary">
               Nhập mã xác thực
             </Text>
 
-            {/* Description */}
             <Text className="mb-8 max-w-xs text-center text-base leading-relaxed text-text-secondary">
-              Vui lòng nhập mã 6 số đã được gửi tới số điện thoại{' '}
+              Chúng tôi đã gửi một mã OTP 6 số đến gmail của bạn, mã này sẽ có
+              tác dụng trong 10p.{`\n`}
               <Text className="font-bold text-text-primary">
-                +84 9xx xxx xxx
+                {email || 'email của bạn'}
               </Text>
             </Text>
 
-            {/* OTP Inputs */}
             <View className="mb-8 flex-row gap-2">
               {otp.map((value, index) => (
                 <TextInput
@@ -116,33 +161,42 @@ export default function OTPScreen() {
               ))}
             </View>
 
-            {/* Resend */}
             <View className="mb-8 flex-row items-center gap-2">
               <Text className="text-sm text-text-secondary">
                 Chưa nhận được mã?
               </Text>
               <TouchableOpacity
-                disabled={counter > 0}
-                onPress={() => setCounter(30)}
+                disabled={counter > 0 || resending}
+                onPress={handleResend}
               >
                 <Text
-                  className={`text-sm font-medium ${counter > 0 ? 'text-text-secondary' : 'text-primary'
-                    }`}
+                  className={`text-sm font-medium ${
+                    counter > 0 || resending
+                      ? 'text-text-secondary'
+                      : 'text-primary'
+                  }`}
                 >
-                  Gửi lại {counter > 0 && `(00:${counter})`}
+                  {resending
+                    ? 'Đang gửi lại...'
+                    : `Gửi lại ${counter > 0 ? `(00:${String(counter).padStart(2, '0')})` : ''}`}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Verify Button */}
             <TouchableOpacity
               onPress={handleVerify}
-              className="h-14 w-full items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/30"
+              disabled={verifying}
+              className={`h-14 w-full items-center justify-center rounded-xl shadow-lg shadow-primary/30 ${
+                verifying ? 'bg-primary/60' : 'bg-primary'
+              }`}
             >
-              <Text className="text-lg font-bold text-white">Xác minh</Text>
+              {verifying ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-lg font-bold text-white">Xác minh</Text>
+              )}
             </TouchableOpacity>
 
-            {/* Footer */}
             <View className="mt-8 flex-row items-center gap-2">
               <Ionicons name="help-circle-outline" size={18} color="#64748b" />
               <Text className="text-sm text-text-secondary">Cần trợ giúp?</Text>

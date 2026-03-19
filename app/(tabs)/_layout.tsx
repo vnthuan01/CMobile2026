@@ -10,11 +10,7 @@ const ICON_SIZE = 24;
 
 export default function TabsLayout() {
   const user = useAuthStore((s) => s.user);
-  const fakeUser = {
-    ...user,
-    role: 'Volunteer',
-  };
-  const isVolunteer = fakeUser?.role === 'Volunteer';
+  const role = (user?.role ?? '').toLowerCase();
   /* ================= THEME ================= */
   const { colors, isDark } = useTheme();
 
@@ -58,9 +54,28 @@ export default function TabsLayout() {
     },
   } as const;
 
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.parallel([
+        Animated.timing(scale, {
+          toValue: 1.6,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    loop.start();
+    return () => loop.stop();
+  }, [opacity, scale]);
 
   /* ================= VOLUNTEER ================= */
-  if (isVolunteer) {
+  if (role === 'volunteer') {
     return (
       <Tabs screenOptions={screenOptions}>
         <Tabs.Screen
@@ -102,23 +117,6 @@ export default function TabsLayout() {
     );
   }
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.parallel([
-        Animated.timing(scale, {
-          toValue: 1.6,
-          duration: 1600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 1600,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
   /* ================= USER ================= */
   return (
     <Tabs screenOptions={screenOptions}>
@@ -138,7 +136,7 @@ export default function TabsLayout() {
         options={{
           title: '',
           tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: () => (
             <View
               style={{
                 alignItems: 'center',
@@ -146,7 +144,6 @@ export default function TabsLayout() {
                 marginTop: -24,
               }}
             >
-              {/* Pulse outline */}
               <Animated.View
                 style={{
                   position: 'absolute',
@@ -160,7 +157,6 @@ export default function TabsLayout() {
                 }}
               />
 
-              {/* Main button */}
               <View
                 style={{
                   width: 56,
@@ -185,7 +181,6 @@ export default function TabsLayout() {
         }}
       />
 
-
       <Tabs.Screen
         name="profile"
         options={{
@@ -199,7 +194,6 @@ export default function TabsLayout() {
       {/* hidden routes */}
       <Tabs.Screen name="home/user" options={{ href: null }} />
       <Tabs.Screen name="home/volunteer" options={{ href: null }} />
-      {/* hidden routes */}
       <Tabs.Screen name="tasks" options={{ href: null }} />
       <Tabs.Screen name="requests" options={{ href: null }} />
     </Tabs>
