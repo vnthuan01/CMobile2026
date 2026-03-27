@@ -145,9 +145,9 @@ export const rescueTeamService = {
   },
 
   getGoongMapStyleUrl: () => {
-    const key = process.env.EXPO_PUBLIC_GOONG_MAP_KEY;
-    if (!key) return null;
-    return `https://tiles.goong.io/assets/goong_map_web.json?api_key=${key}`;
+    const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    if (!token) return null;
+    return 'mapbox://styles/mapbox/streets-v12';
   },
 
   fetchDirectionsPolyline: async (

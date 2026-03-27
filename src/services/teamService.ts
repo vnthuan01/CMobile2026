@@ -36,6 +36,35 @@ export interface TeamDetailResponse {
   updatedAt: string;
 }
 
+export interface TeamTrackingHeartbeatRequest {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number | null;
+  speedKph?: number | null;
+  headingDegree?: number | null;
+  source?: number;
+  capturedAtUtc?: string;
+  rescueBatchId?: string | null;
+  rescueOperationId?: string | null;
+  note?: string | null;
+}
+
+export interface TeamTrackingHeartbeatResponse {
+  teamTrackingPointId: string;
+  teamId: string;
+  rescueBatchId: string | null;
+  rescueOperationId: string | null;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+  speedKph: number | null;
+  headingDegree: number | null;
+  source: number;
+  capturedAtUtc: string;
+  createdAtUtc: string;
+  note: string | null;
+}
+
 const extractApiErrorMessage = (error: any, fallback: string) => {
   const data = error?.response?.data;
   if (!data) return error?.message || fallback;
@@ -77,6 +106,49 @@ export const teamService = {
       data: null,
       status: 404,
       message: 'Không tìm thấy endpoint Team/my-team.',
+    };
+  },
+
+  sendTrackingHeartbeat: async (
+    teamId: string,
+    payload: TeamTrackingHeartbeatRequest,
+  ) => {
+    const routes = [
+      `/Team/${teamId}/tracking-heartbeat`,
+      `/api/Team/${teamId}/tracking-heartbeat`,
+    ];
+
+    for (const route of routes) {
+      try {
+        const response = await api.post<TeamTrackingHeartbeatResponse>(
+          route,
+          payload,
+        );
+        return {
+          success: response.status >= 200 && response.status < 300,
+          data: response.data,
+          message: 'Gửi vị trí team thành công',
+        };
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          return {
+            success: false,
+            data: null,
+            status: error?.response?.status,
+            message: extractApiErrorMessage(
+              error,
+              'Không thể gửi vị trí team.',
+            ),
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      data: null,
+      status: 404,
+      message: 'Không tìm thấy endpoint Team tracking-heartbeat.',
     };
   },
 };

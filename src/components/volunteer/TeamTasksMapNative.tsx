@@ -3,11 +3,11 @@ import {
   RescueActiveBatchResponse,
   RescueBatchItem,
 } from '@/src/services/rescueTeamService';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import Mapbox from '@rnmapbox/maps';
 import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 
-MapLibreGL.setAccessToken(null);
+Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '');
 
 interface TeamTasksMapNativeProps {
   batch: RescueActiveBatchResponse | null;
@@ -58,7 +58,7 @@ export default function TeamTasksMapNative({
   }, [routeCoordinates, selectedMission]);
 
   return (
-    <MapLibreGL.MapView
+    <Mapbox.MapView
       style={{ flex: 1 }}
       styleURL={mapStyle}
       zoomEnabled
@@ -68,7 +68,7 @@ export default function TeamTasksMapNative({
       attributionEnabled={false}
       logoEnabled={false}
     >
-      <MapLibreGL.Camera
+      <Mapbox.Camera
         ref={cameraRef}
         zoomLevel={11}
         centerCoordinate={
@@ -89,7 +89,7 @@ export default function TeamTasksMapNative({
         const emergency = item.rescueRequestType === 'Emergency';
 
         return (
-          <MapLibreGL.PointAnnotation
+          <Mapbox.PointAnnotation
             key={item.rescueBatchItemId}
             id={item.rescueBatchItemId}
             coordinate={coordinate}
@@ -109,12 +109,12 @@ export default function TeamTasksMapNative({
                     : '#FFFFFF',
               }}
             />
-          </MapLibreGL.PointAnnotation>
+          </Mapbox.PointAnnotation>
         );
       })}
 
       {routeCoordinates.length > 1 ? (
-        <MapLibreGL.ShapeSource
+        <Mapbox.ShapeSource
           id="lineSource"
           shape={{
             type: 'Feature',
@@ -125,7 +125,7 @@ export default function TeamTasksMapNative({
             properties: {},
           }}
         >
-          <MapLibreGL.LineLayer
+          <Mapbox.LineLayer
             id="lineLayer"
             style={{
               lineColor: '#2E64FE',
@@ -134,8 +134,8 @@ export default function TeamTasksMapNative({
               lineJoin: 'round',
             }}
           />
-        </MapLibreGL.ShapeSource>
+        </Mapbox.ShapeSource>
       ) : null}
-    </MapLibreGL.MapView>
+    </Mapbox.MapView>
   );
 }

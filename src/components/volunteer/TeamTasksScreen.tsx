@@ -6,11 +6,14 @@ import {
   RescueBatchItem,
   rescueTeamService,
 } from '@/src/services/rescueTeamService';
-import { teamService } from '@/src/services/teamService';
+import {
+  teamService,
+  TeamTrackingHeartbeatRequest,
+} from '@/src/services/teamService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -73,10 +76,21 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
     [],
   );
+  const [teamId, setTeamId] = useState<string | null>(null);
+  const [teamName, setTeamName] = useState<string | null>(null);
+  const [isSyncingEta, setIsSyncingEta] = useState(false);
+  const [lastHeartbeatAt, setLastHeartbeatAt] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
+    accuracy?: number | null;
+    speedKph?: number | null;
+    headingDegree?: number | null;
   } | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+  const heartbeatInFlightRef = useRef(false);
 
   const loadData = useCallback(async (isRefresh?: boolean) => {
     if (isRefresh) {
@@ -90,6 +104,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     try {
       const teamResult = await teamService.getMyTeam();
       const teamId = teamResult.data?.teamId;
+      const teamName = teamResult.data?.name;
 
       if (!teamResult.success || !teamId) {
         setErrorMessage(
@@ -113,6 +128,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
         nextBatch.items,
       );
 
+      setTeamId(teamId);
+      setTeamName(teamName || null);
       setBatch(nextBatch);
       setCurrentMission(nextCurrentMission);
       setSelectedMission(
@@ -139,6 +156,15 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
         setUserLocation({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          speedKph:
+            position.coords.speed != null && position.coords.speed >= 0
+              ? position.coords.speed * 3.6
+              : null,
+          headingDegree:
+            position.coords.heading != null && position.coords.heading >= 0
+              ? position.coords.heading
+              : null,
         });
       } catch {
         setUserLocation(null);
@@ -147,6 +173,88 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
     loadLocation();
   }, []);
+
+  useEffect(() => {
+    const sendHeartbeat = async () => {
+      if (!teamId || !userLocation || !batch?.rescueBatchId) return;
+      if (heartbeatInFlightRef.current) return;
+
+      heartbeatInFlightRef.current = true;
+      setIsSyncingEta(true);
+      try {
+        const payload: TeamTrackingHeartbeatRequest = {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          accuracyMeters: userLocation.accuracy ?? null,
+          speedKph: userLocation.speedKph ?? null,
+          headingDegree: userLocation.headingDegree ?? null,
+          source: 0,
+          capturedAtUtc: new Date().toISOString(),
+          rescueBatchId: batch.rescueBatchId,
+          rescueOperationId: null,
+          note: 'tracking from mobile',
+        };
+
+        const heartbeat = await teamService.sendTrackingHeartbeat(
+          teamId,
+          payload,
+        );
+        if (!heartbeat.success) return;
+
+        setLastHeartbeatAt(new Date().toISOString());
+
+        const refreshedBatch =
+          await rescueTeamService.getActiveBatchByTeam(teamId);
+        if (!refreshedBatch.success || !refreshedBatch.data) return;
+
+        const nextBatch = refreshedBatch.data;
+        const nextCurrentMission = rescueTeamService.getCurrentMission(
+          nextBatch.items,
+        );
+
+        setBatch(nextBatch);
+        setCurrentMission(nextCurrentMission);
+        setSelectedMission((prev) => {
+          if (!prev) return nextCurrentMission || nextBatch.items[0] || null;
+          return (
+            nextBatch.items.find(
+              (item) => item.rescueBatchItemId === prev.rescueBatchItemId,
+            ) ||
+            nextCurrentMission ||
+            nextBatch.items[0] ||
+            null
+          );
+        });
+      } finally {
+        heartbeatInFlightRef.current = false;
+        setIsSyncingEta(false);
+      }
+    };
+
+    if (screen !== 'map' || !teamId || !userLocation || !batch?.rescueBatchId) {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      return;
+    }
+
+    sendHeartbeat();
+
+    const speed = userLocation.speedKph ?? 0;
+    const intervalMs = speed >= 5 ? 10000 : 20000;
+
+    heartbeatIntervalRef.current = setInterval(() => {
+      sendHeartbeat();
+    }, intervalMs);
+
+    return () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+    };
+  }, [batch?.rescueBatchId, screen, teamId, userLocation]);
 
   useEffect(() => {
     const loadRoute = async () => {
@@ -231,6 +339,20 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     setScreen('map');
   };
 
+  const heartbeatStatusLabel = useMemo(() => {
+    if (isSyncingEta) return 'Dang cap nhat ETA...';
+    if (!lastHeartbeatAt) return null;
+
+    const date = new Date(lastHeartbeatAt);
+    if (Number.isNaN(date.getTime())) return null;
+
+    return `Da dong bo vi tri luc ${date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })}`;
+  }, [isSyncingEta, lastHeartbeatAt]);
+
   if (screen === 'map') {
     return (
       <View className="flex-1 bg-background-light">
@@ -240,6 +362,21 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           rightAction={
             selectedMission ? (
               <View className="items-end">
+                {heartbeatStatusLabel ? (
+                  <View
+                    className="mb-1 rounded-full px-3 py-1"
+                    style={{
+                      backgroundColor: isSyncingEta ? '#DBEAFE' : '#DCFCE7',
+                    }}
+                  >
+                    <Text
+                      className="text-[10px] font-semibold"
+                      style={{ color: isSyncingEta ? '#1D4ED8' : '#166534' }}
+                    >
+                      {heartbeatStatusLabel}
+                    </Text>
+                  </View>
+                ) : null}
                 <Text className="text-xs text-text-secondary">
                   {selectedMission.estimatedMinutes != null
                     ? `${selectedMission.estimatedMinutes} phút`
@@ -458,7 +595,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           <View className="px-4 pt-4">
             <View className="rounded-3xl bg-secondary p-5">
               <Text className="text-2xl font-bold text-white">
-                {batch.teamId}
+                {teamName || 'Team hien tai'}
               </Text>
               <Text className="mt-2 text-sm text-white/80">
                 {summary.total} nhiệm vụ • {summary.emergencyCount} khẩn cấp

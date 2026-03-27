@@ -109,10 +109,19 @@ export const volunteerService = {
 
     for (const route of routes) {
       try {
-        const response = await api.get<SkillResponse[]>(route);
+        const response = await api.get(route);
+        const raw = response.data;
+        const normalized = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.items)
+            ? raw.items
+            : Array.isArray(raw?.data)
+              ? raw.data
+              : [];
+
         return {
           success: response.status === 200,
-          data: response.data,
+          data: normalized as SkillResponse[],
           message: 'Lấy danh sách kỹ năng thành công',
         };
       } catch (error: any) {

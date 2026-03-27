@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "scheme": "reliefcare",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.reliefcare.mobile"
@@ -23,7 +23,12 @@
     "plugins": [
       "expo-router",
       "@react-native-community/datetimepicker",
-      "@maplibre/maplibre-react-native"
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "${EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN}"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

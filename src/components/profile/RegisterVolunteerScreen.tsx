@@ -92,7 +92,7 @@ export default function RegisterVolunteerScreen({
     const loadSkills = async () => {
       const result = await volunteerService.getAllSkills();
       if (result.success) {
-        setSkills(result.data || []);
+        setSkills(Array.isArray(result.data) ? result.data : []);
       }
       setSkillsLoading(false);
     };
@@ -390,7 +390,7 @@ export default function RegisterVolunteerScreen({
             </Text>
           ) : (
             <View className="flex-row flex-wrap gap-2">
-              {skills.map((skill) => {
+              {(Array.isArray(skills) ? skills : []).map((skill) => {
                 const active = selectedSkillIds.includes(skill.skillId);
                 return (
                   <TouchableOpacity
