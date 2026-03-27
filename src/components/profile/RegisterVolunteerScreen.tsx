@@ -4,6 +4,7 @@ import {
   CreateVolunteerCertificateRequest,
   CreateVolunteerRequest,
   SkillResponse,
+  TeamRolePreference,
   volunteerService,
 } from '@/src/services/volunteerService';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +42,12 @@ const EMPTY_CERT: CreateVolunteerCertificateRequest = {
 
 type PickingField = 'issuedDate' | 'expiryDate';
 
+const TEAM_ROLE_OPTIONS: Array<{ label: string; value: TeamRolePreference }> = [
+  { label: 'Member', value: TeamRolePreference.Member },
+  { label: 'Leader', value: TeamRolePreference.Leader },
+  { label: 'Driver', value: TeamRolePreference.Driver },
+];
+
 export default function RegisterVolunteerScreen({
   onBack,
   onSuccess,
@@ -48,6 +55,8 @@ export default function RegisterVolunteerScreen({
   const { bottom } = useSafeAreaInsets();
   const [descriptions, setDescriptions] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
+  const [teamRolePreference, setTeamRolePreference] =
+    useState<TeamRolePreference | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [skills, setSkills] = useState<SkillResponse[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(true);
@@ -65,7 +74,12 @@ export default function RegisterVolunteerScreen({
     field: PickingField;
   } | null>(null);
 
-  const toISODateTime = (d: Date) => d.toISOString();
+  const toDateOnlyString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const formatDisplayDate = (iso?: string | null) => {
     if (!iso) return 'Chọn ngày';
@@ -125,7 +139,7 @@ export default function RegisterVolunteerScreen({
         is24Hour: true,
         onChange: (dateEvent, selectedDate) => {
           if (dateEvent.type === 'dismissed' || !selectedDate) return;
-          updateCertificate(index, field, toISODateTime(selectedDate));
+          updateCertificate(index, field, toDateOnlyString(selectedDate));
         },
       });
       return;
@@ -145,8 +159,8 @@ export default function RegisterVolunteerScreen({
 
     if (!selected || !pickingTarget) return;
 
-    const iso = toISODateTime(selected);
-    updateCertificate(pickingTarget.index, pickingTarget.field, iso);
+    const dateOnly = toDateOnlyString(selected);
+    updateCertificate(pickingTarget.index, pickingTarget.field, dateOnly);
     setPickerDate(selected);
     setPickerVisible(false);
     setPickingTarget(null);
@@ -189,10 +203,8 @@ export default function RegisterVolunteerScreen({
   };
 
   const validate = () => {
-    const isValidIsoDateTime = (value: string) => {
-      const d = new Date(value);
-      return !Number.isNaN(d.getTime());
-    };
+    const isValidDateOnly = (value: string) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(value);
 
     if (!descriptions.trim()) {
       Alert.alert('Lỗi', 'Vui lòng nhập mô tả hồ sơ tình nguyện viên.');
@@ -204,6 +216,11 @@ export default function RegisterVolunteerScreen({
       (Number.isNaN(Number(yearsOfExperience)) || Number(yearsOfExperience) < 0)
     ) {
       Alert.alert('Lỗi', 'Số năm kinh nghiệm phải là số >= 0.');
+      return false;
+    }
+
+    if (!teamRolePreference) {
+      Alert.alert('Lỗi', 'Vui lòng chọn vai trò mong muốn trong đội.');
       return false;
     }
 
@@ -231,21 +248,18 @@ export default function RegisterVolunteerScreen({
         return false;
       }
 
-      if (!isValidIsoDateTime(cert.issuedDate.trim())) {
+      if (!isValidDateOnly(cert.issuedDate.trim())) {
         Alert.alert(
           'Lỗi',
-          'Ngày cấp chứng chỉ phải đúng định dạng ISO DateTime.',
+          'Ngày cấp chứng chỉ phải đúng định dạng YYYY-MM-DD.',
         );
         return false;
       }
 
-      if (
-        cert.expiryDate?.trim() &&
-        !isValidIsoDateTime(cert.expiryDate.trim())
-      ) {
+      if (cert.expiryDate?.trim() && !isValidDateOnly(cert.expiryDate.trim())) {
         Alert.alert(
           'Lỗi',
-          'Ngày hết hạn chứng chỉ phải đúng định dạng ISO DateTime.',
+          'Ngày hết hạn chứng chỉ phải đúng định dạng YYYY-MM-DD.',
         );
         return false;
       }
@@ -256,10 +270,12 @@ export default function RegisterVolunteerScreen({
 
   const handleSubmit = async () => {
     if (!validate()) return;
+    if (!teamRolePreference) return;
 
     const payload: CreateVolunteerRequest = {
       descriptions: descriptions.trim(),
       skillIds: selectedSkillIds,
+      teamRolePreference,
       yearsOfExperience: yearsOfExperience.trim()
         ? Number(yearsOfExperience)
         : null,
@@ -324,6 +340,36 @@ export default function RegisterVolunteerScreen({
             placeholder="Ví dụ: 2"
             className="h-12 rounded-xl border border-surface-dark bg-white px-4 text-base text-text-primary"
           />
+        </View>
+
+        <View className="px-4 pt-4">
+          <Text className="mb-2 text-sm font-semibold text-text-secondary">
+            Vai trò mong muốn trong đội
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {TEAM_ROLE_OPTIONS.map((role) => {
+              const active = teamRolePreference === role.value;
+              return (
+                <TouchableOpacity
+                  key={role.value}
+                  onPress={() => setTeamRolePreference(role.value)}
+                  className={`rounded-full border px-4 py-2 ${
+                    active
+                      ? 'border-primary bg-primary'
+                      : 'border-surface-dark bg-white'
+                  }`}
+                >
+                  <Text
+                    className={`text-sm font-medium ${
+                      active ? 'text-white' : 'text-text-primary'
+                    }`}
+                  >
+                    {role.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <View className="px-4 pt-4">
@@ -410,12 +456,6 @@ export default function RegisterVolunteerScreen({
                 placeholder="Đơn vị cấp"
                 className="mb-2 h-11 rounded-lg border border-surface-dark px-3 text-text-primary"
               />
-              <TextInput
-                value={cert.issuedDate}
-                onChangeText={(v) => updateCertificate(index, 'issuedDate', v)}
-                placeholder="Issued Date (ISO)"
-                className="mb-2 h-11 rounded-lg border border-surface-dark px-3 text-text-primary"
-              />
               <TouchableOpacity
                 onPress={() => openDateTimePicker(index, 'issuedDate')}
                 className="mb-2 h-11 flex-row items-center justify-center gap-2 rounded-lg border border-surface-dark bg-surface"
@@ -425,12 +465,6 @@ export default function RegisterVolunteerScreen({
                   {formatDisplayDate(cert.issuedDate)}
                 </Text>
               </TouchableOpacity>
-              <TextInput
-                value={cert.expiryDate || ''}
-                onChangeText={(v) => updateCertificate(index, 'expiryDate', v)}
-                placeholder="Expiry Date (ISO) - không bắt buộc"
-                className="mb-2 h-11 rounded-lg border border-surface-dark px-3 text-text-primary"
-              />
               <TouchableOpacity
                 onPress={() => openDateTimePicker(index, 'expiryDate')}
                 className="mb-2 h-11 flex-row items-center justify-center gap-2 rounded-lg border border-surface-dark bg-surface"

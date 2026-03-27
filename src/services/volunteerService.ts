@@ -1,4 +1,5 @@
 import api from './api';
+import { uploadService } from './uploadService';
 
 export interface CreateVolunteerCertificateRequest {
   name: string;
@@ -11,8 +12,15 @@ export interface CreateVolunteerCertificateRequest {
 export interface CreateVolunteerRequest {
   skillIds: string[];
   descriptions: string;
+  teamRolePreference: TeamRolePreference;
   yearsOfExperience?: number | null;
   certificates: CreateVolunteerCertificateRequest[];
+}
+
+export enum TeamRolePreference {
+  Member = 1,
+  Leader = 2,
+  Driver = 3,
 }
 
 export interface SkillResponse {
@@ -32,10 +40,6 @@ interface CreateVolunteerProfileResponse {
   yearsOfExperience?: number | null;
   skills: string[];
   certificates: CreateVolunteerCertificateRequest[];
-}
-
-interface UploadImageResponse {
-  secure_url?: string;
 }
 
 const extractApiErrorMessage = (error: any, fallback: string) => {
@@ -133,67 +137,5 @@ export const volunteerService = {
         'Không tìm thấy endpoint Skills. Kiểm tra lại route backend (ví dụ: /api/Skill).',
     };
   },
-
-  uploadImageToCloudinary: async (
-    localUri: string,
-    fileName?: string,
-    mimeType?: string,
-  ) => {
-    try {
-      const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
-      const uploadPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-
-      if (!cloudName || !uploadPreset) {
-        return {
-          success: false,
-          url: null,
-          message:
-            'Thiếu cấu hình Cloudinary (EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME / EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET).',
-        };
-      }
-
-      const formData = new FormData();
-      formData.append('upload_preset', uploadPreset);
-      formData.append('file', {
-        uri: localUri,
-        type: mimeType || 'image/jpeg',
-        name: fileName || `certificate_${Date.now()}.jpg`,
-      } as any);
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        },
-      );
-
-      const data = (await response.json()) as UploadImageResponse & {
-        error?: { message?: string };
-      };
-
-      if (!response.ok || !data?.secure_url) {
-        return {
-          success: false,
-          url: null,
-          message:
-            data?.error?.message ||
-            'Upload ảnh chứng chỉ lên Cloudinary thất bại.',
-        };
-      }
-
-      return {
-        success: true,
-        url: data.secure_url,
-        message: 'Upload ảnh thành công',
-      };
-    } catch (error: any) {
-      console.error('Upload image to Cloudinary error:', error);
-      return {
-        success: false,
-        url: null,
-        message: error.message || 'Upload ảnh thất bại',
-      };
-    }
-  },
+  uploadImageToCloudinary: uploadService.uploadImageToCloudinary,
 };

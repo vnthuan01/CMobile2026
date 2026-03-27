@@ -1,5 +1,4 @@
 import RequestsScreen from '@/app/(tabs)/requests/index';
-import TasksListScreen from '@/app/(tabs)/tasks/index';
 import '@/global.css';
 import CitizenProfile from '@/src/components/profile/CitizenProfile';
 import RegisterVolunteerScreen from '@/src/components/profile/RegisterVolunteerScreen';
@@ -9,9 +8,11 @@ import VolunteerProfile from '@/src/components/profile/VolunteerProfile';
 import ChangePasswordScreen from '@/src/components/screens/ChangePasswordScreen';
 import HelpScreen from '@/src/components/screens/HelpScreen';
 import SettingsScreen from '@/src/components/screens/SettingsScreen';
+import MyCurrentTeamScreen from '@/src/components/team/MyCurrentTeamScreen';
 import AllocateTaskScreen from '@/src/components/teamleader/AllocateTaskScreen';
 import DashboardTeamLeaderScreen from '@/src/components/teamleader/DashboardTeamLeaderScreen';
 import ReportProgressTeamLeaderScreen from '@/src/components/teamleader/ReportProgressTeamLeaderScreen';
+import TeamTasksScreen from '@/src/components/volunteer/TeamTasksScreen';
 import NewSOSForVolunteerScreen from '@/src/components/volunteer/NewSOSForVolunteerScreen';
 import ProgressForReliefScreen from '@/src/components/volunteer/ProgressForReliefScreen';
 import ProgressForRescueScreen from '@/src/components/volunteer/ProgressForRescueScreen';
@@ -35,7 +36,8 @@ type ProfileScreenType =
   | 'allocate-task'
   | 'report-leader'
   | 'change-password'
-  | 'register-volunteer';
+  | 'register-volunteer'
+  | 'my-team';
 
 const ACCENT_COLOR = '#DA251D';
 
@@ -116,9 +118,18 @@ export default function ProfileScreen() {
     );
   }
 
+  if (currentScreen === 'my-team') {
+    return (
+      <MyCurrentTeamScreen
+        onBack={() => setCurrentScreen('profile')}
+        onOpenTasks={() => setCurrentScreen('tasks')}
+      />
+    );
+  }
+
   // ─── Volunteer Screens ───
   if (currentScreen === 'tasks') {
-    return <TasksListScreen onBack={() => setCurrentScreen('profile')} />;
+    return <TeamTasksScreen onBack={() => setCurrentScreen('profile')} />;
   }
   if (currentScreen === 'progress-rescue') {
     return (

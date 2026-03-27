@@ -14,8 +14,7 @@ export default function VolunteerHome() {
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
-  const [currentScreen, setCurrentScreen] =
-    useState<VolunteerScreen>('home');
+  const [currentScreen, setCurrentScreen] = useState<VolunteerScreen>('home');
 
   if (currentScreen === 'tasks') {
     return <ViewTasksScreen onBack={() => setCurrentScreen('home')} />;
@@ -38,7 +37,7 @@ export default function VolunteerHome() {
           </View>
           <View>
             <Text className="text-lg font-bold">
-              Xin chào, {user?.full_name}
+              Xin chào, {user?.user_name}
             </Text>
             <Text className="text-xs text-text-secondary">
               Tình nguyện viên
@@ -112,8 +111,9 @@ export default function VolunteerHome() {
 function StatusButton({ label, active }: { label: string; active?: boolean }) {
   return (
     <View
-      className={`h-10 flex-1 items-center justify-center rounded-lg ${active ? 'bg-white' : ''
-        }`}
+      className={`h-10 flex-1 items-center justify-center rounded-lg ${
+        active ? 'bg-white' : ''
+      }`}
     >
       <Text className={active ? 'font-bold text-primary' : 'text-gray-400'}>
         {label}

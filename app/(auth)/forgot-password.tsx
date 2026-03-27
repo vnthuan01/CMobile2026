@@ -1,4 +1,5 @@
 import '@/global.css';
+import { authService } from '@/src/services/authService';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -16,25 +17,37 @@ import {
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const [identity, setIdentity] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSendCode = async () => {
-    if (!identity.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập email hoặc số điện thoại');
+    if (!email.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email');
       return;
     }
 
     setLoading(true);
     try {
-      // TODO: gọi API gửi mã xác thực
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const result = await authService.sendForgotPasswordOtp({
+        email: email.trim(),
+      });
 
-      Alert.alert('Thành công', 'Mã xác thực đã được gửi', [
+      if (!result.success) {
+        Alert.alert(
+          'Lỗi',
+          result.message || 'Không thể gửi mã, vui lòng thử lại',
+        );
+        return;
+      }
+
+      Alert.alert('Thành công', result.message || 'Mã xác thực đã được gửi', [
         {
           text: 'OK',
           onPress: () => {
-            // router.push('/verify-otp'); // nếu có bước OTP
+            router.push({
+              pathname: '/otp-verification',
+              params: { email: email.trim(), mode: 'forgot-password' },
+            });
           },
         },
       ]);
@@ -87,7 +100,7 @@ export default function ForgotPasswordScreen() {
           {/* Input */}
           <View className="py-2">
             <Text className="mb-2 text-sm font-semibold text-text-primary">
-              Email hoặc Số điện thoại
+              Email
             </Text>
 
             <View className="relative">
@@ -95,8 +108,8 @@ export default function ForgotPasswordScreen() {
                 className="h-14 rounded-lg border border-surface-dark bg-background-light px-12 text-base text-text-primary"
                 placeholder="vidu@email.com"
                 placeholderTextColor="#94A3B8"
-                value={identity}
-                onChangeText={setIdentity}
+                value={email}
+                onChangeText={setEmail}
                 editable={!loading}
               />
 

@@ -34,6 +34,30 @@ interface VerifyEmailOtpRequest {
   code: string;
 }
 
+interface ForgotPasswordSendOtpRequest {
+  email: string;
+}
+
+interface ForgotPasswordVerifyOtpRequest {
+  email: string;
+  otpCode: string;
+}
+
+interface ForgotPasswordVerifyOtpResponse {
+  userId: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  accessTokenExpires: string | null;
+  message: string | null;
+  resetToken: string | null;
+}
+
+interface ForgotPasswordResetRequest {
+  email: string;
+  resetToken: string;
+  newPassword: string;
+}
+
 export interface UserProfileResponse {
   id: string;
   displayName: string | null;
@@ -135,6 +159,83 @@ export const authService = {
           error.response?.data?.message ||
           error.message ||
           'Gửi lại OTP thất bại',
+      };
+    }
+  },
+
+  sendForgotPasswordOtp: async (data: ForgotPasswordSendOtpRequest) => {
+    try {
+      const response = await api.post('/Auth/forgot-password/send-otp', {
+        email: data.email,
+      });
+
+      return {
+        success: response.status >= 200 && response.status < 300,
+        message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
+      };
+    } catch (error: any) {
+      console.error('Send forgot password OTP error:', error);
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          error.response?.data?.detail ||
+          error.message ||
+          'Không thể gửi OTP',
+      };
+    }
+  },
+
+  verifyForgotPasswordOtp: async (data: ForgotPasswordVerifyOtpRequest) => {
+    try {
+      const response = await api.post<ForgotPasswordVerifyOtpResponse>(
+        '/Auth/forgot-password/verify-otp',
+        {
+          email: data.email,
+          otpCode: data.otpCode,
+        },
+      );
+
+      return {
+        success: response.status === 200,
+        resetToken: response.data?.resetToken,
+        message: response.data?.message || 'Xác minh OTP thành công.',
+      };
+    } catch (error: any) {
+      console.error('Verify forgot password OTP error:', error);
+      return {
+        success: false,
+        resetToken: null,
+        message:
+          error.response?.data?.errors?.Code?.[0] ||
+          error.response?.data?.detail ||
+          error.message ||
+          'Xác minh OTP thất bại',
+      };
+    }
+  },
+
+  resetForgotPassword: async (data: ForgotPasswordResetRequest) => {
+    try {
+      const response = await api.post('/Auth/forgot-password/reset', {
+        email: data.email,
+        resetToken: data.resetToken,
+        newPassword: data.newPassword,
+      });
+
+      return {
+        success: response.status === 204,
+        message: response.data?.message || 'Đặt lại mật khẩu thành công.',
+      };
+    } catch (error: any) {
+      console.error('Reset forgot password error:', error);
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          error.response?.data?.detail ||
+          error.message ||
+          'Đặt lại mật khẩu thất bại',
       };
     }
   },

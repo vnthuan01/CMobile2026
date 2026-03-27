@@ -17,7 +17,7 @@ import {
 
 export default function OTPScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; mode?: string }>();
 
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const [counter, setCounter] = useState(30);
@@ -26,6 +26,8 @@ export default function OTPScreen() {
   const inputsRef = useRef<TextInput[]>([]);
 
   const email = Array.isArray(params.email) ? params.email[0] : params.email;
+  const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+  const isForgotPasswordMode = mode === 'forgot-password';
 
   useEffect(() => {
     if (counter === 0) return;
@@ -55,7 +57,9 @@ export default function OTPScreen() {
     if (!email) {
       Alert.alert(
         'Lỗi',
-        'Không tìm thấy email để xác thực. Vui lòng đăng ký lại.',
+        isForgotPasswordMode
+          ? 'Không tìm thấy email để khôi phục mật khẩu. Vui lòng thử lại.'
+          : 'Không tìm thấy email để xác thực. Vui lòng đăng ký lại.',
       );
       return;
     }
@@ -68,6 +72,27 @@ export default function OTPScreen() {
 
     setVerifying(true);
     try {
+      if (isForgotPasswordMode) {
+        const forgotResult = await authService.verifyForgotPasswordOtp({
+          email,
+          otpCode: code,
+        });
+
+        if (!forgotResult.success || !forgotResult.resetToken) {
+          Alert.alert('Lỗi', forgotResult.message || 'Xác thực OTP thất bại.');
+          return;
+        }
+
+        router.replace({
+          pathname: '/reset-password',
+          params: {
+            email,
+            resetToken: forgotResult.resetToken,
+          },
+        });
+        return;
+      }
+
       const result = await authService.verifyEmailOtp({ email, code });
       if (!result.success) {
         Alert.alert('Lỗi', result.message || 'Xác thực OTP thất bại.');
@@ -90,6 +115,20 @@ export default function OTPScreen() {
 
     setResending(true);
     try {
+      if (isForgotPasswordMode) {
+        const forgotResend = await authService.sendForgotPasswordOtp({ email });
+        if (!forgotResend.success) {
+          Alert.alert('Lỗi', forgotResend.message || 'Không thể gửi lại OTP.');
+          return;
+        }
+
+        setCounter(30);
+        setOtp(Array(6).fill(''));
+        inputsRef.current[0]?.focus();
+        Alert.alert('Thông báo', forgotResend.message || 'Đã gửi lại mã OTP.');
+        return;
+      }
+
       const result = await authService.resendEmailOtp(email);
       if (!result.success) {
         Alert.alert('Lỗi', result.message || 'Không thể gửi lại OTP.');
@@ -121,7 +160,7 @@ export default function OTPScreen() {
             </TouchableOpacity>
 
             <Text className="flex-1 pr-10 text-center text-lg font-bold text-text-primary">
-              Xác minh OTP
+              {isForgotPasswordMode ? 'Xác minh OTP khôi phục' : 'Xác minh OTP'}
             </Text>
           </View>
 
@@ -131,12 +170,16 @@ export default function OTPScreen() {
             </View>
 
             <Text className="mb-3 text-center text-2xl font-bold text-text-primary">
-              Nhập mã xác thực
+              {isForgotPasswordMode
+                ? 'Nhập mã OTP khôi phục'
+                : 'Nhập mã xác thực'}
             </Text>
 
             <Text className="mb-8 max-w-xs text-center text-base leading-relaxed text-text-secondary">
-              Chúng tôi đã gửi một mã OTP 6 số đến gmail của bạn, mã này sẽ có
-              tác dụng trong 10p.{`\n`}
+              {isForgotPasswordMode
+                ? 'Chúng tôi đã gửi một mã OTP 6 số để khôi phục mật khẩu, mã này sẽ có tác dụng trong 10p.'
+                : 'Chúng tôi đã gửi một mã OTP 6 số đến gmail của bạn, mã này sẽ có tác dụng trong 10p.'}
+              {`\n`}
               <Text className="font-bold text-text-primary">
                 {email || 'email của bạn'}
               </Text>
