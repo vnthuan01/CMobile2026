@@ -43,7 +43,17 @@ const FILTER_OPTIONS: Array<{ label: string; value: MissionFilter }> = [
   { label: 'Đã xong', value: 'done' },
 ];
 
-const supportsNativeMap = false;
+const supportsNativeMap = Constants.appOwnership !== 'expo';
+
+let TeamTasksMapNative: any = null;
+
+if (supportsNativeMap) {
+  try {
+    TeamTasksMapNative = require('./TeamTasksMapNative').default;
+  } catch {
+    TeamTasksMapNative = null;
+  }
+}
 
 export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const { bottom } = useSafeAreaInsets();
@@ -221,39 +231,6 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     setScreen('map');
   };
 
-  const fitMapToSelection = useCallback(() => {
-    if (!supportsNativeMap) return;
-
-    if (routeCoordinates.length >= 2 && cameraRef.current?.fitBounds) {
-      const lngs = routeCoordinates.map((coord) => coord[0]);
-      const lats = routeCoordinates.map((coord) => coord[1]);
-
-      const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
-      const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
-
-      cameraRef.current.fitBounds(ne, sw, [60, 40, 280, 40], 800);
-      return;
-    }
-
-    const coordinate = selectedMission
-      ? rescueTeamService.toMapCoordinate(selectedMission)
-      : null;
-
-    if (coordinate && cameraRef.current?.setCamera) {
-      cameraRef.current.setCamera({
-        centerCoordinate: coordinate,
-        zoomLevel: 13,
-        animationDuration: 800,
-      });
-    }
-  }, [routeCoordinates, selectedMission]);
-
-  useEffect(() => {
-    if (screen !== 'map') return;
-    const timer = setTimeout(() => fitMapToSelection(), 250);
-    return () => clearTimeout(timer);
-  }, [screen, fitMapToSelection]);
-
   if (screen === 'map') {
     return (
       <View className="flex-1 bg-background-light">
@@ -280,89 +257,15 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
         {mapStyle ? (
           <View className="flex-1">
-            {supportsNativeMap && MapLibreGL ? (
-              <MapLibreGL.MapView
-                style={{ flex: 1 }}
-                styleURL={mapStyle}
-                zoomEnabled
-                scrollEnabled
-                rotateEnabled
-                pitchEnabled
-                attributionEnabled={false}
-                logoEnabled={false}
-              >
-                <MapLibreGL.Camera
-                  ref={cameraRef}
-                  zoomLevel={11}
-                  centerCoordinate={
-                    selectedMission &&
-                    rescueTeamService.toMapCoordinate(selectedMission)
-                      ? rescueTeamService.toMapCoordinate(selectedMission)!
-                      : [106.629, 10.724]
-                  }
-                />
-
-                {batch?.items?.map((item) => {
-                  const coordinate = rescueTeamService.toMapCoordinate(item);
-                  if (!coordinate) return null;
-
-                  const isSelected =
-                    item.rescueBatchItemId ===
-                    selectedMission?.rescueBatchItemId;
-                  const isCurrent =
-                    item.rescueBatchItemId ===
-                    currentMission?.rescueBatchItemId;
-                  const emergency = item.rescueRequestType === 'Emergency';
-
-                  return (
-                    <MapLibreGL.PointAnnotation
-                      key={item.rescueBatchItemId}
-                      id={item.rescueBatchItemId}
-                      coordinate={coordinate}
-                      onSelected={() => setSelectedMission(item)}
-                    >
-                      <View
-                        style={{
-                          width: isSelected ? 26 : isCurrent ? 24 : 18,
-                          height: isSelected ? 26 : isCurrent ? 24 : 18,
-                          borderRadius: 14,
-                          backgroundColor: emergency ? '#DC2626' : '#1565C0',
-                          borderWidth: isSelected ? 4 : 3,
-                          borderColor: isSelected
-                            ? '#FACC15'
-                            : isCurrent
-                              ? '#22C55E'
-                              : '#FFFFFF',
-                        }}
-                      />
-                    </MapLibreGL.PointAnnotation>
-                  );
-                })}
-
-                {routeCoordinates.length > 1 ? (
-                  <MapLibreGL.ShapeSource
-                    id="lineSource"
-                    shape={{
-                      type: 'Feature',
-                      geometry: {
-                        type: 'LineString',
-                        coordinates: routeCoordinates,
-                      },
-                      properties: {},
-                    }}
-                  >
-                    <MapLibreGL.LineLayer
-                      id="lineLayer"
-                      style={{
-                        lineColor: '#2E64FE',
-                        lineWidth: 6,
-                        lineCap: 'round',
-                        lineJoin: 'round',
-                      }}
-                    />
-                  </MapLibreGL.ShapeSource>
-                ) : null}
-              </MapLibreGL.MapView>
+            {supportsNativeMap && TeamTasksMapNative ? (
+              <TeamTasksMapNative
+                batch={batch}
+                selectedMission={selectedMission}
+                currentMission={currentMission}
+                routeCoordinates={routeCoordinates}
+                mapStyle={mapStyle}
+                onSelectMission={setSelectedMission}
+              />
             ) : (
               <FallbackMapPreview
                 batch={batch}
