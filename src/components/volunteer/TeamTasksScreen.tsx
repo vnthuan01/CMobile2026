@@ -1,4 +1,5 @@
 import '@/global.css';
+import AppBottomSheet from '@/src/components/common/AppBottomSheet';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
@@ -448,12 +449,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
             )}
 
             {selectedMission ? (
-              <View
-                className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-white p-4"
-                style={{ paddingBottom: bottom + 18 }}
+              <AppBottomSheet
+                open={!!selectedMission}
+                snapPoints={['50%', '82%']}
               >
-                <View className="mb-3 h-1.5 w-12 self-center rounded-full bg-slate-200" />
-
                 <View className="flex-row flex-wrap gap-2">
                   <View
                     className="rounded-full px-3 py-1"
@@ -563,7 +562,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                     </Text>
                   ))}
                 </View>
-              </View>
+              </AppBottomSheet>
             ) : null}
           </View>
         ) : (

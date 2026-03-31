@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -33,25 +34,38 @@ export default function ResetPasswordScreen() {
 
   const handleSubmit = async () => {
     if (!email || !resetToken) {
-      Alert.alert(
-        'Lỗi',
-        'Thiếu thông tin reset token. Vui lòng thử lại từ đầu.',
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Thiếu thông tin reset token. Vui lòng thử lại từ đầu.',
+      });
       return;
     }
 
     if (!newPassword.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập mật khẩu mới.');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Vui lòng nhập mật khẩu mới.',
+      });
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Lỗi', 'Mật khẩu mới phải từ 6 ký tự trở lên.');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Mật khẩu mới phải từ 6 ký tự trở lên.',
+      });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp.');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Mật khẩu xác nhận không khớp.',
+      });
       return;
     }
 
@@ -64,7 +78,11 @@ export default function ResetPasswordScreen() {
       });
 
       if (!result.success) {
-        Alert.alert('Lỗi', result.message || 'Không thể đặt lại mật khẩu.');
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: result.message || 'Không thể đặt lại mật khẩu.',
+        });
         return;
       }
 

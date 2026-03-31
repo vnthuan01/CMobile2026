@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { authService } from '../../src/services/authService';
 
 export default function LoginScreen() {
@@ -42,13 +43,17 @@ export default function LoginScreen() {
           easing: Easing.ease,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ email và mật khẩu');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Vui lòng nhập đầy đủ email và mật khẩu',
+      });
       return;
     }
 
@@ -68,10 +73,18 @@ export default function LoginScreen() {
           },
         ]);
       } else {
-        Alert.alert('Lỗi', result.message || 'Đăng nhập thất bại');
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: result.message || 'Đăng nhập thất bại',
+        });
       }
     } catch {
-      Alert.alert('Lỗi', 'Có lỗi xảy ra, vui lòng thử lại');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Có lỗi xảy ra, vui lòng thử lại',
+      });
     } finally {
       setLoading(false);
     }
@@ -95,7 +108,7 @@ export default function LoginScreen() {
             <View className="absolute right-0 top-0">
               <TouchableOpacity
                 onPress={() => router.push('/donate')}
-                className="flex-row items-center px-3 h-14 rounded-full border border-surface-dark bg-white"
+                className="h-14 flex-row items-center rounded-full border border-surface-dark bg-white px-3"
                 style={{
                   shadowColor: '#ff4a4aff',
                   shadowOffset: { width: 0, height: 4 },
@@ -105,11 +118,16 @@ export default function LoginScreen() {
                 }}
               >
                 <Animated.View style={{ transform: [{ scale }] }}>
-                  <Ionicons name="heart-outline" size={20} color="#DA251D" className='mt-1' />
+                  <Ionicons
+                    name="heart-outline"
+                    size={20}
+                    color="#DA251D"
+                    className="mt-1"
+                  />
                 </Animated.View>
 
                 {/* Label che border */}
-                <View className="px-1 bg-white">
+                <View className="bg-white px-1">
                   <Text className="text-sm font-bold text-[#DA251D]">
                     Donation
                   </Text>
@@ -121,7 +139,9 @@ export default function LoginScreen() {
               className="flex-row items-center gap-1 rounded-full bg-red-50 px-3 py-1.5"
             >
               <Ionicons name="alert-circle" size={18} color="#dc2626" />
-              <Text className="text-sm font-bold text-red-600">Cần hỗ trợ ngay lập tức!</Text>
+              <Text className="text-sm font-bold text-red-600">
+                Cần hỗ trợ ngay lập tức!
+              </Text>
             </TouchableOpacity>
 
             <Text className="text-[32px] font-bold text-text-primary">
@@ -192,8 +212,9 @@ export default function LoginScreen() {
 
             {/* Login Button */}
             <TouchableOpacity
-              className={`mt-4 h-12 items-center justify-center rounded-xl ${loading ? 'bg-primary/50' : 'bg-primary'
-                }`}
+              className={`mt-4 h-12 items-center justify-center rounded-xl ${
+                loading ? 'bg-primary/50' : 'bg-primary'
+              }`}
               onPress={handleLogin}
               disabled={loading}
             >

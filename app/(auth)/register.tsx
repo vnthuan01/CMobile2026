@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -37,12 +38,20 @@ export default function RegisterScreen() {
       !password ||
       !confirmPassword
     ) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Vui lòng nhập đầy đủ thông tin',
+      });
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Mật khẩu xác nhận không khớp',
+      });
       return;
     }
 
@@ -59,7 +68,7 @@ export default function RegisterScreen() {
       });
 
       if (!result.success) {
-        Alert.alert('Lỗi', result.message);
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: result.message });
         return;
       }
 
@@ -70,7 +79,11 @@ export default function RegisterScreen() {
         });
       }
     } catch {
-      Alert.alert('Lỗi', 'Có lỗi xảy ra, vui lòng thử lại');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Có lỗi xảy ra, vui lòng thử lại',
+      });
     } finally {
       setLoading(false);
     }

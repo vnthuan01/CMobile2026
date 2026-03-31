@@ -26,6 +26,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 interface RegisterVolunteerScreenProps {
   onBack?: () => void;
@@ -169,7 +170,11 @@ export default function RegisterVolunteerScreen({
   const pickAndUploadCertificateImage = async (index: number) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Lỗi', 'Bạn cần cấp quyền thư viện ảnh để chọn chứng chỉ.');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Bạn cần cấp quyền thư viện ảnh để chọn chứng chỉ.',
+      });
       return;
     }
 
@@ -191,12 +196,20 @@ export default function RegisterVolunteerScreen({
       );
 
       if (!uploadResult.success || !uploadResult.url) {
-        Alert.alert('Lỗi', uploadResult.message || 'Upload ảnh thất bại.');
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: uploadResult.message || 'Upload ảnh thất bại.',
+        });
         return;
       }
 
       updateCertificate(index, 'fileUrl', uploadResult.url);
-      Alert.alert('Thành công', 'Đã upload ảnh chứng chỉ lên Cloudinary.');
+      Toast.show({
+        type: 'success',
+        text1: 'Thành công',
+        text2: 'Đã upload ảnh chứng chỉ lên Cloudinary.',
+      });
     } finally {
       setUploadingCertificateIndex(null);
     }
@@ -292,7 +305,11 @@ export default function RegisterVolunteerScreen({
     try {
       const result = await volunteerService.createVolunteerProfile(payload);
       if (!result.success) {
-        Alert.alert('Lỗi', result.message || 'Không thể gửi hồ sơ.');
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: result.message || 'Không thể gửi hồ sơ.',
+        });
         return;
       }
 

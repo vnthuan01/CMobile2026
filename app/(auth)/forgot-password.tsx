@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function ForgotPasswordScreen() {
 
   const handleSendCode = async () => {
     if (!email.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập email');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Vui lòng nhập email' });
       return;
     }
 
@@ -33,10 +34,11 @@ export default function ForgotPasswordScreen() {
       });
 
       if (!result.success) {
-        Alert.alert(
-          'Lỗi',
-          result.message || 'Không thể gửi mã, vui lòng thử lại',
-        );
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: result.message || 'Không thể gửi mã, vui lòng thử lại',
+        });
         return;
       }
 
@@ -52,7 +54,11 @@ export default function ForgotPasswordScreen() {
         },
       ]);
     } catch {
-      Alert.alert('Lỗi', 'Không thể gửi mã, vui lòng thử lại');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể gửi mã, vui lòng thử lại',
+      });
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,6 @@
 import '@/global.css';
 import Header from '@/src/components/header/header';
 import { useTheme } from '@/src/context/ThemeContext';
-import { uploadService } from '@/src/services/uploadService';
 import {
   DisasterType,
   PriorityCriteria,
@@ -11,6 +10,7 @@ import {
   getCurrentLocation,
   submitRescueRequest,
 } from '@/src/services/rescueService';
+import { uploadService } from '@/src/services/uploadService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
@@ -25,19 +25,48 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DISASTER_OPTIONS: { label: string; value: DisasterType; icon: string }[] =
-  [
-    { label: 'Bão lũ', value: 0, icon: '🌊' },
-    { label: 'Sạt lở', value: 1, icon: '⛰️' },
-    { label: 'Động đất', value: 2, icon: '🏔️' },
-  ];
+  [{ label: 'Bão lũ', value: 0, icon: '🌊' }];
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface RequestRescueScreenProps {
   onBack?: () => void;
 }
+
+type CriteriaCategory = 'HUMAN' | 'ENV' | 'SCALE';
+
+const CRITERIA_CATEGORIES: Array<{
+  key: CriteriaCategory;
+  label: string;
+  subtitle: string;
+}> = [
+  {
+    key: 'HUMAN',
+    label: 'Nhóm con người (HUMAN)',
+    subtitle: 'Chọn 1 tiêu chí',
+  },
+  {
+    key: 'ENV',
+    label: 'Nhóm môi trường (ENV)',
+    subtitle: 'Chọn 1 tiêu chí',
+  },
+  {
+    key: 'SCALE',
+    label: 'Nhóm quy mô (SCALE)',
+    subtitle: 'Chọn 1 tiêu chí',
+  },
+];
+
+const getCriteriaCategory = (code?: string): CriteriaCategory | null => {
+  if (!code) return null;
+  if (code.startsWith('HUMAN_')) return 'HUMAN';
+  if (code.startsWith('ENV_')) return 'ENV';
+  if (code.startsWith('SCALE_')) return 'SCALE';
+  return null;
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function RequestRescueScreen({
@@ -55,7 +84,13 @@ export default function RequestRescueScreen({
   const [reporterFullName, setReporterFullName] = useState('');
   const [reporterPhone, setReporterPhone] = useState('');
   const [attachments, setAttachments] = useState<RescueAttachment[]>([]);
-  const [selectedCriteria, setSelectedCriteria] = useState<string[]>([]);
+  const [selectedCriteriaByCategory, setSelectedCriteriaByCategory] = useState<
+    Record<CriteriaCategory, string | null>
+  >({
+    HUMAN: null,
+    ENV: null,
+    SCALE: null,
+  });
 
   // ── Location state ───────────────────────────────────────────────────────
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -93,11 +128,15 @@ export default function RequestRescueScreen({
     // Only needed for Normal rescue type
     if (rescueType !== 0) return;
     setLoadingCriteria(true);
-    setSelectedCriteria([]);
+    setSelectedCriteriaByCategory({ HUMAN: null, ENV: null, SCALE: null });
     fetchPriorityCriteria(disasterType)
       .then(setCriteria)
       .catch(() =>
-        Alert.alert('Lỗi', 'Không thể tải danh sách tiêu chí ưu tiên.'),
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: 'Không thể tải danh sách tiêu chí ưu tiên.',
+        }),
       )
       .finally(() => setLoadingCriteria(false));
   }, [disasterType, rescueType]);
@@ -106,10 +145,11 @@ export default function RequestRescueScreen({
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Cần quyền',
-        'Cho phép truy cập thư viện ảnh để đính kèm hình ảnh.',
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Cần quyền',
+        text2: 'Cho phép truy cập thư viện ảnh để đính kèm hình ảnh.',
+      });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -130,10 +170,12 @@ export default function RequestRescueScreen({
           );
 
           if (!uploadResult.success || !uploadResult.url) {
-            Alert.alert(
-              'Lỗi',
-              uploadResult.message || 'Không thể upload ảnh lên Cloudinary.',
-            );
+            Toast.show({
+              type: 'error',
+              text1: 'Lỗi',
+              text2:
+                uploadResult.message || 'Không thể upload ảnh lên Cloudinary.',
+            });
             continue;
           }
 
@@ -156,10 +198,11 @@ export default function RequestRescueScreen({
     setAttachments((prev) => prev.filter((_, i) => i !== index));
 
   // ── Toggle criteria ───────────────────────────────────────────────────────
-  const toggleCriteria = (id: string) => {
-    setSelectedCriteria((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+  const toggleCriteria = (category: CriteriaCategory, id: string) => {
+    setSelectedCriteriaByCategory((prev) => ({
+      ...prev,
+      [category]: prev[category] === id ? null : id,
+    }));
   };
 
   // ── Validation ────────────────────────────────────────────────────────────
@@ -206,11 +249,15 @@ export default function RequestRescueScreen({
       };
 
       if (rescueType === 0) {
+        const selectedPriorityCriteriaIds = Object.values(
+          selectedCriteriaByCategory,
+        ).filter((x): x is string => !!x);
+
         await submitRescueRequest({
           ...base,
           rescueType: 0,
           description: description.trim(),
-          selectedPriorityCriteriaIds: selectedCriteria,
+          selectedPriorityCriteriaIds,
         });
       } else {
         await submitRescueRequest({
@@ -225,7 +272,11 @@ export default function RequestRescueScreen({
         { text: 'OK', onPress: onBack },
       ]);
     } catch {
-      Alert.alert('Lỗi', 'Không thể gửi yêu cầu. Vui lòng thử lại.');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể gửi yêu cầu. Vui lòng thử lại.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -463,7 +514,7 @@ export default function RequestRescueScreen({
             <Section>
               <SectionTitle
                 title="Tiêu chí ưu tiên"
-                subtitle="Chọn các tiêu chí phù hợp (có thể chọn nhiều)"
+                subtitle="Mỗi nhóm HUMAN / ENV / SCALE chỉ chọn 1 tiêu chí"
                 colors={colors}
               />
 
@@ -485,70 +536,108 @@ export default function RequestRescueScreen({
                   Không có tiêu chí nào.
                 </Text>
               ) : (
-                <View className="flex-col gap-2">
-                  {criteria.map((c) => {
-                    const selected = selectedCriteria.includes(
-                      c.priorityCriteriaId,
+                <View className="flex-col gap-4">
+                  {CRITERIA_CATEGORIES.map((group) => {
+                    const groupItems = criteria.filter(
+                      (c) => getCriteriaCategory(c.code) === group.key,
                     );
+
                     return (
-                      <TouchableOpacity
-                        key={c.priorityCriteriaId}
-                        onPress={() => toggleCriteria(c.priorityCriteriaId)}
-                        className="flex-row items-center gap-3 rounded-xl border-2 p-3"
+                      <View
+                        key={group.key}
+                        className="rounded-xl border p-3"
                         style={{
-                          backgroundColor: selected
-                            ? colors.card
-                            : 'transparent',
-                          borderColor: selected
-                            ? colors.primary
-                            : colors.border,
+                          borderColor: colors.border,
+                          backgroundColor: colors.card,
                         }}
                       >
-                        <View
-                          className="h-6 w-6 items-center justify-center rounded-full border-2"
-                          style={{
-                            borderColor: selected
-                              ? colors.primary
-                              : colors.border,
-                            backgroundColor: selected
-                              ? colors.primary
-                              : 'transparent',
-                          }}
-                        >
-                          {selected && (
-                            <Ionicons name="checkmark" size={14} color="#fff" />
-                          )}
-                        </View>
-                        <View className="flex-1">
-                          <View className="flex-row items-center justify-between">
-                            <Text
-                              className="flex-1 text-sm font-semibold"
-                              style={{ color: colors.text }}
-                            >
-                              {c.name}
-                            </Text>
-                            <View
-                              className="ml-2 rounded-full px-2 py-0.5"
-                              style={{
-                                backgroundColor: colors.primary + '22',
-                              }}
-                            >
-                              <Text
-                                className="text-xs font-bold"
-                                style={{ color: colors.primary }}
-                              >
-                                +{c.point} điểm
-                              </Text>
-                            </View>
-                          </View>
+                        <View className="mb-2">
                           <Text
-                            className="mt-0.5 text-xs"
+                            className="text-sm font-bold"
+                            style={{ color: colors.text }}
+                          >
+                            {group.label}
+                          </Text>
+                          <Text
+                            className="text-xs"
                             style={{ color: colors.textSecondary }}
                           >
-                            {c.description}
+                            {group.subtitle}
                           </Text>
                         </View>
-                      </TouchableOpacity>
+
+                        {groupItems.length === 0 ? (
+                          <Text
+                            className="text-xs"
+                            style={{ color: colors.textSecondary }}
+                          >
+                            Không có tiêu chí trong nhóm này.
+                          </Text>
+                        ) : (
+                          <View className="flex-col gap-2">
+                            {groupItems.map((c) => {
+                              const selected =
+                                selectedCriteriaByCategory[group.key] ===
+                                c.priorityCriteriaId;
+
+                              return (
+                                <TouchableOpacity
+                                  key={c.priorityCriteriaId}
+                                  onPress={() =>
+                                    toggleCriteria(
+                                      group.key,
+                                      c.priorityCriteriaId,
+                                    )
+                                  }
+                                  className="flex-row items-center gap-3 rounded-xl border-2 p-3"
+                                  style={{
+                                    backgroundColor: selected
+                                      ? colors.card
+                                      : 'transparent',
+                                    borderColor: selected
+                                      ? colors.primary
+                                      : colors.border,
+                                  }}
+                                >
+                                  <View
+                                    className="h-6 w-6 items-center justify-center rounded-full border-2"
+                                    style={{
+                                      borderColor: selected
+                                        ? colors.primary
+                                        : colors.border,
+                                      backgroundColor: selected
+                                        ? colors.primary
+                                        : 'transparent',
+                                    }}
+                                  >
+                                    {selected && (
+                                      <Ionicons
+                                        name="checkmark"
+                                        size={14}
+                                        color="#fff"
+                                      />
+                                    )}
+                                  </View>
+                                  <View className="flex-1">
+                                    <Text
+                                      className="text-sm font-semibold"
+                                      style={{ color: colors.text }}
+                                    >
+                                      {c.name}
+                                    </Text>
+                                    <Text
+                                      className="mt-0.5 text-xs"
+                                      style={{ color: colors.textSecondary }}
+                                    >
+                                      {c.description}
+                                    </Text>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        )}
+                      </View>
                     );
                   })}
                 </View>

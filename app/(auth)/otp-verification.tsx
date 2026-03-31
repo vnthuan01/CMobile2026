@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function OTPScreen() {
   const router = useRouter();
@@ -55,18 +56,23 @@ export default function OTPScreen() {
 
   const handleVerify = async () => {
     if (!email) {
-      Alert.alert(
-        'Lỗi',
-        isForgotPasswordMode
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: isForgotPasswordMode
           ? 'Không tìm thấy email để khôi phục mật khẩu. Vui lòng thử lại.'
           : 'Không tìm thấy email để xác thực. Vui lòng đăng ký lại.',
-      );
+      });
       return;
     }
 
     const code = otp.join('');
     if (code.length < 6) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đủ 6 số OTP.');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Vui lòng nhập đủ 6 số OTP.',
+      });
       return;
     }
 
@@ -79,7 +85,11 @@ export default function OTPScreen() {
         });
 
         if (!forgotResult.success || !forgotResult.resetToken) {
-          Alert.alert('Lỗi', forgotResult.message || 'Xác thực OTP thất bại.');
+          Toast.show({
+            type: 'error',
+            text1: 'Lỗi',
+            text2: forgotResult.message || 'Xác thực OTP thất bại.',
+          });
           return;
         }
 
@@ -95,7 +105,11 @@ export default function OTPScreen() {
 
       const result = await authService.verifyEmailOtp({ email, code });
       if (!result.success) {
-        Alert.alert('Lỗi', result.message || 'Xác thực OTP thất bại.');
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: result.message || 'Xác thực OTP thất bại.',
+        });
         return;
       }
 
@@ -118,27 +132,43 @@ export default function OTPScreen() {
       if (isForgotPasswordMode) {
         const forgotResend = await authService.sendForgotPasswordOtp({ email });
         if (!forgotResend.success) {
-          Alert.alert('Lỗi', forgotResend.message || 'Không thể gửi lại OTP.');
+          Toast.show({
+            type: 'error',
+            text1: 'Lỗi',
+            text2: forgotResend.message || 'Không thể gửi lại OTP.',
+          });
           return;
         }
 
         setCounter(30);
         setOtp(Array(6).fill(''));
         inputsRef.current[0]?.focus();
-        Alert.alert('Thông báo', forgotResend.message || 'Đã gửi lại mã OTP.');
+        Toast.show({
+          type: 'success',
+          text1: 'Thông báo',
+          text2: forgotResend.message || 'Đã gửi lại mã OTP.',
+        });
         return;
       }
 
       const result = await authService.resendEmailOtp(email);
       if (!result.success) {
-        Alert.alert('Lỗi', result.message || 'Không thể gửi lại OTP.');
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: result.message || 'Không thể gửi lại OTP.',
+        });
         return;
       }
 
       setCounter(30);
       setOtp(Array(6).fill(''));
       inputsRef.current[0]?.focus();
-      Alert.alert('Thông báo', result.message || 'Đã gửi lại mã OTP.');
+      Toast.show({
+        type: 'success',
+        text1: 'Thông báo',
+        text2: result.message || 'Đã gửi lại mã OTP.',
+      });
     } finally {
       setResending(false);
     }
