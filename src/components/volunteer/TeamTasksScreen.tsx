@@ -353,6 +353,40 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     })}`;
   }, [isSyncingEta, lastHeartbeatAt]);
 
+  const debugTrackingLines = useMemo(() => {
+    return [
+      `teamId: ${teamId || '---'}`,
+      `batchId: ${batch?.rescueBatchId || '---'}`,
+      `screen: ${screen}`,
+      `heartbeat: ${isSyncingEta ? 'syncing' : 'idle'}`,
+      `lastSync: ${lastHeartbeatAt || '---'}`,
+      `lat: ${userLocation?.latitude ?? '---'}`,
+      `lng: ${userLocation?.longitude ?? '---'}`,
+      `accuracy: ${userLocation?.accuracy ?? '---'}`,
+      `speedKph: ${userLocation?.speedKph ?? '---'}`,
+      `heading: ${userLocation?.headingDegree ?? '---'}`,
+      `currentMission: ${currentMission?.rescueBatchItemId || '---'}`,
+      `selectedMission: ${selectedMission?.rescueBatchItemId || '---'}`,
+      `eta: ${selectedMission?.estimatedMinutes ?? '---'} phút`,
+      `distance: ${selectedMission?.distanceKm ?? '---'} km`,
+    ];
+  }, [
+    batch?.rescueBatchId,
+    currentMission?.rescueBatchItemId,
+    isSyncingEta,
+    lastHeartbeatAt,
+    screen,
+    selectedMission?.distanceKm,
+    selectedMission?.estimatedMinutes,
+    selectedMission?.rescueBatchItemId,
+    teamId,
+    userLocation?.accuracy,
+    userLocation?.headingDegree,
+    userLocation?.latitude,
+    userLocation?.longitude,
+    userLocation?.speedKph,
+  ]);
+
   if (screen === 'map') {
     return (
       <View className="flex-1 bg-background-light">
@@ -514,6 +548,20 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                       Mở Google Maps
                     </Text>
                   </TouchableOpacity>
+                </View>
+
+                <View className="mt-4 rounded-2xl bg-slate-900 p-3">
+                  <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-300">
+                    Tracking Debug
+                  </Text>
+                  {debugTrackingLines.map((line) => (
+                    <Text
+                      key={line}
+                      className="text-[11px] leading-5 text-slate-100"
+                    >
+                      {line}
+                    </Text>
+                  ))}
                 </View>
               </View>
             ) : null}
