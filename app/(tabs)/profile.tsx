@@ -1,6 +1,7 @@
 import RequestsScreen from '@/app/(tabs)/requests/index';
 import '@/global.css';
 import CitizenProfile from '@/src/components/profile/CitizenProfile';
+import MyVolunteerProfileScreen from '@/src/components/profile/MyVolunteerProfileScreen';
 import RegisterVolunteerScreen from '@/src/components/profile/RegisterVolunteerScreen';
 import UpdateProfileCitizenScreen from '@/src/components/profile/UpdateProfileCitizenScreen';
 import UpdateProfileVolunteerScreen from '@/src/components/profile/UpdateProfileVolunteerScreen';
@@ -21,6 +22,7 @@ import { useAuthStore } from '@/src/store/authStore';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { VolunteerProfileResponse } from '@/src/services/volunteerService';
 
 type ProfileScreenType =
   | 'profile'
@@ -37,6 +39,7 @@ type ProfileScreenType =
   | 'report-leader'
   | 'change-password'
   | 'register-volunteer'
+  | 'my-volunteer-profile'
   | 'my-team';
 
 const ACCENT_COLOR = '#DA251D';
@@ -49,6 +52,11 @@ export default function ProfileScreen() {
   const params = useLocalSearchParams();
   const [currentScreen, setCurrentScreen] =
     useState<ProfileScreenType>('profile');
+  const [volunteerFormMode, setVolunteerFormMode] = useState<
+    'create' | 'resubmit'
+  >('create');
+  const [volunteerFormInitialProfile, setVolunteerFormInitialProfile] =
+    useState<VolunteerProfileResponse | null>(null);
 
   const { colors, isDark } = useTheme();
   const headerBg = isDark ? 'bg-gray-700' : 'bg-primary/10';
@@ -113,7 +121,27 @@ export default function ProfileScreen() {
     return (
       <RegisterVolunteerScreen
         onBack={() => setCurrentScreen('profile')}
-        onSuccess={() => setCurrentScreen('profile')}
+        onSuccess={() => setCurrentScreen('my-volunteer-profile')}
+        mode={volunteerFormMode}
+        initialProfile={volunteerFormInitialProfile}
+      />
+    );
+  }
+
+  if (currentScreen === 'my-volunteer-profile') {
+    return (
+      <MyVolunteerProfileScreen
+        onBack={() => setCurrentScreen('profile')}
+        onCreate={() => {
+          setVolunteerFormMode('create');
+          setVolunteerFormInitialProfile(null);
+          setCurrentScreen('register-volunteer');
+        }}
+        onResubmit={(profile) => {
+          setVolunteerFormMode('resubmit');
+          setVolunteerFormInitialProfile(profile);
+          setCurrentScreen('register-volunteer');
+        }}
       />
     );
   }

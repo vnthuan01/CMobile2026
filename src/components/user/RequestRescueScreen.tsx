@@ -10,8 +10,10 @@ import {
   getCurrentLocation,
   submitRescueRequest,
 } from '@/src/services/rescueService';
+import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { uploadService } from '@/src/services/uploadService';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
@@ -68,6 +70,19 @@ const getCriteriaCategory = (code?: string): CriteriaCategory | null => {
   return null;
 };
 
+const supportsNativeMap = Constants.appOwnership !== 'expo';
+
+let RequestRescueMiniMapNative: any = null;
+
+if (supportsNativeMap) {
+  try {
+    RequestRescueMiniMapNative =
+      require('./RequestRescueMiniMapNative').default;
+  } catch {
+    RequestRescueMiniMapNative = null;
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function RequestRescueScreen({
   onBack,
@@ -104,6 +119,7 @@ export default function RequestRescueScreen({
   const [loadingCriteria, setLoadingCriteria] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
 
   // ── Auto locate on mount ──────────────────────────────────────────────────
   useEffect(() => {
@@ -452,6 +468,29 @@ export default function RequestRescueScreen({
             <Text className="flex-1 text-sm" style={{ color: colors.text }}>
               {locationLabel}
             </Text>
+          </View>
+
+          <View
+            className="mt-3 h-44 overflow-hidden rounded-xl border"
+            style={{ borderColor: colors.border, backgroundColor: colors.card }}
+          >
+            {mapStyle &&
+            supportsNativeMap &&
+            RequestRescueMiniMapNative &&
+            latitude != null &&
+            longitude != null ? (
+              <RequestRescueMiniMapNative
+                coordinate={[longitude, latitude]}
+                mapStyle={mapStyle}
+              />
+            ) : (
+              <View className="flex-1 items-center justify-center bg-slate-100">
+                <Ionicons name="map-outline" size={32} color="#64748b" />
+                <Text className="mt-2 text-sm text-text-secondary">
+                  Bản đồ vị trí hiện tại sẽ hiển thị tại đây
+                </Text>
+              </View>
+            )}
           </View>
 
           <LabeledInput

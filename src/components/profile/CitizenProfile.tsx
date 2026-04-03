@@ -24,7 +24,8 @@ interface CitizenProfileProps {
       | 'settings'
       | 'help'
       | 'change-password'
-      | 'register-volunteer',
+      | 'register-volunteer'
+      | 'my-volunteer-profile',
   ) => void;
 }
 
@@ -185,13 +186,13 @@ export default function CitizenProfile({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => onNavigate?.('register-volunteer')}
+              onPress={() => onNavigate?.('my-volunteer-profile')}
               className="flex-row items-center justify-between border-b border-surface-dark px-4 py-4"
             >
               <View className="flex-row items-center gap-3">
                 <Ionicons name="heart-outline" size={20} color="#DA251D" />
                 <Text className="text-base font-medium text-text-primary">
-                  Đăng ký làm tình nguyện viên
+                  Hồ sơ tình nguyện viên
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#94a3b8" />

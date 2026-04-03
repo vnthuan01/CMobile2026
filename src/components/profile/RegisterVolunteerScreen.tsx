@@ -3,8 +3,10 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import {
   CreateVolunteerCertificateRequest,
   CreateVolunteerRequest,
+  ResubmitVolunteerProfileRequest,
   SkillResponse,
   TeamRolePreference,
+  VolunteerProfileResponse,
   volunteerService,
 } from '@/src/services/volunteerService';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +33,8 @@ import Toast from 'react-native-toast-message';
 interface RegisterVolunteerScreenProps {
   onBack?: () => void;
   onSuccess?: () => void;
+  mode?: 'create' | 'resubmit';
+  initialProfile?: VolunteerProfileResponse | null;
 }
 
 const EMPTY_CERT: CreateVolunteerCertificateRequest = {
@@ -44,14 +48,56 @@ const EMPTY_CERT: CreateVolunteerCertificateRequest = {
 type PickingField = 'issuedDate' | 'expiryDate';
 
 const TEAM_ROLE_OPTIONS: Array<{ label: string; value: TeamRolePreference }> = [
-  { label: 'Member', value: TeamRolePreference.Member },
-  { label: 'Leader', value: TeamRolePreference.Leader },
-  { label: 'Driver', value: TeamRolePreference.Driver },
+  { label: 'Thành viên', value: TeamRolePreference.Member },
+  { label: 'Đội trưởng', value: TeamRolePreference.Leader },
+  { label: 'Tài xế', value: TeamRolePreference.Driver },
 ];
+
+const getLocalizedSkillName = (name?: string | null, code?: string | null) => {
+  const source = `${code || ''} ${name || ''}`.toLowerCase().trim();
+
+  if (!source) return 'Kỹ năng';
+  if (
+    source.includes('first') ||
+    source.includes('aid') ||
+    source.includes('sơ cứu')
+  ) {
+    return 'Sơ cứu';
+  }
+  if (source.includes('medical') || source.includes('y tế')) {
+    return 'Hỗ trợ y tế';
+  }
+  if (source.includes('swim') || source.includes('bơi')) {
+    return 'Bơi cứu hộ';
+  }
+  if (
+    source.includes('drive') ||
+    source.includes('driver') ||
+    source.includes('lái xe')
+  ) {
+    return 'Lái xe cứu trợ';
+  }
+  if (source.includes('logistic') || source.includes('hậu cần')) {
+    return 'Hậu cần';
+  }
+  if (source.includes('communicat') || source.includes('liên lạc')) {
+    return 'Liên lạc điều phối';
+  }
+  if (source.includes('rescue') || source.includes('cứu hộ')) {
+    return 'Cứu hộ';
+  }
+  if (source.includes('search') || source.includes('tìm kiếm')) {
+    return 'Tìm kiếm cứu nạn';
+  }
+
+  return name || code || 'Kỹ năng';
+};
 
 export default function RegisterVolunteerScreen({
   onBack,
   onSuccess,
+  mode = 'create',
+  initialProfile,
 }: RegisterVolunteerScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const [descriptions, setDescriptions] = useState('');
@@ -65,6 +111,7 @@ export default function RegisterVolunteerScreen({
     CreateVolunteerCertificateRequest[]
   >([{ ...EMPTY_CERT }]);
   const [loading, setLoading] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [uploadingCertificateIndex, setUploadingCertificateIndex] = useState<
     number | null
   >(null);
@@ -100,6 +147,40 @@ export default function RegisterVolunteerScreen({
 
     loadSkills();
   }, []);
+
+  useEffect(() => {
+    if (!initialProfile) return;
+
+    setDescriptions(initialProfile.descriptions || '');
+    setYearsOfExperience(
+      initialProfile.yearsOfExperience != null
+        ? String(initialProfile.yearsOfExperience)
+        : '',
+    );
+    setTeamRolePreference(
+      (initialProfile.preferredTeamRole as TeamRolePreference | null) ||
+        TeamRolePreference.Member,
+    );
+    setSelectedSkillIds(
+      (initialProfile.skills || [])
+        .map((skill) => {
+          if (typeof skill === 'string') return skill;
+          return skill?.skillId || skill?.code || skill?.name || '';
+        })
+        .filter(Boolean),
+    );
+    setCertificates(
+      initialProfile.certificates?.length
+        ? initialProfile.certificates.map((cert) => ({
+            name: cert.name || '',
+            issuedBy: cert.issuedBy || '',
+            issuedDate: cert.issuedDate || '',
+            expiryDate: cert.expiryDate || '',
+            fileUrl: cert.fileUrl || '',
+          }))
+        : [{ ...EMPTY_CERT }],
+    );
+  }, [initialProfile]);
 
   const toggleSkill = (skillId: string) => {
     setSelectedSkillIds((prev) =>
@@ -285,7 +366,7 @@ export default function RegisterVolunteerScreen({
     if (!validate()) return;
     if (!teamRolePreference) return;
 
-    const payload: CreateVolunteerRequest = {
+    const createPayload: CreateVolunteerRequest = {
       descriptions: descriptions.trim(),
       skillIds: selectedSkillIds,
       teamRolePreference,
@@ -303,7 +384,17 @@ export default function RegisterVolunteerScreen({
 
     setLoading(true);
     try {
-      const result = await volunteerService.createVolunteerProfile(payload);
+      const result =
+        mode === 'resubmit'
+          ? await volunteerService.resubmitVolunteerProfile({
+              descriptions: createPayload.descriptions,
+              skillIds: createPayload.skillIds,
+              preferredTeamRole: teamRolePreference,
+              yearsOfExperience: createPayload.yearsOfExperience,
+              certificates: createPayload.certificates,
+            } as ResubmitVolunteerProfileRequest)
+          : await volunteerService.createVolunteerProfile(createPayload);
+
       if (!result.success) {
         Toast.show({
           type: 'error',
@@ -315,7 +406,9 @@ export default function RegisterVolunteerScreen({
 
       Alert.alert(
         'Thành công',
-        'Đã gửi hồ sơ đăng ký tình nguyện viên. Vui lòng chờ xét duyệt.',
+        mode === 'resubmit'
+          ? 'Đã gửi lại hồ sơ tình nguyện viên. Vui lòng chờ xét duyệt lại.'
+          : 'Đã gửi hồ sơ đăng ký tình nguyện viên. Vui lòng chờ xét duyệt.',
         [{ text: 'OK', onPress: () => onSuccess?.() }],
       );
     } finally {
@@ -323,14 +416,54 @@ export default function RegisterVolunteerScreen({
     }
   };
 
+  const handleSaveDraft = () => {
+    setDraftSaved(true);
+    Toast.show({
+      type: 'success',
+      text1: 'Đã lưu nháp',
+      text2: 'Thông tin chỉnh sửa đã được giữ lại trên màn hình hiện tại.',
+    });
+  };
+
   return (
     <View className="flex-1 bg-background-light">
-      <ScreenHeader title="Đăng ký tình nguyện viên" onBack={onBack} />
+      <ScreenHeader
+        title={
+          mode === 'resubmit'
+            ? 'Chỉnh sửa và gửi lại hồ sơ'
+            : 'Đăng ký tình nguyện viên'
+        }
+        onBack={onBack}
+      />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
+        {mode === 'resubmit' && initialProfile?.reason ? (
+          <View className="mx-4 mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+            <View className="flex-row items-start gap-3">
+              <Ionicons name="alert-circle" size={22} color="#DC2626" />
+              <View className="flex-1">
+                <Text className="text-base font-bold text-red-700">
+                  Hồ sơ đã bị từ chối
+                </Text>
+                <Text className="mt-2 text-sm leading-6 text-red-700">
+                  {initialProfile.reason}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {mode === 'resubmit' && draftSaved ? (
+          <View className="mx-4 mt-4 rounded-2xl border border-green-200 bg-green-50 p-4">
+            <Text className="text-sm font-medium text-green-700">
+              Bản nháp đã được lưu trong phiên làm việc hiện tại.
+            </Text>
+          </View>
+        ) : null}
+
         <View className="px-4 pt-4">
           <Text className="mb-2 text-sm font-semibold text-text-secondary">
             Mô tả bản thân
@@ -424,7 +557,7 @@ export default function RegisterVolunteerScreen({
                         active ? 'text-white' : 'text-text-primary'
                       }`}
                     >
-                      {skill.name}
+                      {getLocalizedSkillName(skill.name, skill.code)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -536,10 +669,32 @@ export default function RegisterVolunteerScreen({
         </View>
 
         <View className="px-4 pt-2">
+          {mode === 'resubmit' ? (
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={onBack}
+                className="h-12 flex-1 items-center justify-center rounded-xl border border-surface-dark bg-white"
+              >
+                <Text className="text-base font-bold text-text-primary">
+                  Hủy chỉnh sửa
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleSaveDraft}
+                className="h-12 flex-1 items-center justify-center rounded-xl border border-primary bg-primary/10"
+              >
+                <Text className="text-base font-bold text-primary">
+                  Lưu nháp
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={loading}
-            className={`h-12 items-center justify-center rounded-xl ${
+            className={`mt-3 h-12 items-center justify-center rounded-xl ${
               loading ? 'bg-primary/60' : 'bg-primary'
             }`}
           >
@@ -547,7 +702,9 @@ export default function RegisterVolunteerScreen({
               <ActivityIndicator color="#fff" />
             ) : (
               <Text className="text-base font-bold text-white">
-                Gửi hồ sơ tình nguyện viên
+                {mode === 'resubmit'
+                  ? 'Gửi lại hồ sơ'
+                  : 'Gửi hồ sơ tình nguyện viên'}
               </Text>
             )}
           </TouchableOpacity>

@@ -30,15 +30,26 @@ export interface SkillResponse {
   description: string | null;
 }
 
-interface CreateVolunteerProfileResponse {
+export interface VolunteerProfileResponse {
   volunteerProfileId: string;
   fullName: string | null;
   email: string;
   phoneNumber: string | null;
   descriptions: string;
-  verificationStatus: string;
+  verificationStatus: string | number;
+  volunteerStatus?: string | null;
+  reason?: string | null;
   yearsOfExperience?: number | null;
-  skills: string[];
+  preferredTeamRole?: TeamRolePreference | number | null;
+  skills: Array<string | { skillId?: string; name?: string; code?: string }>;
+  certificates: CreateVolunteerCertificateRequest[];
+}
+
+export interface ResubmitVolunteerProfileRequest {
+  descriptions: string;
+  yearsOfExperience?: number | null;
+  preferredTeamRole: TeamRolePreference;
+  skillIds: string[];
   certificates: CreateVolunteerCertificateRequest[];
 }
 
@@ -62,19 +73,67 @@ const extractApiErrorMessage = (error: any, fallback: string) => {
   return error?.message || fallback;
 };
 
+const normalizeVerificationStatus = (raw: any) => {
+  const normalized = String(raw ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (normalized === '1' || normalized === 'pending') return 'Pending';
+  if (normalized === '2' || normalized === 'approved') return 'Approved';
+  if (normalized === '3' || normalized === 'rejected') return 'Rejected';
+
+  return 'Pending';
+};
+
+const normalizeVolunteerProfile = (raw: any): VolunteerProfileResponse => {
+  const certificates = Array.isArray(raw?.certificates)
+    ? raw.certificates.map((cert: any) => ({
+        name: cert?.name || cert?.certificateName || '',
+        issuedBy: cert?.issuedBy || cert?.issuer || '',
+        issuedDate: cert?.issuedDate || cert?.dateIssued || '',
+        expiryDate: cert?.expiryDate || cert?.expiredDate || null,
+        fileUrl:
+          cert?.fileUrl || cert?.url || cert?.imageUrl || cert?.fileURL || '',
+      }))
+    : [];
+
+  const skills = Array.isArray(raw?.skills)
+    ? raw.skills.map((skill: any) => {
+        if (typeof skill === 'string') return skill;
+        return skill?.skillId || skill?.id || skill?.name || skill?.code || '';
+      })
+    : [];
+
+  return {
+    volunteerProfileId: raw?.volunteerProfileId || raw?.id || '',
+    fullName: raw?.fullName || raw?.full_name || null,
+    email: raw?.email || '',
+    phoneNumber: raw?.phoneNumber || raw?.phone || null,
+    descriptions: raw?.descriptions || raw?.description || '',
+    verificationStatus: normalizeVerificationStatus(raw?.verificationStatus),
+    volunteerStatus: raw?.volunteerStatus || null,
+    reason: raw?.reason || raw?.rejectReason || null,
+    yearsOfExperience: raw?.yearsOfExperience ?? raw?.experienceYears ?? null,
+    preferredTeamRole:
+      raw?.preferredTeamRole ??
+      raw?.teamRolePreference ??
+      raw?.preferredRole ??
+      null,
+    skills,
+    certificates,
+  };
+};
+
 export const volunteerService = {
   createVolunteerProfile: async (payload: CreateVolunteerRequest) => {
     const routes = ['/VolunteerProfile', '/api/VolunteerProfile'];
 
     for (const route of routes) {
       try {
-        const response = await api.post<CreateVolunteerProfileResponse>(
-          route,
-          payload,
-        );
+        const response = await api.post<any>(route, payload);
         return {
           success: response.status === 200 || response.status === 201,
-          data: response.data,
+          data: normalizeVolunteerProfile(response.data),
           message: 'Đăng ký tình nguyện viên thành công',
         };
       } catch (error: any) {
@@ -144,6 +203,88 @@ export const volunteerService = {
       data: [] as SkillResponse[],
       message:
         'Không tìm thấy endpoint Skills. Kiểm tra lại route backend (ví dụ: /api/Skill).',
+    };
+  },
+
+  getMyVolunteerProfile: async () => {
+    const routes = [
+      '/VolunteerProfile/my-profile',
+      '/api/VolunteerProfile/my-profile',
+    ];
+
+    for (const route of routes) {
+      try {
+        const response = await api.get<any>(route);
+        return {
+          success: response.status === 200,
+          data: normalizeVolunteerProfile(response.data),
+          message: 'Lấy hồ sơ volunteer thành công',
+        };
+      } catch (error: any) {
+        if (error?.response?.status === 404) {
+          return {
+            success: true,
+            data: null,
+            message: 'Bạn chưa có hồ sơ volunteer.',
+          };
+        }
+
+        if (error?.response?.status !== 404) {
+          return {
+            success: false,
+            data: null,
+            message: extractApiErrorMessage(
+              error,
+              'Không thể tải hồ sơ volunteer.',
+            ),
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      data: null,
+      message:
+        'Không tìm thấy endpoint VolunteerProfile/my-profile. Kiểm tra lại route backend.',
+    };
+  },
+
+  resubmitVolunteerProfile: async (
+    payload: ResubmitVolunteerProfileRequest,
+  ) => {
+    const routes = [
+      '/VolunteerProfile/my-profile/resubmit',
+      '/api/VolunteerProfile/my-profile/resubmit',
+    ];
+
+    for (const route of routes) {
+      try {
+        const response = await api.put<any>(route, payload);
+        return {
+          success: response.status === 200,
+          data: normalizeVolunteerProfile(response.data),
+          message: 'Đã gửi lại hồ sơ volunteer',
+        };
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          return {
+            success: false,
+            data: null,
+            message: extractApiErrorMessage(
+              error,
+              'Không thể gửi lại hồ sơ volunteer.',
+            ),
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      data: null,
+      message:
+        'Không tìm thấy endpoint VolunteerProfile/my-profile/resubmit. Kiểm tra lại route backend.',
     };
   },
   uploadImageToCloudinary: uploadService.uploadImageToCloudinary,

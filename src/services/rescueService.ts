@@ -25,6 +25,110 @@ export interface RescueAttachment {
   contentType: string;
 }
 
+export interface RescueVerification {
+  status: string;
+  reason: string | null;
+  note: string | null;
+  verifiedAt: string | null;
+}
+
+export interface AssignedRescueTeamInfo {
+  teamId: string;
+  teamName: string;
+  operationStatus: string;
+  currentLatitude: number | null;
+  currentLongitude: number | null;
+  lastTrackedAt: string | null;
+  estimatedMinutesToArrival: number | null;
+  distanceKmToVictim: number | null;
+  routePolyline: string | null;
+  totalDistanceKm: number | null;
+  totalEstimatedMinutes: number | null;
+}
+
+export interface MyRescueRequestItem {
+  requestId: string;
+  rescueRequestStatus: string;
+  disasterType: string | number;
+  rescueRequestType: string | number;
+  description: string;
+  address: string;
+  priority: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignedRescueTeam: AssignedRescueTeamInfo | null;
+  verifications: RescueVerification[];
+}
+
+export interface MyRescueRequestsResponse {
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+  data: MyRescueRequestItem[];
+}
+
+export interface RescueRequestDetailResponse {
+  requestId: string;
+  rescueRequestStatus: string;
+  disasterType: string | number;
+  rescueRequestType: string | number;
+  description: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  priority: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignedRescueTeam: AssignedRescueTeamInfo | null;
+  verifications: RescueVerification[];
+  attachments?: RescueAttachmentDetail[];
+  rescueOperations?: RescueOperationInfo[];
+}
+
+export interface RescueAttachmentDetail {
+  attachmentId?: string;
+  fileUrl: string;
+  contentType: string;
+  uploadedAt?: string;
+}
+
+export interface RescueOperationInfo {
+  rescueOperationId: string;
+  teamId: string;
+  teamName?: string;
+  stationName?: string;
+  status: string;
+  startedAt?: string | null;
+  endedAt?: string | null;
+}
+
+export interface UpdateRescueOperationStatusPayload {
+  status: number;
+  note?: string | null;
+}
+
+export interface CompleteRescueOperationPayload {
+  attachments: RescueAttachment[];
+  note?: string | null;
+}
+
+export interface TeamLocationResponse {
+  teamId: string;
+  teamName: string;
+  operationStatus: string;
+  currentLatitude: number | null;
+  currentLongitude: number | null;
+  lastTrackedAt: string | null;
+  estimatedMinutesToArrival: number | null;
+  distanceKmToVictim: number | null;
+  routePolyline: string | null;
+  totalDistanceKm: number | null;
+  totalEstimatedMinutes: number | null;
+}
+
 export interface NormalRescuePayload {
   rescueType: 0;
   disasterType: DisasterType;
@@ -150,4 +254,60 @@ export async function submitRescueRequest(
   payload: NormalRescuePayload | EmergencyRescuePayload,
 ): Promise<void> {
   await api.post('/RescueRequest', payload);
+}
+
+export async function fetchMyRescueRequests(params?: {
+  pageNumber?: number;
+  pageSize?: number;
+  statusFilter?: string;
+}): Promise<MyRescueRequestsResponse> {
+  const res = await api.get<MyRescueRequestsResponse>(
+    '/RescueRequest/my-requests',
+    {
+      params,
+    },
+  );
+  return res.data;
+}
+
+export async function fetchRescueRequestDetail(
+  requestId: string,
+): Promise<RescueRequestDetailResponse> {
+  const res = await api.get<RescueRequestDetailResponse>(
+    `/RescueRequest/${requestId}`,
+  );
+  return res.data;
+}
+
+export async function fetchRescueTeamLocation(
+  requestId: string,
+): Promise<TeamLocationResponse> {
+  const res = await api.get<TeamLocationResponse>(
+    `/RescueRequest/${requestId}/team-location`,
+  );
+  return res.data;
+}
+
+export async function updateRescueOperationStatus(
+  requestId: string,
+  operationId: string,
+  payload: UpdateRescueOperationStatusPayload,
+): Promise<RescueRequestDetailResponse> {
+  const res = await api.patch<RescueRequestDetailResponse>(
+    `/RescueRequest/${requestId}/operations/${operationId}/status`,
+    payload,
+  );
+  return res.data;
+}
+
+export async function completeRescueOperation(
+  requestId: string,
+  operationId: string,
+  payload: CompleteRescueOperationPayload,
+): Promise<RescueRequestDetailResponse> {
+  const res = await api.post<RescueRequestDetailResponse>(
+    `/RescueRequest/${requestId}/operations/${operationId}/complete`,
+    payload,
+  );
+  return res.data;
 }

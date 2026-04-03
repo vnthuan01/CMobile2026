@@ -35,6 +35,35 @@ export interface RescueActiveBatchResponse {
   items: RescueBatchItem[];
 }
 
+export interface RescueTeamHistoryRequestItem {
+  requestId: string;
+  address: string;
+  disasterType: string;
+  rescueRequestStatus: string;
+  reporterFullName: string;
+  reporterPhone: string;
+  createdAt: string;
+  updatedAt: string;
+  sequenceOrder: number;
+  batchItemStatus: string;
+}
+
+export interface RescueTeamHistoryBatch {
+  rescueBatchId: string;
+  createdAt: string;
+  closedAt: string | null;
+  totalRequests: number;
+  completedRequests: number;
+  requests: RescueTeamHistoryRequestItem[];
+}
+
+export interface RescueTeamHistoryResponse {
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  data: RescueTeamHistoryBatch[];
+}
+
 const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY ?? '';
 
 export const rescueTeamService = {
@@ -54,6 +83,15 @@ export const rescueTeamService = {
         message: 'Lấy nhiệm vụ team thành công',
       };
     } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return {
+          success: true,
+          data: null,
+          status: 404,
+          message: 'Hiện tại team chưa có nhiệm vụ hoạt động.',
+        };
+      }
+
       return {
         success: false,
         data: null,
@@ -76,6 +114,40 @@ export const rescueTeamService = {
         (item) => item.status !== 'Done' && item.status !== 'Cancelled',
       ) || null
     );
+  },
+
+  getHistoryByTeam: async (teamId: string) => {
+    try {
+      const response = await api.get<RescueTeamHistoryResponse>(
+        `/RescueRequest/teams/${teamId}/history`,
+      );
+
+      return {
+        success: response.status === 200,
+        data: response.data,
+        message: 'Lấy lịch sử nhiệm vụ team thành công',
+      };
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return {
+          success: true,
+          data: null,
+          status: 404,
+          message: 'Chưa có lịch sử nhiệm vụ cho team.',
+        };
+      }
+
+      return {
+        success: false,
+        data: null,
+        status: error?.response?.status,
+        message:
+          error?.response?.data?.message ||
+          error?.response?.data?.detail ||
+          error?.message ||
+          'Không tải được lịch sử nhiệm vụ.',
+      };
+    }
   },
 
   getFilteredItems: (

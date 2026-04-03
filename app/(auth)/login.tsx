@@ -69,7 +69,7 @@ export default function LoginScreen() {
         Alert.alert('Thành công', result.message || 'Đăng nhập thành công', [
           {
             text: 'OK',
-            onPress: () => router.replace('/'),
+            onPress: () => router.replace('/(tabs)'),
           },
         ]);
       } else {
