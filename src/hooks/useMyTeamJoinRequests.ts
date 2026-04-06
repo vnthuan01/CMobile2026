@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { teamJoinRequestService } from '../services/teamJoinRequestService';
 import type { CreateTeamJoinRequestPayload } from '../types/joinRequest';
+import { showApiErrorToast, showApiResultToast } from '../utils/apiToast';
 
 export const teamJoinRequestKeys = {
   all: ['teamJoinRequests'] as const,
@@ -31,6 +32,19 @@ export function useCreateTeamJoinRequest() {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: teamJoinRequestKeys.all });
       }
+
+      showApiResultToast(result, {
+        successTitle: 'Gửi yêu cầu thành công',
+        successMessage: 'Yêu cầu tham gia đội đã được gửi.',
+        errorTitle: 'Không thể gửi yêu cầu',
+        errorMessage: 'Không thể gửi yêu cầu tham gia đội.',
+      });
+    },
+    onError: (error) => {
+      showApiErrorToast(error, {
+        errorTitle: 'Không thể gửi yêu cầu',
+        errorMessage: 'Không thể gửi yêu cầu tham gia đội.',
+      });
     },
   });
 }
@@ -44,6 +58,19 @@ export function useCancelTeamJoinRequest() {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: teamJoinRequestKeys.all });
       }
+
+      showApiResultToast(result, {
+        successTitle: 'Huỷ yêu cầu thành công',
+        successMessage: 'Đã huỷ yêu cầu tham gia đội.',
+        errorTitle: 'Không thể huỷ yêu cầu',
+        errorMessage: 'Không thể huỷ yêu cầu tham gia đội.',
+      });
+    },
+    onError: (error) => {
+      showApiErrorToast(error, {
+        errorTitle: 'Không thể huỷ yêu cầu',
+        errorMessage: 'Không thể huỷ yêu cầu tham gia đội.',
+      });
     },
   });
 }

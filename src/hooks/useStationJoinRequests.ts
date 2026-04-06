@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { stationJoinRequestService } from '../services/stationJoinRequestService';
 import type { CreateStationJoinRequestPayload } from '../types/joinRequest';
+import { showApiErrorToast, showApiResultToast } from '../utils/apiToast';
 
 export const stationJoinRequestKeys = {
   all: ['stationJoinRequests'] as const,
@@ -32,6 +33,19 @@ export function useCreateStationJoinRequest() {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: stationJoinRequestKeys.all });
       }
+
+      showApiResultToast(result, {
+        successTitle: 'Gửi yêu cầu thành công',
+        successMessage: 'Yêu cầu tham gia trạm đã được gửi.',
+        errorTitle: 'Không thể gửi yêu cầu',
+        errorMessage: 'Không thể gửi yêu cầu tham gia trạm.',
+      });
+    },
+    onError: (error) => {
+      showApiErrorToast(error, {
+        errorTitle: 'Không thể gửi yêu cầu',
+        errorMessage: 'Không thể gửi yêu cầu tham gia trạm.',
+      });
     },
   });
 }
@@ -46,6 +60,19 @@ export function useCancelStationJoinRequest() {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: stationJoinRequestKeys.all });
       }
+
+      showApiResultToast(result, {
+        successTitle: 'Huỷ yêu cầu thành công',
+        successMessage: 'Đã huỷ yêu cầu tham gia trạm.',
+        errorTitle: 'Không thể huỷ yêu cầu',
+        errorMessage: 'Không thể huỷ yêu cầu tham gia trạm.',
+      });
+    },
+    onError: (error) => {
+      showApiErrorToast(error, {
+        errorTitle: 'Không thể huỷ yêu cầu',
+        errorMessage: 'Không thể huỷ yêu cầu tham gia trạm.',
+      });
     },
   });
 }
