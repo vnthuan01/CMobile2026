@@ -66,7 +66,7 @@ export default function UpdateProfileCitizenScreen({
                 )}
                 {opts?.verified && (
                     <View className="absolute right-3 top-1/2" style={{ transform: [{ translateY: -10 }] }}>
-                        <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+                        <Ionicons name="checkmark-circle" size={20} color={colors.status.completed} />
                     </View>
                 )}
             </View>
@@ -88,20 +88,20 @@ export default function UpdateProfileCitizenScreen({
                         <View
                             className="h-32 w-32 rounded-full items-center justify-center border-4 shadow-lg overflow-hidden"
                             style={{
-                                backgroundColor: isDark ? '#374151' : '#e5e7eb',
-                                borderColor: isDark ? '#1f2937' : '#fff',
+                                backgroundColor: colors.surface,
+                                borderColor: colors.card,
                             }}
                         >
-                            <Ionicons name="person" size={56} color="#9ca3af" />
+                            <Ionicons name="person" size={56} color={colors.textSecondary} />
                         </View>
                         <TouchableOpacity
                             className="absolute bottom-1 right-1 p-2 rounded-full shadow-md border-2"
                             style={{
                                 backgroundColor: colors.primary,
-                                borderColor: isDark ? '#1f2937' : '#fff',
+                                borderColor: colors.card,
                             }}
                         >
-                            <Ionicons name="camera" size={16} color="#fff" />
+                            <Ionicons name="camera" size={16} color={colors.white} />
                         </TouchableOpacity>
                     </View>
                     <View className="mt-4 items-center">
@@ -140,7 +140,7 @@ export default function UpdateProfileCitizenScreen({
                     <TouchableOpacity
                         onPress={onBack}
                         className="w-full items-center justify-center h-12 rounded-xl"
-                        style={{ backgroundColor: isDark ? '#1f2937' : '#f1f5f9' }}
+                        style={{ backgroundColor: colors.surface }}
                     >
                         <Text className="font-semibold text-base" style={{ color: colors.textSecondary }}>
                             Hủy bỏ

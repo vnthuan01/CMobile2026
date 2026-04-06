@@ -1,11 +1,12 @@
 import '@/global.css';
+import AppDialog from '@/src/components/common/AppDialog';
 import { authService } from '@/src/services/authService';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,10 +15,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
+import { useTheme } from '@/src/context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{
     email?: string;
     resetToken?: string;
@@ -31,41 +34,27 @@ export default function ResetPasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Đặt lại mật khẩu thành công.');
 
   const handleSubmit = async () => {
     if (!email || !resetToken) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Thiếu thông tin reset token. Vui lòng thử lại từ đầu.',
-      });
+      showErrorToast('Thiếu thông tin', 'Thiếu thông tin reset token. Vui lòng thử lại từ đầu.');
       return;
     }
 
     if (!newPassword.trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Vui lòng nhập mật khẩu mới.',
-      });
+      showErrorToast('Thiếu mật khẩu', 'Vui lòng nhập mật khẩu mới.');
       return;
     }
 
     if (newPassword.length < 6) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu mới phải từ 6 ký tự trở lên.',
-      });
+      showErrorToast('Mật khẩu chưa hợp lệ', 'Mật khẩu mới phải từ 6 ký tự trở lên.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu xác nhận không khớp.',
-      });
+      showErrorToast('Mật khẩu không khớp', 'Mật khẩu xác nhận không khớp.');
       return;
     }
 
@@ -78,45 +67,48 @@ export default function ResetPasswordScreen() {
       });
 
       if (!result.success) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: result.message || 'Không thể đặt lại mật khẩu.',
-        });
+        showErrorToast('Không thể đặt lại mật khẩu', result.message || 'Không thể đặt lại mật khẩu.');
         return;
       }
 
-      Alert.alert(
-        'Thành công',
-        result.message || 'Đặt lại mật khẩu thành công.',
-        [{ text: 'Đăng nhập', onPress: () => router.replace('/login') }],
-      );
+      const message = result.message || 'Đặt lại mật khẩu thành công.';
+      setSuccessMessage(message);
+      showSuccessToast('Đặt lại mật khẩu thành công', message);
+      setSuccessVisible(true);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background-light"
-    >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="w-full max-w-[420px] flex-1 self-center bg-white px-4">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View className="w-full max-w-[420px] flex-1 self-center px-4" style={{ backgroundColor: colors.background }}>
           <View className="flex-row items-center justify-between py-4">
             <TouchableOpacity
               className="h-12 w-12 items-center justify-center rounded-full"
               onPress={() => router.back()}
             >
-              <Ionicons name="chevron-back" size={24} color="#0f172a" />
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
 
-            <Text className="flex-1 pr-12 text-center text-lg font-bold text-text-primary">
+            <Text
+              className="flex-1 pr-12 text-center text-lg font-bold"
+              style={{ color: colors.text }}
+            >
               Đặt lại mật khẩu
             </Text>
           </View>
 
-          <Text className="mb-2 text-sm font-semibold text-text-primary">
+          <Text
+            className="mb-2 text-sm font-semibold"
+            style={{ color: colors.text }}
+          >
             Mật khẩu mới
           </Text>
           <TextInput
@@ -124,10 +116,15 @@ export default function ResetPasswordScreen() {
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="Nhập mật khẩu mới"
-            className="mb-4 h-12 rounded-lg border border-surface-dark bg-background-light px-4 text-base text-text-primary"
+            className="mb-4 h-12 rounded-lg px-4 text-base"
+            style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
+            placeholderTextColor={colors.textSecondary}
           />
 
-          <Text className="mb-2 text-sm font-semibold text-text-primary">
+          <Text
+            className="mb-2 text-sm font-semibold"
+            style={{ color: colors.text }}
+          >
             Xác nhận mật khẩu mới
           </Text>
           <TextInput
@@ -135,7 +132,9 @@ export default function ResetPasswordScreen() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="Nhập lại mật khẩu mới"
-            className="mb-6 h-12 rounded-lg border border-surface-dark bg-background-light px-4 text-base text-text-primary"
+            className="mb-6 h-12 rounded-lg px-4 text-base"
+            style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
+            placeholderTextColor={colors.textSecondary}
           />
 
           <TouchableOpacity
@@ -146,7 +145,7 @@ export default function ResetPasswordScreen() {
             }`}
           >
             {submitting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.white} />
             ) : (
               <Text className="text-base font-bold text-white">
                 Xác nhận mật khẩu mới
@@ -154,7 +153,21 @@ export default function ResetPasswordScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <AppDialog
+        visible={successVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        cancelLabel="Ở lại"
+        confirmLabel="Đăng nhập"
+        onCancel={() => setSuccessVisible(false)}
+        onConfirm={() => {
+          setSuccessVisible(false);
+          router.replace('/login');
+        }}
+      />
+    </SafeAreaView>
   );
 }

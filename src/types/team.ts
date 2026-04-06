@@ -65,6 +65,8 @@ export interface TeamTrackingHeartbeatResponse {
   note: string | null;
 }
 
+export type TeamTrackingPointResponse = TeamTrackingHeartbeatResponse;
+
 // ── Rescue team / batch ───────────────────────────────────────────────────────
 
 export interface RescueBatchItem {

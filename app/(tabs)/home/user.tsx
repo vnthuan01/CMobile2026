@@ -1,9 +1,10 @@
 import '@/global.css';
-import ViewRequestRescueScreen from '@/src/components/user/ViewRequestRescueScreen';
+import ViewRequestRescueScreen from '@/src/features/rescue/screens/ViewRequestRescueScreen';
 import {
   fetchMyRescueRequests,
   MyRescueRequestItem,
 } from '@/src/services/rescueService';
+import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -29,6 +30,7 @@ const FILTERS: Array<{ label: string; value: RequestFilter }> = [
 export default function CitizenHome() {
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [currentScreen, setCurrentScreen] = useState<UserScreen>('home');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
     null,
@@ -97,40 +99,40 @@ export default function CitizenHome() {
       case 'Pending':
         return {
           label: 'Chờ xác minh',
-          bg: 'bg-amber-100',
-          text: 'text-amber-700',
+          bgColor: `${colors.status.pending}22`,
+          textColor: colors.status.pending,
         };
       case 'Verified':
         return {
           label: 'Đã xác minh',
-          bg: 'bg-blue-100',
-          text: 'text-blue-700',
+          bgColor: `${colors.status.incoming}22`,
+          textColor: colors.status.incoming,
         };
       case 'Assigned':
         return {
           label: 'Đã điều phối đội',
-          bg: 'bg-violet-100',
-          text: 'text-violet-700',
+          bgColor: `${colors.status.inProgress}22`,
+          textColor: colors.status.inProgress,
         };
       case 'InProgress':
         return {
           label: 'Đội đang tiếp cận / xử lý',
-          bg: 'bg-green-100',
-          text: 'text-green-700',
+          bgColor: `${colors.status.completed}22`,
+          textColor: colors.status.completed,
         };
       case 'Completed':
         return {
           label: 'Hoàn thành',
-          bg: 'bg-green-100',
-          text: 'text-green-700',
+          bgColor: `${colors.status.completed}22`,
+          textColor: colors.status.completed,
         };
       case 'Cancelled':
-        return { label: 'Đã hủy', bg: 'bg-red-100', text: 'text-red-700' };
+        return { label: 'Đã hủy', bgColor: `${colors.status.cancelled}22`, textColor: colors.status.cancelled };
       default:
         return {
           label: status || 'Khác',
-          bg: 'bg-gray-100',
-          text: 'text-gray-700',
+          bgColor: colors.surface,
+          textColor: colors.textSecondary,
         };
     }
   };
@@ -154,12 +156,11 @@ export default function CitizenHome() {
 
   return (
     <ScrollView
-      style={{ paddingTop: top, paddingBottom: bottom + 96 }}
-      className="bg-background-light"
+      style={{ paddingTop: top, paddingBottom: bottom + 96, backgroundColor: colors.background }}
     >
-      <View className="bg-white px-4 py-4 shadow-sm">
-        <Text className="text-xl font-bold">Theo dõi yêu cầu</Text>
-        <Text className="mt-1 text-sm text-text-secondary">
+      <View className="px-4 py-4 shadow-sm" style={{ backgroundColor: colors.card }}>
+        <Text className="text-xl font-bold" style={{ color: colors.text }}>Theo dõi yêu cầu</Text>
+        <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
           Danh sách yêu cầu cứu trợ của bạn
         </Text>
       </View>
@@ -176,10 +177,12 @@ export default function CitizenHome() {
               <TouchableOpacity
                 key={f.value}
                 onPress={() => setFilter(f.value)}
-                className={`rounded-full px-4 py-2 ${active ? 'bg-primary' : 'bg-white'}`}
+                className="rounded-full px-4 py-2"
+                style={{ backgroundColor: active ? colors.primary : colors.card }}
               >
                 <Text
-                  className={`font-semibold ${active ? 'text-white' : 'text-text-primary'}`}
+                  className="font-semibold"
+                  style={{ color: active ? colors.white : colors.text }}
                 >
                   {f.label}
                 </Text>
@@ -191,8 +194,8 @@ export default function CitizenHome() {
 
       {loading ? (
         <View className="mt-10 items-center justify-center">
-          <ActivityIndicator color="#DA251D" />
-          <Text className="mt-3 text-sm text-text-secondary">
+          <ActivityIndicator color={colors.primary} />
+          <Text className="mt-3 text-sm" style={{ color: colors.textSecondary }}>
             Đang tải yêu cầu của bạn...
           </Text>
         </View>
@@ -200,16 +203,17 @@ export default function CitizenHome() {
         <>
           {activeRequest ? (
             <View className="mt-4 px-4">
-              <Text className="mb-3 text-base font-bold">Đang hoạt động</Text>
+              <Text className="mb-3 text-base font-bold" style={{ color: colors.text }}>Đang hoạt động</Text>
               <TouchableOpacity
                 onPress={() => {
                   setSelectedRequestId(activeRequest.requestId);
                   setCurrentScreen('track');
                 }}
-                className="overflow-hidden rounded-xl bg-white shadow-sm"
+                className="overflow-hidden rounded-xl shadow-sm"
+                style={{ backgroundColor: colors.card }}
               >
-                <View className="h-32 items-center justify-center bg-gray-200">
-                  <Ionicons name="map" size={40} color="#6b7280" />
+                <View className="h-32 items-center justify-center" style={{ backgroundColor: colors.surface }}>
+                  <Ionicons name="map" size={40} color={colors.textSecondary} />
                 </View>
 
                 <View className="p-4">
@@ -217,10 +221,12 @@ export default function CitizenHome() {
                     <View className="flex-1">
                       <View className="mb-2 flex-row items-center gap-2">
                         <View
-                          className={`rounded-full px-2 py-0.5 ${getStatusUi(activeRequest.rescueRequestStatus).bg}`}
+                          className="rounded-full px-2 py-0.5"
+                          style={{ backgroundColor: getStatusUi(activeRequest.rescueRequestStatus).bgColor }}
                         >
                           <Text
-                            className={`text-xs font-bold ${getStatusUi(activeRequest.rescueRequestStatus).text}`}
+                            className="text-xs font-bold"
+                            style={{ color: getStatusUi(activeRequest.rescueRequestStatus).textColor }}
                           >
                             {
                               getStatusUi(activeRequest.rescueRequestStatus)
@@ -228,17 +234,18 @@ export default function CitizenHome() {
                             }
                           </Text>
                         </View>
-                        <View className="rounded-full bg-amber-100 px-2 py-0.5">
-                          <Text className="text-xs font-bold text-amber-700">
+                        <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${colors.status.pending}22` }}>
+                          <Text className="text-xs font-bold" style={{ color: colors.status.pending }}>
                             {getTypeLabel(activeRequest.rescueRequestType)}
                           </Text>
                         </View>
                       </View>
-                      <Text className="text-lg font-bold">
+                      <Text className="text-lg font-bold" style={{ color: colors.text }}>
                         Yêu cầu #{activeRequest.requestId.slice(0, 8)}
                       </Text>
                       <Text
-                        className="mt-1 text-sm text-text-secondary"
+                        className="mt-1 text-sm"
+                        style={{ color: colors.textSecondary }}
                         numberOfLines={2}
                       >
                         {activeRequest.description || activeRequest.address}
@@ -247,7 +254,7 @@ export default function CitizenHome() {
                     <Ionicons
                       name="chevron-forward"
                       size={24}
-                      color="#6b7280"
+                      color={colors.textSecondary}
                     />
                   </View>
 
@@ -255,9 +262,9 @@ export default function CitizenHome() {
                     'EnRoute' ||
                     activeRequest.rescueRequestStatus === 'InProgress') &&
                   activeRequest.assignedRescueTeam ? (
-                    <View className="mt-3 flex-row items-center gap-2 rounded-lg bg-blue-50 p-3">
-                      <Ionicons name="car" size={20} color="#DA251D" />
-                      <Text className="flex-1 text-sm font-medium text-primary">
+                    <View className="mt-3 flex-row items-center gap-2 rounded-lg p-3" style={{ backgroundColor: `${colors.status.incoming}18` }}>
+                      <Ionicons name="car" size={20} color={colors.status.incoming} />
+                      <Text className="flex-1 text-sm font-medium" style={{ color: colors.status.incoming }}>
                         {activeRequest.assignedRescueTeam.teamName} đang đến -
                         Dự kiến{' '}
                         {activeRequest.assignedRescueTeam
@@ -272,14 +279,14 @@ export default function CitizenHome() {
           ) : null}
 
           <View className="mt-6 px-4">
-            <Text className="mb-3 text-base font-bold">
+            <Text className="mb-3 text-base font-bold" style={{ color: colors.text }}>
               {filter === 'all' ? 'Tất cả yêu cầu' : 'Danh sách yêu cầu'}
             </Text>
 
             <View className="gap-3">
               {filteredRequests.length === 0 ? (
-                <View className="rounded-xl bg-white p-4 shadow-sm">
-                  <Text className="text-sm text-text-secondary">
+                <View className="rounded-xl p-4 shadow-sm" style={{ backgroundColor: colors.card }}>
+                  <Text className="text-sm" style={{ color: colors.textSecondary }}>
                     Chưa có yêu cầu nào trong mục này.
                   </Text>
                 </View>
@@ -293,15 +300,18 @@ export default function CitizenHome() {
                         setSelectedRequestId(item.requestId);
                         setCurrentScreen('track');
                       }}
-                      className="flex-row items-center justify-between rounded-xl bg-white p-4 shadow-sm"
+                      className="flex-row items-center justify-between rounded-xl p-4 shadow-sm"
+                      style={{ backgroundColor: colors.card }}
                     >
                       <View className="flex-1">
                         <View className="mb-1 flex-row items-center gap-2">
                           <View
-                            className={`rounded-full px-2 py-0.5 ${statusUi.bg}`}
+                            className="rounded-full px-2 py-0.5"
+                            style={{ backgroundColor: statusUi.bgColor }}
                           >
                             <Text
-                              className={`text-xs font-bold ${statusUi.text}`}
+                              className="text-xs font-bold"
+                              style={{ color: statusUi.textColor }}
                             >
                               {statusUi.label}
                             </Text>
@@ -318,11 +328,11 @@ export default function CitizenHome() {
                           {item.address || item.description}
                         </Text>
                       </View>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={20}
-                        color="#6b7280"
-                      />
+                        <Ionicons
+                         name="chevron-forward"
+                         size={20}
+                         color={colors.textSecondary}
+                       />
                     </TouchableOpacity>
                   );
                 })
@@ -332,7 +342,7 @@ export default function CitizenHome() {
 
           {historyRequests.length > 0 ? (
             <View className="mt-6 px-4">
-              <Text className="mb-3 text-base font-bold">Lịch sử</Text>
+              <Text className="mb-3 text-base font-bold" style={{ color: colors.text }}>Lịch sử</Text>
               <View className="gap-3">
                 {historyRequests.slice(0, 3).map((item) => {
                   const statusUi = getStatusUi(item.rescueRequestStatus);
@@ -343,24 +353,27 @@ export default function CitizenHome() {
                         setSelectedRequestId(item.requestId);
                         setCurrentScreen('track');
                       }}
-                      className="flex-row items-center justify-between rounded-xl bg-white p-4 shadow-sm"
+                      className="flex-row items-center justify-between rounded-xl p-4 shadow-sm"
+                      style={{ backgroundColor: colors.card }}
                     >
                       <View className="flex-1">
                         <View className="mb-1 flex-row items-center gap-2">
                           <View
-                            className={`rounded-full px-2 py-0.5 ${statusUi.bg}`}
+                            className="rounded-full px-2 py-0.5"
+                            style={{ backgroundColor: statusUi.bgColor }}
                           >
                             <Text
-                              className={`text-xs font-bold ${statusUi.text}`}
+                              className="text-xs font-bold"
+                              style={{ color: statusUi.textColor }}
                             >
                               {statusUi.label}
                             </Text>
                           </View>
                         </View>
-                        <Text className="font-bold">
+                        <Text className="font-bold" style={{ color: colors.text }}>
                           #{item.requestId.slice(0, 8)}
                         </Text>
-                        <Text className="mt-0.5 text-sm text-text-secondary">
+                        <Text className="mt-0.5 text-sm" style={{ color: colors.textSecondary }}>
                           {getTypeLabel(item.rescueRequestType)} •{' '}
                           {new Date(item.createdAt).toLocaleDateString('vi-VN')}
                         </Text>
@@ -368,7 +381,7 @@ export default function CitizenHome() {
                       <Ionicons
                         name="chevron-forward"
                         size={20}
-                        color="#6b7280"
+                        color={colors.textSecondary}
                       />
                     </TouchableOpacity>
                   );
@@ -380,22 +393,26 @@ export default function CitizenHome() {
       )}
 
       <View className="mt-8 px-4">
-        <TouchableOpacity className="h-16 flex-row items-center justify-center gap-3 rounded-xl bg-red-600">
-          <Ionicons name="warning" size={26} color="#fff" />
-          <Text className="text-xl font-black text-white">SOS – KHẨN CẤP</Text>
+        <TouchableOpacity
+          className="h-16 flex-row items-center justify-center gap-3 rounded-xl"
+          style={{ backgroundColor: colors.status.error }}
+        >
+          <Ionicons name="warning" size={26} color={colors.white} />
+          <Text className="text-xl font-black" style={{ color: colors.white }}>SOS – KHẨN CẤP</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => router.push('/donate')}
-          className="mt-4 h-16 flex-row items-center justify-center gap-3 rounded-xl border border-primary bg-white"
+          className="mt-4 h-16 flex-row items-center justify-center gap-3 rounded-xl border"
+          style={{ borderColor: colors.primary, backgroundColor: colors.card }}
         >
-          <Ionicons name="heart" size={26} color="#DA251D" />
-          <Text className="text-xl font-black text-primary">
+          <Ionicons name="heart" size={26} color={colors.primary} />
+          <Text className="text-xl font-black" style={{ color: colors.primary }}>
             ỦNG HỘ CỨU TRỢ
           </Text>
         </TouchableOpacity>
 
-        <Text className="mt-2 text-center text-xs text-gray-400">
+        <Text className="mt-2 text-center text-xs" style={{ color: colors.textSecondary }}>
           Nhấn để gửi tín hiệu khẩn cấp hoặc đóng góp cứu trợ
         </Text>
       </View>

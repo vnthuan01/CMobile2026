@@ -16,40 +16,40 @@ interface ProgressForRescueScreenProps {
     onMarkSOS?: () => void;
 }
 
-const STATUSES: {
+const getStatuses = (colors: ReturnType<typeof useTheme>['colors']): {
     id: RescueStatusType;
     icon: string;
     title: string;
     subtitle: string;
     color: string;
-}[] = [
+}[] => [
         {
             id: 'moving',
             icon: 'boat',
             title: 'Đang di chuyển',
             subtitle: 'Đang tiếp cận vị trí người cần cứu',
-            color: '#1565C0',
+            color: colors.status.incoming,
         },
         {
             id: 'in_progress',
             icon: 'play-circle',
             title: 'Đang tiến hành',
             subtitle: 'Đã tiếp cận và đang thực hiện cứu hộ',
-            color: '#1565C0',
+            color: colors.secondary,
         },
         {
             id: 'success',
             icon: 'shield-checkmark',
             title: 'Đã cứu hộ thành công',
             subtitle: 'Đã đưa người đến nơi an toàn',
-            color: '#16a34a',
+            color: colors.status.completed,
         },
         {
             id: 'failed',
             icon: 'alert-circle',
             title: 'Bị gián đoạn/Thất bại',
             subtitle: 'Dòng chảy xiết, không thể tiếp cận, cần hỗ trợ thêm...',
-            color: '#dc2626',
+            color: colors.status.error,
         },
     ];
 
@@ -59,6 +59,7 @@ export default function ProgressForRescueScreen({
 }: ProgressForRescueScreenProps) {
     const { bottom } = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
+    const STATUSES = getStatuses(colors);
     const [selectedStatus, setSelectedStatus] = useState<RescueStatusType>('in_progress');
     const [notes, setNotes] = useState('');
     const [images, setImages] = useState<string[]>([]);
@@ -69,9 +70,8 @@ export default function ProgressForRescueScreen({
             <ScreenHeader
                 title="Cập nhật tiến độ"
                 onBack={onBack}
-                backgroundColor={colors.primary}
-                titleColor="#fff"
-                iconColor="#fff"
+                backgroundColor={isDark ? colors.card : colors.primary}
+                titleColor={isDark ? colors.text : colors.white}
             />
 
             <ScrollView
@@ -87,8 +87,8 @@ export default function ProgressForRescueScreen({
                     >
                         <View className="flex-[2] flex-col justify-center gap-1">
                             <View className="mb-1 flex-row items-center gap-2">
-                                <View className="rounded bg-blue-100 px-2 py-0.5">
-                                    <Text className="text-xs font-bold text-blue-800">
+                                <View className="rounded px-2 py-0.5" style={{ backgroundColor: `${colors.status.incoming}18` }}>
+                                    <Text className="text-xs font-bold" style={{ color: colors.status.incoming }}>
                                         CỨU HỘ KHẨN CẤP
                                     </Text>
                                 </View>
@@ -108,17 +108,17 @@ export default function ProgressForRescueScreen({
                         </View>
                         <View
                             className="h-24 w-24 flex-none items-center justify-center rounded-lg border"
-                            style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderColor: colors.border }}
+                            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
                         >
-                            <Ionicons name="map" size={40} color="#6b7280" />
+                            <Ionicons name="map" size={40} color={colors.textSecondary} />
                         </View>
                     </View>
                 </View>
 
                 {/* Tab Selector */}
                 <View className="px-4">
-                    <View className="flex-row gap-1 rounded-lg p-1" style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}>
-                        <View className="flex-1 items-center rounded-md py-2 px-3" style={{ backgroundColor: isDark ? '#4b5563' : '#e5e7eb' }}>
+                    <View className="flex-row gap-1 rounded-lg p-1" style={{ backgroundColor: colors.surface }}>
+                        <View className="flex-1 items-center rounded-md py-2 px-3" style={{ backgroundColor: colors.background }}>
                             <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
                                 Cứu trợ (Relief)
                             </Text>
@@ -162,8 +162,8 @@ export default function ProgressForRescueScreen({
                     <View
                         className="rounded-xl border p-4 shadow-sm"
                         style={{
-                            backgroundColor: isDark ? 'rgba(220,38,38,0.1)' : '#fef2f2',
-                            borderColor: isDark ? 'rgba(220,38,38,0.3)' : '#fecaca',
+                            backgroundColor: `${colors.status.error}12`,
+                            borderColor: `${colors.status.error}33`,
                         }}
                     >
                         <View className="flex-row items-start gap-3">
@@ -171,8 +171,8 @@ export default function ProgressForRescueScreen({
                                 <View
                                     className="h-10 w-10 items-center justify-center rounded-full border shadow-sm"
                                     style={{
-                                        backgroundColor: isDark ? 'rgba(220,38,38,0.2)' : '#fff',
-                                        borderColor: isDark ? 'rgba(220,38,38,0.3)' : '#fecaca',
+                                        backgroundColor: `${colors.status.error}18`,
+                                        borderColor: `${colors.status.error}33`,
                                     }}
                                 >
                                     <Ionicons name="location" size={22} color={colors.primary} />
@@ -191,7 +191,7 @@ export default function ProgressForRescueScreen({
                                     className="flex-row items-center justify-center gap-2 rounded-lg px-4 py-2.5 shadow-md"
                                     style={{ backgroundColor: colors.primary }}
                                 >
-                                    <Ionicons name="warning" size={18} color="#fff" />
+                                    <Ionicons name="warning" size={18} color={colors.white} />
                                     <Text className="text-sm font-bold uppercase tracking-wide text-white">
                                         Đánh dấu SOS mới
                                     </Text>

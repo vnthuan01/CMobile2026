@@ -55,7 +55,7 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
                     ) : (
                         <View
                             className="h-5 w-5 rounded-full border-2"
-                            style={{ borderColor: '#d1d5db' }}
+                            style={{ borderColor: colors.border }}
                         />
                     )}
                 </View>
@@ -74,7 +74,7 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
                             {task.title}
                         </Text>
                         {!isDone && (
-                            <Ionicons name="ellipsis-horizontal" size={20} color="#9ca3af" />
+                            <Ionicons name="ellipsis-horizontal" size={20} color={colors.icon} />
                         )}
                     </View>
 
@@ -94,13 +94,13 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
                                     <View
                                         className="h-7 w-7 items-center justify-center rounded-full border-2"
                                         style={{
-                                            backgroundColor: isDark ? '#374151' : '#e5e7eb',
+                                            backgroundColor: colors.surface,
                                             borderColor: colors.card,
                                         }}
                                     >
-                                        <Ionicons name="person-add" size={12} color="#9ca3af" />
+                                        <Ionicons name="person-add" size={12} color={colors.icon} />
                                     </View>
-                                    <Text className="ml-2 text-xs italic" style={{ color: '#9ca3af' }}>
+                                    <Text className="ml-2 text-xs italic" style={{ color: colors.icon }}>
                                         Chưa giao
                                     </Text>
                                 </>
@@ -108,9 +108,9 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
                                 <>
                                     <View
                                         className="h-7 w-7 items-center justify-center rounded-full"
-                                        style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                                        style={{ backgroundColor: colors.surface }}
                                     >
-                                        <Ionicons name="person" size={14} color="#6b7280" />
+                                        <Ionicons name="person" size={14} color={colors.icon} />
                                     </View>
                                     {task.assignee && (
                                         <Text className="ml-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
@@ -121,7 +121,7 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
                                         <View
                                             className="ml-[-6px] h-7 w-7 items-center justify-center rounded-full border-2"
                                             style={{
-                                                backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                                                backgroundColor: colors.surface,
                                                 borderColor: colors.card,
                                             }}
                                         >

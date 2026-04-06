@@ -3,11 +3,9 @@ import {
   RescueActiveBatchResponse,
   RescueBatchItem,
 } from '@/src/services/rescueTeamService';
-import Mapbox from '@rnmapbox/maps';
-import { useEffect, useRef } from 'react';
-import { View } from 'react-native';
-
-Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '');
+import { useTheme } from '@/src/context/ThemeContext';
+import { useEffect, useMemo, useRef } from 'react';
+import { Text, View } from 'react-native';
 
 interface TeamTasksMapNativeProps {
   batch: RescueActiveBatchResponse | null;
@@ -26,7 +24,39 @@ export default function TeamTasksMapNative({
   mapStyle,
   onSelectMission,
 }: TeamTasksMapNativeProps) {
+  const { colors } = useTheme();
   const cameraRef = useRef<any>(null);
+
+  const Mapbox = useMemo(() => {
+    try {
+      // Avoid crashing in Expo Go / web where native code isn't available.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const module = require('@rnmapbox/maps')
+      module.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '')
+      return module
+    } catch {
+      return null
+    }
+  }, [])
+
+  if (!Mapbox?.MapView) {
+    return (
+      <View
+        className="flex-1 items-center justify-center px-4"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Text className="text-center text-base" style={{ color: colors.text }}>
+          Bản đồ chưa khả dụng trong môi trường hiện tại.
+        </Text>
+        <Text
+          className="mt-2 text-center text-sm"
+          style={{ color: colors.textSecondary }}
+        >
+          Hãy chạy bằng Dev Build / build native để dùng Mapbox.
+        </Text>
+      </View>
+    )
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -100,13 +130,13 @@ export default function TeamTasksMapNative({
                 width: isSelected ? 26 : isCurrent ? 24 : 18,
                 height: isSelected ? 26 : isCurrent ? 24 : 18,
                 borderRadius: 14,
-                backgroundColor: emergency ? '#DC2626' : '#1565C0',
+                backgroundColor: emergency ? colors.error : colors.info,
                 borderWidth: isSelected ? 4 : 3,
                 borderColor: isSelected
-                  ? '#FACC15'
+                  ? colors.warning
                   : isCurrent
-                    ? '#22C55E'
-                    : '#FFFFFF',
+                    ? colors.success
+                    : colors.white,
               }}
             />
           </Mapbox.PointAnnotation>
@@ -128,7 +158,7 @@ export default function TeamTasksMapNative({
           <Mapbox.LineLayer
             id="lineLayer"
             style={{
-              lineColor: '#2E64FE',
+              lineColor: colors.info,
               lineWidth: 6,
               lineCap: 'round',
               lineJoin: 'round',

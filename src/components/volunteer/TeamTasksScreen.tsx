@@ -25,10 +25,10 @@ import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import TeamTasksMap from './TeamTasksMap';
+import WebViewMap from '@/src/components/common/WebViewMap';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   Text,
@@ -36,6 +36,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from '@/src/utils/toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TasksScreenType = 'list' | 'map';
@@ -352,7 +357,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           capturedAtUtc: new Date().toISOString(),
           rescueBatchId: batch.rescueBatchId,
           rescueOperationId: null,
-          note: 'tracking from mobile',
+          note: 'Cập nhật vị trí từ ứng dụng di động',
         };
 
         const heartbeat = await teamService.sendTrackingHeartbeat(
@@ -501,7 +506,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     return { total, emergencyCount };
   }, [displayBatch?.items]);
 
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const mapStyle = rescueTeamService.getMapStyleUrl();
 
   const getMissionDisplayStatus = useCallback(
     (item?: RescueBatchItem | null) => {
@@ -514,41 +519,41 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const statusBadge = (status?: string) => {
     const normalized = String(status ?? '').toLowerCase();
     if (normalized === 'inprogress') {
-      return { bg: '#DBEAFE', text: '#1D4ED8', label: 'Đang làm' };
+      return { bg: `${colors.status.inProgress}22`, text: colors.status.inProgress, label: 'Đang làm' };
     }
     if (normalized === 'pending') {
-      return { bg: '#FEF3C7', text: '#92400E', label: 'Chờ xử lý' };
+      return { bg: `${colors.status.pending}22`, text: colors.status.pending, label: 'Chờ xử lý' };
     }
     if (normalized === 'done') {
-      return { bg: '#DCFCE7', text: '#166534', label: 'Đã xong' };
+      return { bg: `${colors.status.completed}22`, text: colors.status.completed, label: 'Đã xong' };
     }
     if (normalized === 'enroute') {
-      return { bg: '#DBEAFE', text: '#1D4ED8', label: 'Đang di chuyển' };
+      return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Đang di chuyển' };
     }
     if (normalized === 'rescuing') {
-      return { bg: '#CCFBF1', text: '#0F766E', label: 'Đang cứu hộ' };
+      return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Đang cứu hộ' };
     }
     if (normalized === 'returning') {
-      return { bg: '#FFEDD5', text: '#C2410C', label: 'Rời hiện trường' };
+      return { bg: `${colors.status.pending}22`, text: colors.status.pending, label: 'Rời hiện trường' };
     }
     if (normalized === 'rescuecompleted') {
-      return { bg: '#DCFCE7', text: '#166534', label: 'Hoàn thành cứu hộ' };
+      return { bg: `${colors.status.completed}22`, text: colors.status.completed, label: 'Hoàn thành cứu hộ' };
     }
     if (normalized === 'closed') {
-      return { bg: '#E2E8F0', text: '#334155', label: 'Đã đóng' };
+      return { bg: `${colors.status.cancelled}22`, text: colors.status.cancelled, label: 'Đã đóng' };
     }
     if (normalized === 'cancelled') {
-      return { bg: '#FEE2E2', text: '#B91C1C', label: 'Đã hủy' };
+      return { bg: `${colors.status.cancelled}22`, text: colors.status.cancelled, label: 'Đã hủy' };
     }
-    return { bg: '#E2E8F0', text: '#475569', label: status || 'Khác' };
+    return { bg: colors.surface, text: colors.textSecondary, label: status || 'Khác' };
   };
 
   const typeBadge = (type?: string) => {
     const normalized = String(type ?? '').toLowerCase();
     if (normalized === 'emergency') {
-      return { bg: '#FEE2E2', text: '#B91C1C', label: 'Khẩn cấp' };
+      return { bg: `${colors.status.error}22`, text: colors.status.error, label: 'Khẩn cấp' };
     }
-    return { bg: '#DBEAFE', text: '#1D4ED8', label: 'Bình thường' };
+    return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Bình thường' };
   };
 
   const formatDistanceKm = (value?: number | null) => {
@@ -623,19 +628,19 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     if (!isLeader || !mission || !isActiveMission) return null;
 
     return (
-      <View className="mt-4 rounded-2xl border border-surface-dark bg-white p-4">
+      <View className="mt-4 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
         <View className="flex-row items-center justify-between">
           <View className="flex-1 pr-3">
-            <Text className="text-base font-bold text-text-primary">
+            <Text className="text-base font-bold" style={{ color: colors.text }}>
               Điều hành nhiệm vụ cứu hộ
             </Text>
-            <Text className="mt-1 text-sm text-text-secondary">
+            <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
               Cập nhật tiến độ và hoàn thành nhiệm vụ ngay tại nhiệm vụ hiện
               tại.
             </Text>
           </View>
-          <View className="rounded-full bg-blue-100 px-3 py-1">
-            <Text className="text-xs font-bold text-blue-700">Leader</Text>
+          <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${colors.status.incoming}18` }}>
+            <Text className="text-xs font-bold" style={{ color: colors.status.incoming }}>Trưởng nhóm</Text>
           </View>
         </View>
 
@@ -646,7 +651,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
               setActiveActionMission(mission);
               setLeaderActionMode('progress');
             }}
-            className="flex-1 rounded-xl bg-primary px-4 py-3"
+            className="flex-1 rounded-xl px-4 py-3"
+            style={{ backgroundColor: colors.primary }}
           >
             <Text className="text-center font-bold text-white">
               Cập nhật tiến độ
@@ -659,17 +665,18 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
               setActiveActionMission(mission);
               setLeaderActionMode('complete');
             }}
-            className="flex-1 rounded-xl border border-surface-dark bg-white px-4 py-3"
+            className="flex-1 rounded-xl border px-4 py-3"
+            style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
-            <Text className="text-center font-bold text-text-primary">
+            <Text className="text-center font-bold" style={{ color: colors.text }}>
               Hoàn thành nhiệm vụ
             </Text>
           </TouchableOpacity>
         </View>
 
         {leaderActionMode ? (
-          <View className="mt-4 rounded-2xl bg-surface p-4">
-            <Text className="text-sm font-semibold text-text-primary">
+          <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
+            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
               {leaderActionMode === 'progress'
                 ? 'Ghi chú cập nhật tiến độ'
                 : 'Ghi chú hoàn thành nhiệm vụ'}
@@ -686,12 +693,14 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   ? 'Ví dụ: Đội đã xuất phát / đã tiếp cận hiện trường / đang quay về...'
                   : 'Ví dụ: Đã sơ tán nạn nhân an toàn, hiện trường đã xử lý xong...'
               }
-              className="mt-3 min-h-[110px] rounded-xl border border-surface-dark bg-white p-4 text-sm text-text-primary"
+              className="mt-3 min-h-[110px] rounded-xl border p-4 text-sm"
+              placeholderTextColor={colors.textSecondary}
+              style={{ borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
             />
 
             {leaderActionMode === 'progress' ? (
               <View className="mt-4">
-                <Text className="mb-3 text-sm font-semibold text-text-primary">
+                <Text className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
                   Các bước cập nhật nhiệm vụ
                 </Text>
                 <StepGroup
@@ -702,20 +711,20 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
               </View>
             ) : (
               <View className="mt-4">
-                <Text className="mb-3 text-sm font-semibold text-text-primary">
+                <Text className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
                   Ảnh minh chứng hiện trường
                 </Text>
                 <ImageUploader
                   images={leaderImages}
                   onAddImage={pickLeaderImages}
-                  onRemoveImage={(index) =>
+                  onRemoveImage={(index: number) =>
                     setLeaderImages((prev) =>
                       prev.filter((_, itemIndex) => itemIndex !== index),
                     )
                   }
                 />
 
-                <Text className="mt-3 text-xs text-text-secondary">
+                <Text className="mt-3 text-xs" style={{ color: colors.textSecondary }}>
                   Cần ít nhất 1 ảnh. Ảnh sẽ được upload trước, sau đó gửi
                   `fileUrl` + `contentType` tới API complete.
                 </Text>
@@ -723,7 +732,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                 {uploadingImages ? (
                   <View className="mt-3 flex-row items-center gap-2">
                     <ActivityIndicator size="small" color={colors.primary} />
-                    <Text className="text-sm text-text-secondary">
+                    <Text className="text-sm" style={{ color: colors.textSecondary }}>
                       Đang upload ảnh minh chứng...
                     </Text>
                   </View>
@@ -736,8 +745,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                     uploadingImages ||
                     leaderImages.length === 0
                   }
-                  className="mt-4 rounded-xl bg-primary px-4 py-3"
+                  className="mt-4 rounded-xl px-4 py-3"
                   style={{
+                    backgroundColor: colors.primary,
                     opacity:
                       actionSubmitting ||
                       uploadingImages ||
@@ -773,10 +783,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const pickLeaderImages = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== 'granted') {
-      Alert.alert(
-        'Cần quyền',
-        'Cho phép truy cập thư viện ảnh để đính kèm minh chứng.',
-      );
+      showWarningToast('Cần quyền thư viện ảnh', 'Cho phép truy cập để đính kèm minh chứng.');
       return;
     }
 
@@ -800,10 +807,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
         );
 
         if (!uploadResult.success || !uploadResult.url) {
-          Alert.alert(
-            'Upload thất bại',
-            uploadResult.message || 'Không thể upload ảnh minh chứng.',
-          );
+          showErrorToast('Upload thất bại', uploadResult.message || 'Không thể upload ảnh minh chứng.');
           continue;
         }
 
@@ -841,10 +845,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
       const targetMission = mission || activeActionMission || selectedMission;
 
       if (!targetMission?.rescueRequestId) {
-        Alert.alert(
-          'Thiếu dữ liệu',
-          'Không xác định được rescue request hiện tại.',
-        );
+        showWarningToast('Thiếu dữ liệu', 'Không xác định được yêu cầu cứu hộ hiện tại.');
         return;
       }
 
@@ -878,14 +879,11 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           }));
         }
 
-        Alert.alert('Thành công', 'Đã cập nhật tiến độ nhiệm vụ.');
+        showSuccessToast('Cập nhật thành công', 'Đã cập nhật tiến độ nhiệm vụ.');
         resetLeaderForms();
         await loadData(true);
       } catch (error: any) {
-        Alert.alert(
-          'Không thể cập nhật',
-          error?.message || 'Cập nhật tiến độ thất bại.',
-        );
+        showErrorToast('Không thể cập nhật', error?.message || 'Cập nhật tiến độ thất bại.');
       } finally {
         actionSubmittingRef.current = false;
         setActionSubmitting(false);
@@ -907,18 +905,12 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
       const targetMission = mission || activeActionMission || selectedMission;
 
       if (!targetMission?.rescueRequestId) {
-        Alert.alert(
-          'Thiếu dữ liệu',
-          'Không xác định được rescue request hiện tại.',
-        );
+        showWarningToast('Thiếu dữ liệu', 'Không xác định được yêu cầu cứu hộ hiện tại.');
         return;
       }
 
       if (leaderImages.length === 0) {
-        Alert.alert(
-          'Thiếu ảnh minh chứng',
-          'Cần ít nhất 1 ảnh trước khi hoàn thành nhiệm vụ.',
-        );
+        showWarningToast('Thiếu ảnh minh chứng', 'Cần ít nhất 1 ảnh trước khi hoàn thành nhiệm vụ.');
         return;
       }
 
@@ -955,15 +947,12 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           }));
         }
 
-        Alert.alert('Hoàn thành', 'Đã xác nhận hoàn thành nhiệm vụ.');
+        showSuccessToast('Hoàn thành nhiệm vụ', 'Đã xác nhận hoàn thành nhiệm vụ thành công.');
         setSelectedMission(null);
         resetLeaderForms();
         await loadData(true);
       } catch (error: any) {
-        Alert.alert(
-          'Không thể hoàn thành',
-          error?.message || 'Hoàn thành nhiệm vụ thất bại.',
-        );
+        showErrorToast('Không thể hoàn thành', error?.message || 'Hoàn thành nhiệm vụ thất bại.');
       } finally {
         actionSubmittingRef.current = false;
         setActionSubmitting(false);
@@ -980,14 +969,14 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   );
 
   const heartbeatStatusLabel = useMemo(() => {
-    if (isSyncingEta) return 'Dang cap nhat ETA...';
-    if (lastHeartbeatError) return `Loi heartbeat: ${lastHeartbeatError}`;
+    if (isSyncingEta) return 'Đang cập nhật ETA...';
+    if (lastHeartbeatError) return `Lỗi đồng bộ vị trí: ${lastHeartbeatError}`;
     if (!lastHeartbeatAt) return null;
 
     const date = new Date(lastHeartbeatAt);
     if (Number.isNaN(date.getTime())) return null;
 
-    return `Da dong bo vi tri luc ${date.toLocaleTimeString('vi-VN', {
+    return `Đã đồng bộ vị trí lúc ${date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -998,23 +987,23 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     return [
       `teamId: ${teamId || '---'}`,
       `batchId: ${batch?.rescueBatchId || '---'}`,
-      `screen: ${screen}`,
-      `hasLocation: ${userLocation ? 'yes' : 'no'}`,
-      `intervalActive: ${heartbeatIntervalRef.current ? 'yes' : 'no'}`,
-      `intervalMs: ${heartbeatIntervalMs ?? '---'}`,
-      `heartbeat: ${isSyncingEta ? 'syncing' : 'idle'}`,
-      `lastSuccess: ${lastHeartbeatSuccessAt || '---'}`,
-      `lastError: ${lastHeartbeatError || '---'}`,
-      `lastSync: ${lastHeartbeatAt || '---'}`,
-      `lat: ${userLocation?.latitude ?? '---'}`,
-      `lng: ${userLocation?.longitude ?? '---'}`,
-      `accuracy: ${userLocation?.accuracy ?? '---'}`,
-      `speedKph: ${userLocation?.speedKph ?? '---'}`,
-      `heading: ${userLocation?.headingDegree ?? '---'}`,
-      `currentMission: ${currentMission?.rescueBatchItemId || '---'}`,
-      `selectedMission: ${selectedMission?.rescueBatchItemId || '---'}`,
+      `màn hình: ${screen === 'map' ? 'bản đồ' : 'danh sách'}`,
+      `có vị trí: ${userLocation ? 'có' : 'không'}`,
+      `đang bật đồng bộ: ${heartbeatIntervalRef.current ? 'có' : 'không'}`,
+      `chu kỳ đồng bộ: ${heartbeatIntervalMs ?? '---'} ms`,
+      `trạng thái đồng bộ: ${isSyncingEta ? 'đang gửi' : 'chờ'}`,
+      `lần thành công gần nhất: ${lastHeartbeatSuccessAt || '---'}`,
+      `lỗi gần nhất: ${lastHeartbeatError || '---'}`,
+      `lần đồng bộ gần nhất: ${lastHeartbeatAt || '---'}`,
+      `vĩ độ: ${userLocation?.latitude ?? '---'}`,
+      `kinh độ: ${userLocation?.longitude ?? '---'}`,
+      `độ chính xác: ${userLocation?.accuracy ?? '---'}`,
+      `tốc độ: ${userLocation?.speedKph ?? '---'}`,
+      `hướng di chuyển: ${userLocation?.headingDegree ?? '---'}`,
+      `nhiệm vụ hiện tại: ${currentMission?.rescueBatchItemId || '---'}`,
+      `nhiệm vụ đang chọn: ${selectedMission?.rescueBatchItemId || '---'}`,
       `eta: ${selectedMission?.estimatedMinutes ?? '---'} phút`,
-      `distance: ${selectedMission?.distanceKm ?? '---'} km`,
+      `khoảng cách: ${selectedMission?.distanceKm ?? '---'} km`,
     ];
   }, [
     batch?.rescueBatchId,
@@ -1038,7 +1027,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
   if (screen === 'map') {
     return (
-      <View className="flex-1 bg-background-light">
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <ScreenHeader
           title="Dẫn đường"
           onBack={() => setScreen('list')}
@@ -1049,23 +1038,23 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   <View
                     className="mb-1 rounded-full px-3 py-1"
                     style={{
-                      backgroundColor: isSyncingEta ? '#DBEAFE' : '#DCFCE7',
+                      backgroundColor: isSyncingEta ? `${colors.info}33` : `${colors.success}33`,
                     }}
                   >
                     <Text
                       className="text-[10px] font-semibold"
-                      style={{ color: isSyncingEta ? '#1D4ED8' : '#166534' }}
+                      style={{ color: isSyncingEta ? colors.info : colors.success }}
                     >
                       {heartbeatStatusLabel}
                     </Text>
                   </View>
                 ) : null}
-                <Text className="text-xs text-text-secondary">
+                <Text className="text-xs" style={{ color: colors.textSecondary }}>
                   {selectedMission.estimatedMinutes != null
                     ? `${formatMinutes(selectedMission.estimatedMinutes)} phút`
                     : '--'}
                 </Text>
-                <Text className="text-xs font-semibold text-text-primary">
+                <Text className="text-xs font-semibold" style={{ color: colors.text }}>
                   {selectedMission.distanceKm != null
                     ? `${formatDistanceKm(selectedMission.distanceKm)} km`
                     : '--'}
@@ -1101,12 +1090,12 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                 open={!!selectedMission}
                 snapPoints={['50%', '82%']}
               >
-                <Text className="text-xl font-bold text-text-primary">
+                <Text className="text-xl font-bold" style={{ color: colors.text }}>
                   {selectedMission.description}
                 </Text>
-                <View className="mt-4 rounded-2xl bg-surface p-4">
+                <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
                   <View className="flex-row items-start gap-3">
-                    <View className="mt-0.5 h-10 w-10 items-center justify-center rounded-xl bg-white">
+                    <View className="mt-0.5 h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: colors.card }}>
                       <Ionicons
                         name="location-outline"
                         size={20}
@@ -1114,10 +1103,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                       />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-sm font-semibold text-text-primary">
+                      <Text className="text-sm font-semibold" style={{ color: colors.text }}>
                         Vị trí nhiệm vụ
                       </Text>
-                      <Text className="mt-1 text-sm leading-5 text-text-secondary">
+                      <Text className="mt-1 text-sm leading-5" style={{ color: colors.textSecondary }}>
                         {selectedMission.address}
                       </Text>
                     </View>
@@ -1133,14 +1122,14 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                     <MetaBadge
                       icon="time-outline"
                       label={`${formatMinutes(selectedMission.estimatedMinutes)} phút`}
-                      bg="#EFF6FF"
-                      text="#1D4ED8"
+                      bg={`${colors.info}22`}
+                      text={colors.info}
                     />
                     <MetaBadge
                       icon="navigate-outline"
                       label={`${formatDistanceKm(selectedMission.distanceKm)} km`}
-                      bg="#F8FAFC"
-                      text="#334155"
+                      bg={colors.surface}
+                      text={colors.textSecondary}
                     />
                     <MetaBadge
                       icon="flag-outline"
@@ -1163,16 +1152,16 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   </View>
                 </View>
 
-                <View className="mt-4 rounded-2xl border border-surface-dark bg-white px-4 py-3">
+                <View className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
                   <View className="flex-row items-center justify-between gap-3">
                     <View className="flex-1">
-                      <Text className="text-xs uppercase tracking-wide text-text-secondary">
+                      <Text className="text-xs uppercase tracking-wide" style={{ color: colors.textSecondary }}>
                         Người gửi yêu cầu
                       </Text>
-                      <Text className="mt-1 text-sm font-semibold text-text-primary">
+                      <Text className="mt-1 text-sm font-semibold" style={{ color: colors.text }}>
                         {selectedMission.reporterFullName || 'Người báo tin'}
                       </Text>
-                      <Text className="mt-0.5 text-sm text-text-secondary">
+                      <Text className="mt-0.5 text-sm" style={{ color: colors.textSecondary }}>
                         {selectedMission.reporterPhone ||
                           'Không có số điện thoại'}
                       </Text>
@@ -1183,7 +1172,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                           selectedMission.reporterPhone,
                         )
                       }
-                      className="h-11 w-11 items-center justify-center rounded-full bg-surface"
+                      className="h-11 w-11 items-center justify-center rounded-full"
+                      style={{ backgroundColor: colors.surface }}
                     >
                       <Ionicons
                         name="call-outline"
@@ -1199,7 +1189,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                     onPress={() =>
                       rescueTeamService.openExternalNavigation(selectedMission)
                     }
-                    className="flex-row items-center justify-center gap-2 rounded-2xl bg-primary py-3.5"
+                    className="flex-row items-center justify-center gap-2 rounded-2xl py-3.5"
+                    style={{ backgroundColor: colors.primary }}
                   >
                     <Ionicons name="navigate-outline" size={18} color="#fff" />
                     <Text className="font-bold text-white">Dẫn đường</Text>
@@ -1207,23 +1198,23 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                 </View>
 
                 {isLeader && isCurrentMissionSelected ? (
-                  <View className="mt-4 rounded-2xl border border-surface-dark bg-white p-4">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1 pr-3">
-                        <Text className="text-base font-bold text-text-primary">
-                          Điều hành nhiệm vụ cứu hộ
-                        </Text>
-                        <Text className="mt-1 text-sm text-text-secondary">
-                          Cập nhật tiến độ và hoàn thành nhiệm vụ ngay tại chi
-                          tiết nhiệm vụ hiện tại.
-                        </Text>
-                      </View>
-                      <View className="rounded-full bg-blue-100 px-3 py-1">
-                        <Text className="text-xs font-bold text-blue-700">
-                          Leader
-                        </Text>
-                      </View>
+                <View className="mt-4 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1 pr-3">
+                      <Text className="text-base font-bold" style={{ color: colors.text }}>
+                        Điều hành nhiệm vụ cứu hộ
+                      </Text>
+                      <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                        Cập nhật tiến độ và hoàn thành nhiệm vụ ngay tại chi
+                        tiết nhiệm vụ hiện tại.
+                      </Text>
                     </View>
+                    <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${colors.info}22` }}>
+                      <Text className="text-xs font-bold" style={{ color: colors.info }}>
+                        Trưởng nhóm
+                      </Text>
+                    </View>
+                  </View>
 
                     <View className="mt-4 flex-row gap-3">
                       <TouchableOpacity
@@ -1232,7 +1223,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                           setActiveActionMission(selectedMission);
                           setLeaderActionMode('progress');
                         }}
-                        className="flex-1 rounded-xl bg-primary px-4 py-3"
+                        className="flex-1 rounded-xl px-4 py-3"
+                        style={{ backgroundColor: colors.primary }}
                       >
                         <Text className="text-center font-bold text-white">
                           Cập nhật tiến độ nhiệm vụ
@@ -1245,17 +1237,18 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                           setActiveActionMission(selectedMission);
                           setLeaderActionMode('complete');
                         }}
-                        className="flex-1 rounded-xl border border-surface-dark bg-white px-4 py-3"
+                        className="flex-1 rounded-xl border px-4 py-3"
+                        style={{ borderColor: colors.border, backgroundColor: colors.card }}
                       >
-                        <Text className="text-center font-bold text-text-primary">
+                        <Text className="text-center font-bold" style={{ color: colors.text }}>
                           Hoàn thành nhiệm vụ
                         </Text>
                       </TouchableOpacity>
                     </View>
 
                     {leaderActionMode ? (
-                      <View className="mt-4 rounded-2xl bg-surface p-4">
-                        <Text className="text-sm font-semibold text-text-primary">
+                      <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
+                        <Text className="text-sm font-semibold" style={{ color: colors.text }}>
                           {leaderActionMode === 'progress'
                             ? 'Ghi chú cập nhật tiến độ'
                             : 'Ghi chú hoàn thành nhiệm vụ'}
@@ -1272,12 +1265,14 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                               ? 'Ví dụ: Đội đã xuất phát / đã tiếp cận hiện trường / đang quay về...'
                               : 'Ví dụ: Đã sơ tán nạn nhân an toàn, hiện trường đã xử lý xong...'
                           }
-                          className="mt-3 min-h-[110px] rounded-xl border border-surface-dark bg-white p-4 text-sm text-text-primary"
+                          placeholderTextColor={colors.textSecondary}
+                          className="mt-3 min-h-[110px] rounded-xl border p-4 text-sm"
+                          style={{ borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
                         />
 
                         {leaderActionMode === 'progress' ? (
                           <View className="mt-4">
-                            <Text className="mb-3 text-sm font-semibold text-text-primary">
+                            <Text className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
                               Các bước cập nhật nhiệm vụ
                             </Text>
                             <StepGroup
@@ -1285,20 +1280,20 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                                 getMissionDisplayStatus(selectedMission) || '',
                               )}
                               disabled={actionSubmitting}
-                              onSelect={(status) =>
+                              onSelect={(status: 2 | 3) =>
                                 submitProgressUpdate(status, selectedMission)
                               }
                             />
                           </View>
                         ) : (
                           <View className="mt-4">
-                            <Text className="mb-3 text-sm font-semibold text-text-primary">
+                            <Text className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
                               Ảnh minh chứng hiện trường
                             </Text>
                             <ImageUploader
                               images={leaderImages}
                               onAddImage={pickLeaderImages}
-                              onRemoveImage={(index) =>
+                              onRemoveImage={(index: number) =>
                                 setLeaderImages((prev) =>
                                   prev.filter(
                                     (_, itemIndex) => itemIndex !== index,
@@ -1307,7 +1302,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                               }
                             />
 
-                            <Text className="mt-3 text-xs text-text-secondary">
+                            <Text className="mt-3 text-xs" style={{ color: colors.textSecondary }}>
                               Cần ít nhất 1 ảnh. Ảnh sẽ được upload trước, sau
                               đó gửi `fileUrl` + `contentType` tới API complete.
                             </Text>
@@ -1318,7 +1313,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                                   size="small"
                                   color={colors.primary}
                                 />
-                                <Text className="text-sm text-text-secondary">
+                                <Text className="text-sm" style={{ color: colors.textSecondary }}>
                                   Đang upload ảnh minh chứng...
                                 </Text>
                               </View>
@@ -1333,8 +1328,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                                 uploadingImages ||
                                 leaderImages.length === 0
                               }
-                              className="mt-4 rounded-xl bg-primary px-4 py-3"
+                              className="mt-4 rounded-xl px-4 py-3"
                               style={{
+                                backgroundColor: colors.primary,
                                 opacity:
                                   actionSubmitting ||
                                   uploadingImages ||
@@ -1366,14 +1362,15 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   </View>
                 ) : null}
 
-                <View className="mt-4 rounded-2xl bg-slate-900 p-3">
-                  <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-300">
-                    Tracking Debug
+                <View className="mt-4 rounded-2xl p-3" style={{ backgroundColor: colors.text }}>
+                  <Text className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: colors.surface }}>
+                     Thông tin đồng bộ vị trí
                   </Text>
                   {debugTrackingLines.map((line) => (
                     <Text
                       key={line}
-                      className="text-[11px] leading-5 text-slate-100"
+                      className="text-[11px] leading-5"
+                      style={{ color: colors.background }}
                     >
                       {line}
                     </Text>
@@ -1384,9 +1381,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           </View>
         ) : (
           <View className="flex-1 items-center justify-center px-6">
-            <Ionicons name="map-outline" size={34} color="#94A3B8" />
-            <Text className="mt-4 text-center text-base text-text-secondary">
-              Thiếu `EXPO_PUBLIC_GOONG_MAP_KEY`, chưa thể hiển thị Goong Map
+          <Ionicons name="map-outline" size={34} color={colors.textSecondary} />
+            <Text className="mt-4 text-center text-base" style={{ color: colors.textSecondary }}>
+              Thiếu `EXPO_PUBLIC_GOONG_MAP_KEY`, chưa thể hiển thị bản đồ Goong
               trong app.
             </Text>
           </View>
@@ -1396,9 +1393,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   }
 
   return (
-    <View className="flex-1 bg-background-light">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
-        title="Nhiệm vụ của team"
+        title="Nhiệm vụ của nhóm"
         onBack={onBack}
         rightAction={
           <TouchableOpacity
@@ -1415,37 +1412,39 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text className="mt-3 text-text-secondary">Đang tải nhiệm vụ...</Text>
+          <Text className="mt-3" style={{ color: colors.textSecondary }}>Đang tải nhiệm vụ...</Text>
         </View>
       ) : errorMessage ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="alert-circle-outline" size={34} color="#DC2626" />
-          <Text className="mt-4 text-center text-xl font-bold text-text-primary">
+          <Ionicons name="alert-circle-outline" size={34} color={colors.error} />
+          <Text className="mt-4 text-center text-xl font-bold" style={{ color: colors.text }}>
             Không tải được dữ liệu nhiệm vụ.
           </Text>
-          <Text className="mt-2 text-center text-base text-text-secondary">
+          <Text className="mt-2 text-center text-base" style={{ color: colors.textSecondary }}>
             {errorMessage}
           </Text>
           <TouchableOpacity
             onPress={() => loadData()}
-            className="mt-6 rounded-xl bg-primary px-5 py-3"
+            className="mt-6 rounded-xl px-5 py-3"
+            style={{ backgroundColor: colors.primary }}
           >
             <Text className="font-bold text-white">Thử lại</Text>
           </TouchableOpacity>
         </View>
       ) : !displayBatch && historyBatches.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="file-tray-outline" size={34} color="#94A3B8" />
-          <Text className="mt-4 text-center text-xl font-bold text-text-primary">
+          <Ionicons name="file-tray-outline" size={34} color={colors.textSecondary} />
+          <Text className="mt-4 text-center text-xl font-bold" style={{ color: colors.text }}>
             Hiện chưa có nhiệm vụ hoạt động.
           </Text>
-          <Text className="mt-2 text-center text-base text-text-secondary">
+          <Text className="mt-2 text-center text-base" style={{ color: colors.textSecondary }}>
             Khi có batch đang chạy hoặc nhiệm vụ vừa hoàn tất, danh sách sẽ hiển
             thị tại đây.
           </Text>
           <TouchableOpacity
             onPress={() => loadData()}
-            className="mt-6 rounded-xl bg-primary px-5 py-3"
+            className="mt-6 rounded-xl px-5 py-3"
+            style={{ backgroundColor: colors.primary }}
           >
             <Text className="font-bold text-white">Tải lại</Text>
           </TouchableOpacity>
@@ -1463,9 +1462,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           }
         >
           <View className="px-4 pt-4">
-            <View className="rounded-3xl bg-secondary p-5">
+            <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
               <Text className="text-2xl font-bold text-white">
-                {teamName || 'Team hien tai'}
+                {teamName || 'Nhóm hiện tại'}
               </Text>
               <Text className="mt-2 text-sm text-white/80">
                 {summary.total} nhiệm vụ • {summary.emergencyCount} khẩn cấp
@@ -1492,20 +1491,20 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   className="mt-4 rounded-2xl px-4 py-3"
                   style={{
                     backgroundColor: lastHeartbeatError
-                      ? '#FEE2E2'
+                      ? `${colors.error}22`
                       : isSyncingEta
-                        ? '#DBEAFE'
-                        : '#DCFCE7',
+                        ? `${colors.info}33`
+                        : `${colors.success}33`,
                   }}
                 >
                   <Text
                     className="text-sm font-semibold"
                     style={{
                       color: lastHeartbeatError
-                        ? '#B91C1C'
+                        ? colors.error
                         : isSyncingEta
-                          ? '#1D4ED8'
-                          : '#166534',
+                          ? colors.info
+                          : colors.success,
                     }}
                   >
                     {heartbeatStatusLabel}
@@ -1528,12 +1527,12 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                       onPress={() => setFilter(option.value)}
                       className="rounded-full px-4 py-2"
                       style={{
-                        backgroundColor: active ? colors.primary : '#E2E8F0',
+                        backgroundColor: active ? colors.primary : colors.surface,
                       }}
                     >
                       <Text
                         style={{
-                          color: active ? '#fff' : '#334155',
+                          color: active ? colors.white : colors.textSecondary,
                           fontWeight: '700',
                         }}
                       >
@@ -1556,7 +1555,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   return (
                     <View
                       key={item.rescueBatchItemId}
-                      className="rounded-2xl border border-surface-dark bg-white p-4"
+                      className="rounded-2xl border p-4"
+                      style={{ borderColor: colors.border, backgroundColor: colors.card }}
                     >
                       <View className="flex-row flex-wrap gap-2">
                         <View
@@ -1583,8 +1583,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                         </View>
                         {currentMissionForUi?.rescueBatchItemId ===
                         item.rescueBatchItemId ? (
-                          <View className="rounded-full bg-green-100 px-3 py-1">
-                            <Text className="text-xs font-bold text-green-700">
+                          <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${colors.success}22` }}>
+                            <Text className="text-xs font-bold" style={{ color: colors.success }}>
                               Hiện tại
                             </Text>
                           </View>
@@ -1592,7 +1592,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                       </View>
 
                       <Text
-                        className="mt-3 text-base font-bold text-text-primary"
+                        className="mt-3 text-base font-bold"
+                        style={{ color: colors.text }}
                         numberOfLines={2}
                       >
                         {item.description}
@@ -1603,12 +1604,12 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                           size={16}
                           color={colors.primary}
                         />
-                        <Text className="flex-1 text-sm text-text-secondary">
+                        <Text className="flex-1 text-sm" style={{ color: colors.textSecondary }}>
                           {item.address}
                         </Text>
                       </View>
 
-                      <Text className="mt-2 text-sm font-medium text-text-primary">
+                      <Text className="mt-2 text-sm font-medium" style={{ color: colors.text }}>
                         {formatDistanceKm(item.distanceKm)} km •{' '}
                         {formatMinutes(item.estimatedMinutes)}
                         phút
@@ -1616,10 +1617,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
                       <View className="mt-3 flex-row items-center justify-between">
                         <View className="flex-1 pr-3">
-                          <Text className="text-sm font-semibold text-text-primary">
+                          <Text className="text-sm font-semibold" style={{ color: colors.text }}>
                             {item.reporterFullName || 'Người báo tin'}
                           </Text>
-                          <Text className="text-sm text-text-secondary">
+                          <Text className="text-sm" style={{ color: colors.textSecondary }}>
                             {item.reporterPhone || 'Không có số điện thoại'}
                           </Text>
                         </View>
@@ -1629,7 +1630,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                               item.reporterPhone,
                             )
                           }
-                          className="h-10 w-10 items-center justify-center rounded-full bg-surface"
+                          className="h-10 w-10 items-center justify-center rounded-full"
+                          style={{ backgroundColor: colors.surface }}
                         >
                           <Ionicons
                             name="call-outline"
@@ -1642,7 +1644,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                       <View className="mt-4 flex-row gap-3">
                         <TouchableOpacity
                           onPress={() => openMapScreen(item)}
-                          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
+                          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
+                          style={{ backgroundColor: colors.primary }}
                         >
                           <Ionicons
                             name="navigate-outline"
@@ -1657,7 +1660,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                           onPress={() =>
                             rescueTeamService.openExternalNavigation(item)
                           }
-                          className="flex-row items-center justify-center rounded-xl border border-surface-dark px-4 py-3"
+                          className="flex-row items-center justify-center rounded-xl border px-4 py-3"
+                          style={{ borderColor: colors.border }}
                         >
                           <Ionicons
                             name="map-outline"
@@ -1687,11 +1691,11 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
                   return (
                     <View key={historyBatch.rescueBatchId} className="gap-3">
-                      <View className="rounded-2xl bg-slate-100 px-4 py-3">
-                        <Text className="text-sm font-bold text-text-primary">
-                          Batch {historyBatch.rescueBatchId.slice(0, 8)}
+                      <View className="rounded-2xl px-4 py-3" style={{ backgroundColor: colors.surface }}>
+                        <Text className="text-sm font-bold" style={{ color: colors.text }}>
+                          Đợt nhiệm vụ {historyBatch.rescueBatchId.slice(0, 8)}
                         </Text>
-                        <Text className="mt-1 text-xs text-text-secondary">
+                        <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
                           {new Date(historyBatch.createdAt).toLocaleString(
                             'vi-VN',
                           )}{' '}
@@ -1708,7 +1712,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                         return (
                           <View
                             key={item.rescueBatchItemId}
-                            className="rounded-2xl border border-surface-dark bg-white p-4"
+                            className="rounded-2xl border p-4"
+                            style={{ borderColor: colors.border, backgroundColor: colors.card }}
                           >
                             <View className="flex-row flex-wrap gap-2">
                               <View
@@ -1736,7 +1741,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                             </View>
 
                             <Text
-                              className="mt-3 text-base font-bold text-text-primary"
+                              className="mt-3 text-base font-bold"
+                              style={{ color: colors.text }}
                               numberOfLines={2}
                             >
                               {item.description}
@@ -1747,17 +1753,17 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                                 size={16}
                                 color={colors.primary}
                               />
-                              <Text className="flex-1 text-sm text-text-secondary">
+                              <Text className="flex-1 text-sm" style={{ color: colors.textSecondary }}>
                                 {item.address}
                               </Text>
                             </View>
 
                             <View className="mt-3 flex-row items-center justify-between">
                               <View className="flex-1 pr-3">
-                                <Text className="text-sm font-semibold text-text-primary">
+                                <Text className="text-sm font-semibold" style={{ color: colors.text }}>
                                   {item.reporterFullName || 'Người báo tin'}
                                 </Text>
-                                <Text className="text-sm text-text-secondary">
+                                <Text className="text-sm" style={{ color: colors.textSecondary }}>
                                   {item.reporterPhone ||
                                     'Không có số điện thoại'}
                                 </Text>
@@ -1768,7 +1774,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                                     item.reporterPhone,
                                   )
                                 }
-                                className="h-10 w-10 items-center justify-center rounded-full bg-surface"
+                                className="h-10 w-10 items-center justify-center rounded-full"
+                                style={{ backgroundColor: colors.surface }}
                               >
                                 <Ionicons
                                   name="call-outline"
@@ -1827,6 +1834,7 @@ function StepGroup({
   disabled?: boolean;
   onSelect: (status: 2 | 3) => void;
 }) {
+  const { colors } = useTheme();
   const steps = [
     {
       key: 'EnRoute',
@@ -1852,31 +1860,34 @@ function StepGroup({
   const activeIndex = statusOrder[currentStatus.toLowerCase()] ?? -1;
 
   return (
-    <View className="overflow-hidden rounded-2xl border border-surface-dark bg-white">
+    <View className="overflow-hidden rounded-2xl border" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
       <View className="flex-row">
         {steps.map((step, index) => {
           const isCompleted = activeIndex > index;
           const isCurrent = activeIndex === index;
+          // Completed: use primary (brand red); current: tinted surface; default: card
           const backgroundColor = isCompleted
-            ? '#DA251D'
+            ? colors.primary
             : isCurrent
-              ? '#FEE2E2'
-              : '#FFFFFF';
+              ? `${colors.error}22`
+              : colors.card;
           const textColor = isCompleted
-            ? '#FFFFFF'
+            ? colors.white
             : isCurrent
-              ? '#B91C1C'
-              : '#475569';
+              ? colors.error
+              : colors.textSecondary;
 
           return (
             <TouchableOpacity
               key={step.key}
               onPress={() => onSelect(step.status)}
               disabled={disabled}
-              className={`flex-1 items-center justify-center px-2 py-4 ${index < steps.length - 1 ? 'border-r border-surface-dark' : ''}`}
+              className={`flex-1 items-center justify-center px-2 py-4`}
               style={{
                 backgroundColor,
                 opacity: disabled ? 0.6 : 1,
+                borderRightWidth: index < steps.length - 1 ? 1 : 0,
+                borderRightColor: colors.border,
               }}
             >
               <Ionicons name={step.icon} size={18} color={textColor} />
@@ -1937,34 +1948,68 @@ function FallbackMapPreview({
   colors: any;
   supportsNativeMap: boolean;
 }) {
+  const markers = (batch?.items ?? [])
+    .map((item) => {
+      const coordinate = rescueTeamService.toMapCoordinate(item)
+      if (!coordinate) return null
+      const emergency = item.rescueRequestType === 'Emergency'
+      return {
+        id: item.rescueBatchItemId,
+        coordinate,
+        color: emergency ? colors.error : colors.info,
+        size: 14,
+      }
+    })
+    .filter(Boolean) as Array<{
+    id: string
+    coordinate: [number, number]
+    color: string
+    size?: number
+  }>
+
+  const center =
+    (selectedMission && rescueTeamService.toMapCoordinate(selectedMission)) ||
+    markers[0]?.coordinate ||
+    ([106.629, 10.724] as const)
+
   return (
-    <View className="flex-1 items-center justify-center bg-slate-100 px-4">
-      <View className="w-full max-w-[420px] rounded-3xl border border-slate-200 bg-white p-5">
-        <View className="flex-row items-center gap-2">
-          <Ionicons name="map-outline" size={22} color={colors.primary} />
-          <Text className="text-lg font-bold text-text-primary">
-            {supportsNativeMap ? 'Goong Map Preview' : 'Fallback Preview'}
-          </Text>
-        </View>
+    <View className="flex-1" style={{ backgroundColor: colors.surface }}>
+      <WebViewMap
+        center={center}
+        zoom={13}
+        markers={markers}
+        routeCoordinates={routeCoordinates}
+        routeColor={colors.info}
+        onMarkerPress={(id) => {
+          const mission = (batch?.items ?? []).find(
+            (item) => item.rescueBatchItemId === id,
+          )
+          if (mission) {
+            // Reuse the same selection behavior as native map
+            // (selection state lives in the parent, so we can't set it here)
+          }
+        }}
+        style={{ flex: 1 }}
+      />
 
-        <Text className="mt-3 text-sm leading-6 text-text-secondary">
-          {supportsNativeMap
-            ? 'Map native đã được tích hợp, nhưng màn hiện đang dùng preview an toàn để tránh crash trong môi trường hiện tại.'
-            : 'Expo Go không hỗ trợ native map module này. Hãy dùng dev build để xem Goong Map thật trong app.'}
-        </Text>
-
-        <View className="mt-4 rounded-2xl bg-surface p-4">
-          <Text className="text-sm font-semibold text-text-primary">
+      <View
+        className="absolute bottom-0 left-0 right-0 px-4 pb-4"
+        style={{ paddingBottom: 12 }}
+        pointerEvents="none"
+      >
+        <View
+          className="rounded-2xl border px-4 py-3"
+          style={{
+            borderColor: colors.border,
+            backgroundColor: `${colors.card}F2`,
+          }}
+        >
+          <Text className="text-sm font-semibold" style={{ color: colors.text }}>
             {selectedMission?.description || 'Chưa chọn nhiệm vụ'}
           </Text>
-          <Text className="mt-2 text-sm text-text-secondary">
-            Marker queue: {batch?.items?.length || 0}
-          </Text>
-          <Text className="mt-1 text-sm text-text-secondary">
-            Route preview points: {routeCoordinates.length}
-          </Text>
-          <Text className="mt-1 text-sm text-text-secondary">
-            Địa chỉ: {selectedMission?.address || '---'}
+          <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+            Số điểm nhiệm vụ: {batch?.items?.length || 0} · Tuyến đường:{' '}
+            {routeCoordinates.length}
           </Text>
         </View>
       </View>

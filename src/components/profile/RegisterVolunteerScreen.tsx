@@ -1,4 +1,5 @@
 import '@/global.css';
+import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import {
   CreateVolunteerCertificateRequest,
@@ -9,6 +10,7 @@ import {
   VolunteerProfileResponse,
   volunteerService,
 } from '@/src/services/volunteerService';
+import { showErrorToast, showSuccessToast, showWarningToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, {
   DateTimePickerAndroid,
@@ -18,7 +20,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   ScrollView,
@@ -28,7 +29,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface RegisterVolunteerScreenProps {
   onBack?: () => void;
@@ -100,6 +101,8 @@ export default function RegisterVolunteerScreen({
   initialProfile,
 }: RegisterVolunteerScreenProps) {
   const { bottom } = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const { dialogProps, showDialog } = useDialog();
   const [descriptions, setDescriptions] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [teamRolePreference, setTeamRolePreference] =
@@ -251,11 +254,7 @@ export default function RegisterVolunteerScreen({
   const pickAndUploadCertificateImage = async (index: number) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Bạn cần cấp quyền thư viện ảnh để chọn chứng chỉ.',
-      });
+      showWarningToast('Cần quyền truy cập', 'Bạn cần cấp quyền thư viện ảnh để chọn chứng chỉ.');
       return;
     }
 
@@ -277,20 +276,12 @@ export default function RegisterVolunteerScreen({
       );
 
       if (!uploadResult.success || !uploadResult.url) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: uploadResult.message || 'Upload ảnh thất bại.',
-        });
+        showErrorToast('Upload ảnh thất bại', uploadResult.message || 'Upload ảnh thất bại.');
         return;
       }
 
       updateCertificate(index, 'fileUrl', uploadResult.url);
-      Toast.show({
-        type: 'success',
-        text1: 'Thành công',
-        text2: 'Đã upload ảnh chứng chỉ lên Cloudinary.',
-      });
+      showSuccessToast('Upload thành công', 'Đã upload ảnh chứng chỉ lên Cloudinary.');
     } finally {
       setUploadingCertificateIndex(null);
     }
@@ -301,7 +292,7 @@ export default function RegisterVolunteerScreen({
       /^\d{4}-\d{2}-\d{2}$/.test(value);
 
     if (!descriptions.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập mô tả hồ sơ tình nguyện viên.');
+      showWarningToast('Thiếu thông tin', 'Vui lòng nhập mô tả hồ sơ tình nguyện viên.');
       return false;
     }
 
@@ -309,17 +300,17 @@ export default function RegisterVolunteerScreen({
       yearsOfExperience.trim() &&
       (Number.isNaN(Number(yearsOfExperience)) || Number(yearsOfExperience) < 0)
     ) {
-      Alert.alert('Lỗi', 'Số năm kinh nghiệm phải là số >= 0.');
+      showWarningToast('Dữ liệu chưa hợp lệ', 'Số năm kinh nghiệm phải là số >= 0.');
       return false;
     }
 
     if (!teamRolePreference) {
-      Alert.alert('Lỗi', 'Vui lòng chọn vai trò mong muốn trong đội.');
+      showWarningToast('Thiếu thông tin', 'Vui lòng chọn vai trò mong muốn trong đội.');
       return false;
     }
 
     if (selectedSkillIds.length === 0) {
-      Alert.alert('Lỗi', 'Vui lòng chọn ít nhất 1 kỹ năng.');
+      showWarningToast('Thiếu thông tin', 'Vui lòng chọn ít nhất 1 kỹ năng.');
       return false;
     }
 
@@ -330,31 +321,22 @@ export default function RegisterVolunteerScreen({
         !cert.issuedDate.trim() ||
         !cert.fileUrl.trim()
       ) {
-        Alert.alert('Lỗi', 'Vui lòng điền đủ thông tin chứng chỉ bắt buộc.');
+        showWarningToast('Thiếu thông tin', 'Vui lòng điền đủ thông tin chứng chỉ bắt buộc.');
         return false;
       }
 
       if (!/^https?:\/\//i.test(cert.fileUrl.trim())) {
-        Alert.alert(
-          'Lỗi',
-          'File URL của chứng chỉ phải là link hợp lệ (http/https).',
-        );
+        showWarningToast('Dữ liệu chưa hợp lệ', 'File URL của chứng chỉ phải là link hợp lệ (http/https).');
         return false;
       }
 
       if (!isValidDateOnly(cert.issuedDate.trim())) {
-        Alert.alert(
-          'Lỗi',
-          'Ngày cấp chứng chỉ phải đúng định dạng YYYY-MM-DD.',
-        );
+        showWarningToast('Dữ liệu chưa hợp lệ', 'Ngày cấp chứng chỉ phải đúng định dạng YYYY-MM-DD.');
         return false;
       }
 
       if (cert.expiryDate?.trim() && !isValidDateOnly(cert.expiryDate.trim())) {
-        Alert.alert(
-          'Lỗi',
-          'Ngày hết hạn chứng chỉ phải đúng định dạng YYYY-MM-DD.',
-        );
+        showWarningToast('Dữ liệu chưa hợp lệ', 'Ngày hết hạn chứng chỉ phải đúng định dạng YYYY-MM-DD.');
         return false;
       }
     }
@@ -396,21 +378,23 @@ export default function RegisterVolunteerScreen({
           : await volunteerService.createVolunteerProfile(createPayload);
 
       if (!result.success) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: result.message || 'Không thể gửi hồ sơ.',
-        });
+        showErrorToast('Không thể gửi hồ sơ', result.message || 'Không thể gửi hồ sơ.');
         return;
       }
 
-      Alert.alert(
-        'Thành công',
+      const successMessage =
         mode === 'resubmit'
           ? 'Đã gửi lại hồ sơ tình nguyện viên. Vui lòng chờ xét duyệt lại.'
-          : 'Đã gửi hồ sơ đăng ký tình nguyện viên. Vui lòng chờ xét duyệt.',
-        [{ text: 'OK', onPress: () => onSuccess?.() }],
-      );
+          : 'Đã gửi hồ sơ đăng ký tình nguyện viên. Vui lòng chờ xét duyệt.';
+      showSuccessToast('Gửi hồ sơ thành công', successMessage);
+      showDialog({
+        title: 'Thành công',
+        message: successMessage,
+        type: 'success',
+        cancelLabel: 'Ở lại',
+        confirmLabel: 'Hoàn tất',
+        onConfirm: () => onSuccess?.(),
+      });
     } finally {
       setLoading(false);
     }
@@ -418,15 +402,11 @@ export default function RegisterVolunteerScreen({
 
   const handleSaveDraft = () => {
     setDraftSaved(true);
-    Toast.show({
-      type: 'success',
-      text1: 'Đã lưu nháp',
-      text2: 'Thông tin chỉnh sửa đã được giữ lại trên màn hình hiện tại.',
-    });
+    showSuccessToast('Đã lưu nháp', 'Thông tin chỉnh sửa đã được giữ lại trên màn hình hiện tại.');
   };
 
   return (
-    <View className="flex-1 bg-background-light">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
         title={
           mode === 'resubmit'
@@ -441,14 +421,14 @@ export default function RegisterVolunteerScreen({
         showsVerticalScrollIndicator={false}
       >
         {mode === 'resubmit' && initialProfile?.reason ? (
-          <View className="mx-4 mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+          <View className="mx-4 mt-4 rounded-2xl border p-4" style={{ borderColor: `${colors.status.error}33`, backgroundColor: `${colors.status.error}12` }}>
             <View className="flex-row items-start gap-3">
-              <Ionicons name="alert-circle" size={22} color="#DC2626" />
+              <Ionicons name="alert-circle" size={22} color={colors.status.error} />
               <View className="flex-1">
-                <Text className="text-base font-bold text-red-700">
+                <Text className="text-base font-bold" style={{ color: colors.status.error }}>
                   Hồ sơ đã bị từ chối
                 </Text>
-                <Text className="mt-2 text-sm leading-6 text-red-700">
+                <Text className="mt-2 text-sm leading-6" style={{ color: colors.status.error }}>
                   {initialProfile.reason}
                 </Text>
               </View>
@@ -457,8 +437,8 @@ export default function RegisterVolunteerScreen({
         ) : null}
 
         {mode === 'resubmit' && draftSaved ? (
-          <View className="mx-4 mt-4 rounded-2xl border border-green-200 bg-green-50 p-4">
-            <Text className="text-sm font-medium text-green-700">
+          <View className="mx-4 mt-4 rounded-2xl border p-4" style={{ borderColor: `${colors.status.completed}33`, backgroundColor: `${colors.status.completed}12` }}>
+            <Text className="text-sm font-medium" style={{ color: colors.status.completed }}>
               Bản nháp đã được lưu trong phiên làm việc hiện tại.
             </Text>
           </View>
@@ -475,7 +455,9 @@ export default function RegisterVolunteerScreen({
             numberOfLines={4}
             textAlignVertical="top"
             placeholder="Ví dụ: Có kinh nghiệm tham gia cứu trợ lũ, sơ cứu cơ bản..."
-            className="rounded-xl border border-surface-dark bg-white px-4 py-3 text-base text-text-primary"
+            className="rounded-xl border px-4 py-3 text-base"
+            placeholderTextColor={colors.textSecondary}
+            style={{ borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
           />
         </View>
 
@@ -488,7 +470,9 @@ export default function RegisterVolunteerScreen({
             onChangeText={setYearsOfExperience}
             keyboardType="number-pad"
             placeholder="Ví dụ: 2"
-            className="h-12 rounded-xl border border-surface-dark bg-white px-4 text-base text-text-primary"
+            className="h-12 rounded-xl border px-4 text-base"
+            placeholderTextColor={colors.textSecondary}
+            style={{ borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
           />
         </View>
 
@@ -503,17 +487,13 @@ export default function RegisterVolunteerScreen({
                 <TouchableOpacity
                   key={role.value}
                   onPress={() => setTeamRolePreference(role.value)}
-                  className={`rounded-full border px-4 py-2 ${
-                    active
-                      ? 'border-primary bg-primary'
-                      : 'border-surface-dark bg-white'
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      active ? 'text-white' : 'text-text-primary'
-                    }`}
+                    className="rounded-full border px-4 py-2"
+                    style={{ borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.card }}
                   >
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: active ? colors.white : colors.text }}
+                    >
                     {role.label}
                   </Text>
                 </TouchableOpacity>
@@ -528,13 +508,13 @@ export default function RegisterVolunteerScreen({
           </Text>
           {skillsLoading ? (
             <View className="h-16 items-center justify-center">
-              <ActivityIndicator color="#DA251D" />
+              <ActivityIndicator color={colors.primary} />
               <Text className="mt-2 text-xs text-text-secondary">
                 Đang tải kỹ năng...
               </Text>
             </View>
           ) : skills.length === 0 ? (
-            <Text className="text-sm text-red-600">
+            <Text className="text-sm" style={{ color: colors.status.error }}>
               Không tải được danh sách kỹ năng. Vui lòng kiểm tra endpoint
               Skill.
             </Text>
@@ -546,16 +526,12 @@ export default function RegisterVolunteerScreen({
                   <TouchableOpacity
                     key={skill.skillId}
                     onPress={() => toggleSkill(skill.skillId)}
-                    className={`rounded-full border px-3 py-2 ${
-                      active
-                        ? 'border-primary bg-primary'
-                        : 'border-surface-dark bg-white'
-                    }`}
+                    className="rounded-full border px-3 py-2"
+                    style={{ borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.card }}
                   >
                     <Text
-                      className={`text-sm font-medium ${
-                        active ? 'text-white' : 'text-text-primary'
-                      }`}
+                      className="text-sm font-medium"
+                      style={{ color: active ? colors.white : colors.text }}
                     >
                       {getLocalizedSkillName(skill.name, skill.code)}
                     </Text>
@@ -581,7 +557,8 @@ export default function RegisterVolunteerScreen({
           {certificates.map((cert, index) => (
             <View
               key={index}
-              className="mb-3 rounded-xl border border-surface-dark bg-white p-3"
+              className="mb-3 rounded-xl border p-3"
+              style={{ borderColor: colors.border, backgroundColor: colors.card }}
             >
               <View className="mb-2 flex-row items-center justify-between">
                 <Text className="font-semibold text-text-primary">
@@ -589,7 +566,7 @@ export default function RegisterVolunteerScreen({
                 </Text>
                 {certificates.length > 1 && (
                   <TouchableOpacity onPress={() => removeCertificate(index)}>
-                    <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                    <Ionicons name="trash-outline" size={18} color={colors.status.error} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -598,28 +575,34 @@ export default function RegisterVolunteerScreen({
                 value={cert.name}
                 onChangeText={(v) => updateCertificate(index, 'name', v)}
                 placeholder="Tên chứng chỉ"
-                className="mb-2 h-11 rounded-lg border border-surface-dark px-3 text-text-primary"
+                className="mb-2 h-11 rounded-lg border px-3"
+                placeholderTextColor={colors.textSecondary}
+                style={{ borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
               />
               <TextInput
                 value={cert.issuedBy}
                 onChangeText={(v) => updateCertificate(index, 'issuedBy', v)}
                 placeholder="Đơn vị cấp"
-                className="mb-2 h-11 rounded-lg border border-surface-dark px-3 text-text-primary"
+                className="mb-2 h-11 rounded-lg border px-3"
+                placeholderTextColor={colors.textSecondary}
+                style={{ borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
               />
               <TouchableOpacity
                 onPress={() => openDateTimePicker(index, 'issuedDate')}
-                className="mb-2 h-11 flex-row items-center justify-center gap-2 rounded-lg border border-surface-dark bg-surface"
+                className="mb-2 h-11 flex-row items-center justify-center gap-2 rounded-lg border"
+                style={{ borderColor: colors.border, backgroundColor: colors.surface }}
               >
-                <Ionicons name="calendar-outline" size={16} color="#334155" />
+                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
                 <Text className="text-sm font-medium text-text-primary">
                   {formatDisplayDate(cert.issuedDate)}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => openDateTimePicker(index, 'expiryDate')}
-                className="mb-2 h-11 flex-row items-center justify-center gap-2 rounded-lg border border-surface-dark bg-surface"
+                className="mb-2 h-11 flex-row items-center justify-center gap-2 rounded-lg border"
+                style={{ borderColor: colors.border, backgroundColor: colors.surface }}
               >
-                <Ionicons name="time-outline" size={16} color="#334155" />
+                <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
                 <Text className="text-sm font-medium text-text-primary">
                   {cert.expiryDate
                     ? formatDisplayDate(cert.expiryDate)
@@ -630,7 +613,9 @@ export default function RegisterVolunteerScreen({
                 value={cert.fileUrl}
                 onChangeText={(v) => updateCertificate(index, 'fileUrl', v)}
                 placeholder="Cloudinary URL (https://...)"
-                className="h-11 rounded-lg border border-surface-dark px-3 text-text-primary"
+                className="h-11 rounded-lg border px-3"
+                placeholderTextColor={colors.textSecondary}
+                style={{ borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
               />
 
               <TouchableOpacity
@@ -643,10 +628,10 @@ export default function RegisterVolunteerScreen({
                 }`}
               >
                 {uploadingCertificateIndex === index ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.white} />
                 ) : (
                   <>
-                    <Ionicons name="images-outline" size={18} color="#fff" />
+                    <Ionicons name="images-outline" size={18} color={colors.white} />
                     <Text className="font-semibold text-white">
                       Chọn ảnh từ thư viện
                     </Text>
@@ -656,7 +641,7 @@ export default function RegisterVolunteerScreen({
 
               {!!cert.fileUrl?.trim() &&
                 /^https?:\/\//i.test(cert.fileUrl.trim()) && (
-                  <View className="mt-2 overflow-hidden rounded-lg border border-surface-dark">
+                  <View className="mt-2 overflow-hidden rounded-lg border" style={{ borderColor: colors.border }}>
                     <Image
                       source={{ uri: cert.fileUrl.trim() }}
                       className="h-40 w-full"
@@ -673,9 +658,10 @@ export default function RegisterVolunteerScreen({
             <View className="flex-row gap-3">
               <TouchableOpacity
                 onPress={onBack}
-                className="h-12 flex-1 items-center justify-center rounded-xl border border-surface-dark bg-white"
+                className="h-12 flex-1 items-center justify-center rounded-xl border"
+                style={{ borderColor: colors.border, backgroundColor: colors.card }}
               >
-                <Text className="text-base font-bold text-text-primary">
+                <Text className="text-base font-bold" style={{ color: colors.text }}>
                   Hủy chỉnh sửa
                 </Text>
               </TouchableOpacity>
@@ -699,7 +685,7 @@ export default function RegisterVolunteerScreen({
             }`}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.white} />
             ) : (
               <Text className="text-base font-bold text-white">
                 {mode === 'resubmit'
@@ -719,6 +705,7 @@ export default function RegisterVolunteerScreen({
           onChange={onDateTimeChange}
         />
       ) : null}
+      <AppDialog {...dialogProps} />
     </View>
   );
 }

@@ -38,7 +38,7 @@ export default function StickyFooterButton({
                 <Text className="text-base font-bold tracking-tight text-white">
                     {title}
                 </Text>
-                {icon && <Ionicons name={icon as any} size={16} color="#fff" />}
+                {icon && <Ionicons name={icon as any} size={16} color={colors.white} />}
             </TouchableOpacity>
         </View>
     );

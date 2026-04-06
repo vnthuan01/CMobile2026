@@ -1,4 +1,4 @@
-import HelpScreen from '@/src/components/screens/HelpScreen';
+import HelpScreen from '@/src/features/profile/screens/HelpScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileHelpRoute() {

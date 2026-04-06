@@ -1,4 +1,4 @@
-import MyVolunteerProfileScreen from '@/src/components/profile/MyVolunteerProfileScreen';
+import MyVolunteerProfileScreen from '@/src/features/profile/screens/MyVolunteerProfileScreen';
 import { useProfileFlowStore } from '@/src/store/profileFlowStore';
 import type { VolunteerProfileResponse } from '@/src/types/volunteer';
 import { useRouter } from 'expo-router';

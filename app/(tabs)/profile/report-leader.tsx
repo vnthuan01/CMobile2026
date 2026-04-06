@@ -1,4 +1,4 @@
-import ReportProgressTeamLeaderScreen from '@/src/components/teamleader/ReportProgressTeamLeaderScreen';
+import ReportProgressTeamLeaderScreen from '@/src/features/teamleader/screens/ReportProgressTeamLeaderScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileReportLeaderRoute() {

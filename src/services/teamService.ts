@@ -1,8 +1,10 @@
 import api from './api';
+import { extractApiErrorMessage } from '../utils/apiError';
 import type {
   TeamDetailResponse,
   TeamTrackingHeartbeatRequest,
   TeamTrackingHeartbeatResponse,
+  TeamTrackingPointResponse,
 } from '../types/team';
 
 export type {
@@ -13,16 +15,8 @@ export type {
   TeamDetailResponse,
   TeamTrackingHeartbeatRequest,
   TeamTrackingHeartbeatResponse,
+  TeamTrackingPointResponse,
 } from '../types/team';
-
-const extractApiErrorMessage = (error: any, fallback: string) => {
-  const data = error?.response?.data;
-  if (!data) return error?.message || fallback;
-  if (typeof data === 'string') return data;
-  return (
-    data.message || data.detail || data.title || error?.message || fallback
-  );
-};
 
 export const teamService = {
   getMyTeam: async () => {
@@ -99,6 +93,45 @@ export const teamService = {
       data: null,
       status: 404,
       message: 'Không tìm thấy endpoint Team tracking-heartbeat.',
+    };
+  },
+
+  getLatestTracking: async (teamId: string, limit = 100) => {
+    const routes = [
+      `/Team/${teamId}/tracking/latest`,
+      `/api/Team/${teamId}/tracking/latest`,
+    ];
+
+    for (const route of routes) {
+      try {
+        const response = await api.get<TeamTrackingPointResponse[]>(route, {
+          params: { limit },
+        });
+        return {
+          success: response.status === 200,
+          data: Array.isArray(response.data) ? response.data : [],
+          message: 'Lấy lịch sử tracking mới nhất thành công',
+        };
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          return {
+            success: false,
+            data: null,
+            status: error?.response?.status,
+            message: extractApiErrorMessage(
+              error,
+              'Không thể tải lịch sử tracking team.',
+            ),
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      data: null,
+      status: 404,
+      message: 'Không tìm thấy endpoint Team tracking/latest.',
     };
   },
 };

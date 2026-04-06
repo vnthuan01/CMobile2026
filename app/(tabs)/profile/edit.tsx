@@ -1,5 +1,5 @@
-import UpdateProfileCitizenScreen from '@/src/components/profile/UpdateProfileCitizenScreen';
-import UpdateProfileVolunteerScreen from '@/src/components/profile/UpdateProfileVolunteerScreen';
+import UpdateProfileCitizenScreen from '@/src/features/profile/screens/UpdateProfileCitizenScreen';
+import UpdateProfileVolunteerScreen from '@/src/features/profile/screens/UpdateProfileVolunteerScreen';
 import type { AuthState } from '@/src/store/authStore';
 import { useAuthStore } from '@/src/store/authStore';
 import { useRouter } from 'expo-router';

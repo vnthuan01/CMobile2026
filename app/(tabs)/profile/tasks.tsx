@@ -1,4 +1,4 @@
-import TeamTasksScreen from '@/src/components/volunteer/TeamTasksScreen';
+import TeamTasksScreen from '@/src/features/volunteer/screens/TeamTasksScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileTasksRoute() {

@@ -1,4 +1,4 @@
-import RegisterVolunteerScreen from '@/src/components/profile/RegisterVolunteerScreen';
+import RegisterVolunteerScreen from '@/src/features/profile/screens/RegisterVolunteerScreen';
 import type { ProfileFlowStoreState } from '@/src/store/profileFlowStore';
 import { useProfileFlowStore } from '@/src/store/profileFlowStore';
 import { useRouter } from 'expo-router';

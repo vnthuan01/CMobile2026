@@ -171,10 +171,10 @@ export default function TabsLayout() {
                   shadowRadius: 8,
                   elevation: 10,
                   borderWidth: 4,
-                  borderColor: isDark ? colors.card : '#ffffff',
+                  borderColor: isDark ? colors.card : colors.white,
                 }}
               >
-                <Ionicons name="add" size={32} color="#fff" />
+                <Ionicons name="add" size={32} color={colors.white} />
               </View>
             </View>
           ),

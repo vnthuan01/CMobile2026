@@ -1,4 +1,4 @@
-import MyCurrentTeamScreen from '@/src/components/team/MyCurrentTeamScreen';
+import MyCurrentTeamScreen from '@/src/features/team/screens/MyCurrentTeamScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileMyTeamRoute() {

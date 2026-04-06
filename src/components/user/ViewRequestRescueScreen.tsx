@@ -1,5 +1,5 @@
 import '@/global.css';
-import Header from '@/src/components/header/header';
+import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
   fetchRescueRequestDetail,
@@ -10,16 +10,16 @@ import {
 import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import UserRescueTrackingMap from './UserRescueTrackingMap';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import UserRescueTrackingMap from './UserRescueTrackingMap';
 
 interface ViewRequestRescueScreenProps {
   requestId: string;
@@ -104,7 +104,7 @@ export default function ViewRequestRescueScreen({
     operationStatus === 'EnRoute' ||
     detail?.rescueRequestStatus === 'InProgress';
 
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const mapStyle = rescueTeamService.getMapStyleUrl();
 
   const victimCoordinate = useMemo(() => {
     if (detail?.longitude == null || detail?.latitude == null) return null;
@@ -132,31 +132,31 @@ export default function ViewRequestRescueScreen({
   const statusBadge = (status?: string) => {
     switch (status) {
       case 'Pending':
-        return { bg: '#FEF3C7', text: '#92400E', label: 'Chờ xác minh' };
+        return { bg: `${colors.status.pending}22`, text: colors.status.pending, label: 'Chờ xác minh' };
       case 'Verified':
-        return { bg: '#DBEAFE', text: '#1D4ED8', label: 'Đã xác minh' };
+        return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Đã xác minh' };
       case 'Assigned':
-        return { bg: '#EDE9FE', text: '#6D28D9', label: 'Đã điều phối đội' };
+        return { bg: `${colors.status.inProgress}22`, text: colors.status.inProgress, label: 'Đã điều phối đội' };
       case 'InProgress':
         return {
-          bg: '#DCFCE7',
-          text: '#166534',
+          bg: `${colors.status.completed}22`,
+          text: colors.status.completed,
           label: 'Đội đang tiếp cận / xử lý',
         };
       case 'Completed':
-        return { bg: '#DCFCE7', text: '#166534', label: 'Hoàn thành' };
+        return { bg: `${colors.status.completed}22`, text: colors.status.completed, label: 'Hoàn thành' };
       case 'Cancelled':
-        return { bg: '#FEE2E2', text: '#B91C1C', label: 'Đã hủy' };
+        return { bg: `${colors.status.cancelled}22`, text: colors.status.cancelled, label: 'Đã hủy' };
       default:
-        return { bg: '#E2E8F0', text: '#475569', label: status || 'Khác' };
+        return { bg: `${colors.border}`, text: colors.textSecondary, label: status || 'Khác' };
     }
   };
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background-light">
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.background }}>
         <ActivityIndicator color={colors.primary} />
-        <Text className="mt-3 text-sm text-text-secondary">
+        <Text className="mt-3 text-sm" style={{ color: colors.textSecondary }}>
           Đang tải chi tiết yêu cầu...
         </Text>
       </View>
@@ -165,7 +165,7 @@ export default function ViewRequestRescueScreen({
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Header title="Theo dõi yêu cầu" onBack={onBack} center />
+      <ScreenHeader title="Theo dõi yêu cầu" onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: bottom + 120 }}
@@ -181,10 +181,8 @@ export default function ViewRequestRescueScreen({
               mapStyle={mapStyle}
             />
           ) : (
-            <View
-              className={`h-full w-full items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
-            >
-              <Ionicons name="map" size={60} color="#6b7280" />
+            <View className="h-full w-full items-center justify-center" style={{ backgroundColor: colors.surface }}>
+              <Ionicons name="map" size={60} color={colors.textSecondary} />
             </View>
           )}
 
@@ -369,17 +367,17 @@ export default function ViewRequestRescueScreen({
           </View>
         ) : null}
 
-        <View className="px-4 pb-6">
+        <View className="px-4 pb-6 mt-4">
           <TouchableOpacity
-            className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl border border-red-500"
-            style={{ backgroundColor: colors.card }}
+            className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl border"
+            style={{ backgroundColor: colors.card, borderColor: colors.status.error }}
           >
-            <Ionicons name="close-circle-outline" size={20} color="#ef4444" />
-            <Text className="text-sm font-bold text-red-500">
+            <Ionicons name="close-circle-outline" size={20} color={colors.status.error} />
+            <Text className="text-sm font-bold" style={{ color: colors.status.error }}>
               Hủy yêu cầu cứu hộ
             </Text>
           </TouchableOpacity>
-          <Text className="mt-2 text-center text-xs text-gray-400">
+          <Text className="mt-2 text-center text-xs" style={{ color: colors.icon }}>
             Chỉ hủy nếu bạn đã an toàn hoặc không cần hỗ trợ nữa.
           </Text>
         </View>

@@ -1,4 +1,4 @@
-import ChangePasswordScreen from '@/src/components/screens/ChangePasswordScreen';
+import ChangePasswordScreen from '@/src/features/profile/screens/ChangePasswordScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileChangePasswordRoute() {

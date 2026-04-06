@@ -1,5 +1,6 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
+import { useTheme } from '@/src/context/ThemeContext';
 import Constants from 'expo-constants';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
@@ -27,6 +28,8 @@ interface MapLibreTestScreenProps {
 export default function MapLibreTestScreen({
   onBack,
 }: MapLibreTestScreenProps) {
+  const { colors } = useTheme();
+
   const mapStyle = useMemo(() => {
     const key = process.env.EXPO_PUBLIC_GOONG_MAP_KEY;
     if (!key) return null;
@@ -34,28 +37,28 @@ export default function MapLibreTestScreen({
   }, []);
 
   return (
-    <View className="flex-1 bg-background-light">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader title="MapLibre Test" onBack={onBack} />
 
       {!supportsNativeMap ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base text-text-secondary">
+          <Text className="text-center text-base" style={{ color: colors.textSecondary }}>
             Bạn đang chạy Expo Go. Hãy mở bằng development build để test native
             map.
           </Text>
         </View>
       ) : nativeLoadError ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-lg font-bold text-red-600">
+          <Text className="text-center text-lg font-bold" style={{ color: colors.error }}>
             MapLibre native load failed
           </Text>
-          <Text className="mt-3 text-center text-base text-text-secondary">
+          <Text className="mt-3 text-center text-base" style={{ color: colors.textSecondary }}>
             {nativeLoadError}
           </Text>
         </View>
       ) : !mapStyle ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base text-text-secondary">
+          <Text className="text-center text-base" style={{ color: colors.textSecondary }}>
             Thiếu EXPO_PUBLIC_GOONG_MAP_KEY.
           </Text>
         </View>

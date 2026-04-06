@@ -1,11 +1,12 @@
 import '@/global.css';
+import AppDialog from '@/src/components/common/AppDialog';
 import { authService } from '@/src/services/authService';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,10 +15,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
+import { useTheme } from '@/src/context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -28,6 +31,8 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Đăng ký thành công. Vui lòng xác thực OTP.');
 
   const handleRegister = async () => {
     if (
@@ -38,20 +43,12 @@ export default function RegisterScreen() {
       !password ||
       !confirmPassword
     ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Vui lòng nhập đầy đủ thông tin',
-      });
+      showErrorToast('Thiếu thông tin', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
 
     if (password !== confirmPassword) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu xác nhận không khớp',
-      });
+      showErrorToast('Mật khẩu không khớp', 'Mật khẩu xác nhận không khớp');
       return;
     }
 
@@ -68,36 +65,34 @@ export default function RegisterScreen() {
       });
 
       if (!result.success) {
-        Toast.show({ type: 'error', text1: 'Lỗi', text2: result.message });
+        showErrorToast('Đăng ký thất bại', result.message || 'Vui lòng thử lại.');
         return;
       }
 
-      if (result.status == 201 || result.status == 200) {
-        router.replace({
-          pathname: '/otp-verification',
-          params: { email: email.trim() },
-        });
+      if (result.status === 201 || result.status === 200) {
+        const message = result.message || 'Đăng ký thành công. Vui lòng xác thực OTP.';
+        setSuccessMessage(message);
+        showSuccessToast('Đăng ký thành công', message);
+        setSuccessVisible(true);
       }
     } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Có lỗi xảy ra, vui lòng thử lại',
-      });
+      showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background-light"
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
       >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="w-full max-w-[420px] flex-1 self-center px-5 pb-8 pt-6">
           {/* Header */}
           <View className="mb-6 flex-row items-center justify-between">
@@ -105,23 +100,29 @@ export default function RegisterScreen() {
               className="h-12 w-12 items-center justify-center rounded-full"
               onPress={() => router.back()}
             >
-              <Ionicons name="chevron-back" size={22} color="#0f172a" />
+              <Ionicons name="chevron-back" size={22} color={colors.text} />
             </TouchableOpacity>
-            <Text className="flex-1 pr-12 text-center text-lg font-bold text-text-primary">
+            <Text
+              className="flex-1 pr-12 text-center text-lg font-bold"
+              style={{ color: colors.text }}
+            >
               Đăng kí tài khoản{' '}
             </Text>
-            <TouchableOpacity className="flex-row items-center gap-1 rounded-full bg-red-50 px-3 py-1.5">
-              <Ionicons name="alert-circle" size={18} color="#dc2626" />
-              <Text className="text-sm font-bold text-red-600">SOS</Text>
+            <TouchableOpacity className="flex-row items-center gap-1 rounded-full px-3 py-1.5" style={{ backgroundColor: `${colors.status.error}18` }}>
+              <Ionicons name="alert-circle" size={18} color={colors.status.error} />
+              <Text className="text-sm font-bold" style={{ color: colors.status.error }}>SOS</Text>
             </TouchableOpacity>
           </View>
 
           {/* Headline */}
           <View className="mb-8">
-            <Text className="mb-2 text-[32px] font-bold text-text-primary">
+            <Text
+              className="mb-2 text-[32px] font-bold"
+              style={{ color: colors.text }}
+            >
               Tạo tài khoản để trải nghiệm ứng dụng.
             </Text>
-            <Text className="text-base text-text-secondary">
+            <Text className="text-base" style={{ color: colors.textSecondary }}>
               Nhập thông tin để kết nối với cứu trợ.
             </Text>
           </View>
@@ -130,13 +131,17 @@ export default function RegisterScreen() {
           <View className="space-y-5">
             {/* Full Name */}
             <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
+              <Text
+                className="mb-2 text-base font-medium"
+                style={{ color: colors.text }}
+              >
                 Họ và tên
               </Text>
               <TextInput
-                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
+                className="h-14 rounded-lg px-4 text-base"
+                style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
                 placeholder="Nguyễn Văn A"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textSecondary}
                 value={fullName}
                 onChangeText={setFullName}
                 editable={!loading}
@@ -145,13 +150,17 @@ export default function RegisterScreen() {
 
             {/* UserName */}
             <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
+              <Text
+                className="mb-2 text-base font-medium"
+                style={{ color: colors.text }}
+              >
                 Tên tài khoản
               </Text>
               <TextInput
-                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
+                className="h-14 rounded-lg px-4 text-base"
+                style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
                 placeholder="Nhâp tên tài khoản"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textSecondary}
                 value={username}
                 onChangeText={setUsername}
                 editable={!loading}
@@ -160,13 +169,17 @@ export default function RegisterScreen() {
 
             {/* Phone */}
             <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
+              <Text
+                className="mb-2 text-base font-medium"
+                style={{ color: colors.text }}
+              >
                 Số điện thoại
               </Text>
               <TextInput
-                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
+                className="h-14 rounded-lg px-4 text-base"
+                style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
                 placeholder="09xx xxx xxx"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="phone-pad"
                 value={phone}
                 onChangeText={setPhone}
@@ -176,13 +189,17 @@ export default function RegisterScreen() {
 
             {/* Email */}
             <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
+              <Text
+                className="mb-2 text-base font-medium"
+                style={{ color: colors.text }}
+              >
                 Email
               </Text>
               <TextInput
-                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
+                className="h-14 rounded-lg px-4 text-base"
+                style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
                 placeholder="example@email.com"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
@@ -193,14 +210,18 @@ export default function RegisterScreen() {
 
             {/* Password */}
             <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
+              <Text
+                className="mb-2 text-base font-medium"
+                style={{ color: colors.text }}
+              >
                 Mật khẩu
               </Text>
               <View className="relative">
                 <TextInput
-                  className="h-14 rounded-lg border border-surface-dark bg-white px-4 pr-12 text-base text-text-primary"
+                  className="h-14 rounded-lg px-4 pr-12 text-base"
+                  style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
                   placeholder="••••••••"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.textSecondary}
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
@@ -210,21 +231,27 @@ export default function RegisterScreen() {
                   className="absolute right-4 top-[18px]"
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text>{showPassword ? '🙈' : '👁️'}</Text>
+                  <Text style={{ color: colors.textSecondary }}>
+                    {showPassword ? '🙈' : '👁️'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Confirm Password */}
             <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
+              <Text
+                className="mb-2 text-base font-medium"
+                style={{ color: colors.text }}
+              >
                 Xác nhận mật khẩu
               </Text>
               <View className="relative">
                 <TextInput
-                  className="h-14 rounded-lg border border-surface-dark bg-white px-4 pr-12 text-base text-text-primary"
+                  className="h-14 rounded-lg px-4 pr-12 text-base"
+                  style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
                   placeholder="••••••••"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.textSecondary}
                   secureTextEntry={!showConfirmPassword}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -234,7 +261,9 @@ export default function RegisterScreen() {
                   className="absolute right-4 top-[18px]"
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  <Text>{showConfirmPassword ? '🙈' : '👁️'}</Text>
+                  <Text style={{ color: colors.textSecondary }}>
+                    {showConfirmPassword ? '🙈' : '👁️'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -248,7 +277,7 @@ export default function RegisterScreen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.white} />
               ) : (
                 <Text className="text-[17px] font-bold text-white">
                   Đăng ký
@@ -259,7 +288,7 @@ export default function RegisterScreen() {
 
           {/* Footer */}
           <View className="mt-10 items-center">
-            <Text className="text-base text-text-secondary">
+            <Text className="text-base" style={{ color: colors.textSecondary }}>
               Đã có tài khoản?
               <Text
                 className="font-bold text-primary"
@@ -271,7 +300,24 @@ export default function RegisterScreen() {
             </Text>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <AppDialog
+        visible={successVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        cancelLabel="Ở lại"
+        confirmLabel="Nhập OTP"
+        onCancel={() => setSuccessVisible(false)}
+        onConfirm={() => {
+          setSuccessVisible(false);
+          router.replace({
+            pathname: '/otp-verification',
+            params: { email: email.trim() },
+          });
+        }}
+      />
+    </SafeAreaView>
   );
 }

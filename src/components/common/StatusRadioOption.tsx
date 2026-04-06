@@ -35,7 +35,7 @@ export default function StatusRadioOption({
             <View
                 className="h-5 w-5 items-center justify-center rounded-full border-2"
                 style={{
-                    borderColor: selected ? accentColor : '#d1d5db',
+                    borderColor: selected ? accentColor : colors.border,
                 }}
             >
                 {selected && (

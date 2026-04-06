@@ -1,5 +1,6 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
+import { useTheme } from '@/src/context/ThemeContext';
 import {
   TeamRolePreference,
   VolunteerProfileResponse,
@@ -31,6 +32,7 @@ export default function MyVolunteerProfileScreen({
   onResubmit,
 }: MyVolunteerProfileScreenProps) {
   const { bottom } = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   const queryClient = useQueryClient();
   const { data: profileData, isLoading: loading } = useMyVolunteerProfile();
@@ -57,24 +59,24 @@ export default function MyVolunteerProfileScreen({
     switch (normalizedStatus) {
       case 'Approved':
         return {
-          bg: '#DCFCE7',
-          text: '#166534',
+          bg: `${colors.status.completed}22`,
+          text: colors.status.completed,
           title: 'Đã chấp nhận',
           description: 'Bạn đã trở thành tình nguyện viên.',
           icon: 'checkmark-circle' as const,
         };
       case 'Rejected':
         return {
-          bg: '#FEE2E2',
-          text: '#B91C1C',
+          bg: `${colors.status.error}22`,
+          text: colors.status.error,
           title: 'Bị từ chối',
           description: 'Hồ sơ của bạn cần được chỉnh sửa và gửi lại.',
           icon: 'close-circle' as const,
         };
       default:
         return {
-          bg: '#FEF3C7',
-          text: '#92400E',
+          bg: `${colors.status.pending}22`,
+          text: colors.status.pending,
           title: 'Chờ duyệt',
           description: 'Hồ sơ của bạn đang chờ moderator duyệt.',
           icon: 'time' as const,
@@ -84,10 +86,10 @@ export default function MyVolunteerProfileScreen({
 
   if (loading) {
     return (
-      <View className="flex-1 bg-background-light">
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#DA251D" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text className="mt-3 text-text-secondary">Đang tải hồ sơ...</Text>
         </View>
       </View>
@@ -96,10 +98,10 @@ export default function MyVolunteerProfileScreen({
 
   if (errorMessage) {
     return (
-      <View className="flex-1 bg-background-light">
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="alert-circle-outline" size={36} color="#DC2626" />
+          <Ionicons name="alert-circle-outline" size={36} color={colors.status.error} />
           <Text className="mt-4 text-center text-lg font-bold text-text-primary">
             Không thể tải hồ sơ tình nguyện viên
           </Text>
@@ -119,10 +121,10 @@ export default function MyVolunteerProfileScreen({
 
   if (!profile) {
     return (
-      <View className="flex-1 bg-background-light">
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="document-text-outline" size={36} color="#94A3B8" />
+          <Ionicons name="document-text-outline" size={36} color={colors.textSecondary} />
           <Text className="mt-4 text-center text-lg font-bold text-text-primary">
             Bạn chưa có hồ sơ tình nguyện viên
           </Text>
@@ -143,7 +145,7 @@ export default function MyVolunteerProfileScreen({
   }
 
   return (
-    <View className="flex-1 bg-background-light">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
       <ScrollView
         className="flex-1"
@@ -151,7 +153,7 @@ export default function MyVolunteerProfileScreen({
         showsVerticalScrollIndicator={false}
       >
         <View className="px-4 pt-4">
-          <View className="rounded-3xl bg-secondary p-5">
+          <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
             <View className="flex-row items-start justify-between gap-3">
               <View className="flex-1">
                 <View
@@ -173,7 +175,7 @@ export default function MyVolunteerProfileScreen({
                 </Text>
               </View>
               <View className="rounded-2xl bg-white/15 p-3">
-                <Ionicons name={statusMeta.icon} size={24} color="#fff" />
+                <Ionicons name={statusMeta.icon} size={24} color={colors.white} />
               </View>
             </View>
 
@@ -207,12 +209,12 @@ export default function MyVolunteerProfileScreen({
             }
           />
           <View className="mt-4">
-            <Text className="text-sm font-semibold text-text-secondary">
-              Mô tả
-            </Text>
-            <Text className="mt-2 text-base leading-6 text-text-primary">
-              {profile.descriptions || '--'}
-            </Text>
+              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
+                Mô tả
+              </Text>
+              <Text className="mt-2 text-base leading-6" style={{ color: colors.text }}>
+                {profile.descriptions || '--'}
+              </Text>
           </View>
         </SectionCard>
 
@@ -245,22 +247,23 @@ export default function MyVolunteerProfileScreen({
               {profile.certificates.map((certificate, index) => (
                 <View
                   key={`${certificate.fileUrl}-${index}`}
-                  className="rounded-2xl border border-surface-dark bg-surface p-4"
+                  className="rounded-2xl border p-4"
+                  style={{ borderColor: colors.border, backgroundColor: colors.surface }}
                 >
-                  <Text className="text-base font-bold text-text-primary">
+                  <Text className="text-base font-bold" style={{ color: colors.text }}>
                     {certificate.name}
                   </Text>
-                  <Text className="mt-1 text-sm text-text-secondary">
+                  <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
                     {certificate.issuedBy}
                   </Text>
-                  <Text className="mt-2 text-sm text-text-secondary">
+                  <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
                     Cấp ngày {formatDate(certificate.issuedDate)}
                     {certificate.expiryDate
                       ? ` • Hết hạn ${formatDate(certificate.expiryDate)}`
                       : ''}
                   </Text>
                   {!!certificate.fileUrl && (
-                    <View className="mt-3 overflow-hidden rounded-xl border border-surface-dark">
+                    <View className="mt-3 overflow-hidden rounded-xl border" style={{ borderColor: colors.border }}>
                       <Image
                         source={{ uri: certificate.fileUrl }}
                         className="h-40 w-full"
@@ -302,12 +305,14 @@ function SectionCard({
   icon: keyof typeof Ionicons.glyphMap;
   children: React.ReactNode;
 }) {
+  const { colors } = useTheme();
+
   return (
     <View className="mt-4 px-4">
-      <View className="rounded-2xl border border-surface-dark bg-white p-4">
+      <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
         <View className="mb-4 flex-row items-center gap-2">
-          <Ionicons name={icon} size={18} color="#DA251D" />
-          <Text className="text-base font-bold text-text-primary">{title}</Text>
+          <Ionicons name={icon} size={18} color={colors.primary} />
+          <Text className="text-base font-bold" style={{ color: colors.text }}>{title}</Text>
         </View>
         {children}
       </View>
@@ -316,16 +321,18 @@ function SectionCard({
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
   return (
     <View className="mb-3">
-      <Text className="text-sm font-semibold text-text-secondary">{label}</Text>
-      <Text className="mt-1 text-base text-text-primary">{value}</Text>
+      <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>{label}</Text>
+      <Text className="mt-1 text-base" style={{ color: colors.text }}>{value}</Text>
     </View>
   );
 }
 
 function EmptyInline({ text }: { text: string }) {
-  return <Text className="text-sm text-text-secondary">{text}</Text>;
+  const { colors } = useTheme();
+  return <Text className="text-sm" style={{ color: colors.textSecondary }}>{text}</Text>;
 }
 
 function formatDate(value?: string | null) {
