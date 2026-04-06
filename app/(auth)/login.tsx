@@ -1,10 +1,12 @@
 import '@/global.css';
+import AppDialog from '@/src/components/common/AppDialog';
+import { useTheme } from '@/src/context/ThemeContext';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Easing,
   KeyboardAvoidingView,
@@ -14,11 +16,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import Toast from 'react-native-toast-message';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../../src/services/authService';
-import { useTheme } from '@/src/context/ThemeContext';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [successDialogVisible, setSuccessDialogVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Đăng nhập thành công');
 
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -51,11 +54,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Vui lòng nhập đầy đủ email và mật khẩu',
-      });
+      showErrorToast('Thiếu thông tin', 'Vui lòng nhập đầy đủ email và mật khẩu');
       return;
     }
 
@@ -68,40 +67,31 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
-        Alert.alert('Thành công', result.message || 'Đăng nhập thành công', [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]);
+        const message = result.message || 'Đăng nhập thành công';
+        setSuccessMessage(message);
+        showSuccessToast('Đăng nhập thành công', message);
+        setSuccessDialogVisible(true);
       } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: result.message || 'Đăng nhập thất bại',
-        });
+        showErrorToast('Đăng nhập thất bại', result.message || 'Vui lòng kiểm tra lại thông tin đăng nhập.');
       }
     } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Có lỗi xảy ra, vui lòng thử lại',
-      });
+      showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại sau');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
       >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="w-full max-w-[420px] flex-1 self-center px-6 pb-8 pt-10">
           {/* Header */}
           <View className="mb-10 items-center">
@@ -303,7 +293,21 @@ export default function LoginScreen() {
             <Text className="font-bold text-primary">Đăng ký ngay</Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <AppDialog
+        visible={successDialogVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        cancelLabel="Ở lại"
+        confirmLabel="Vào ứng dụng"
+        onCancel={() => setSuccessDialogVisible(false)}
+        onConfirm={() => {
+          setSuccessDialogVisible(false);
+          router.replace('/(tabs)');
+        }}
+      />
+    </SafeAreaView>
   );
 }

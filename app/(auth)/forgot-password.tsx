@@ -1,11 +1,12 @@
 import '@/global.css';
+import AppDialog from '@/src/components/common/AppDialog';
 import { authService } from '@/src/services/authService';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,18 +15,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useTheme } from '@/src/context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Mã xác thực đã được gửi');
 
   const handleSendCode = async () => {
     if (!email.trim()) {
-      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Vui lòng nhập email' });
+      showErrorToast('Thiếu email', 'Vui lòng nhập email');
       return;
     }
 
@@ -36,46 +39,32 @@ export default function ForgotPasswordScreen() {
       });
 
       if (!result.success) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: result.message || 'Không thể gửi mã, vui lòng thử lại',
-        });
+        showErrorToast('Không thể gửi mã', result.message || 'Không thể gửi mã, vui lòng thử lại');
         return;
       }
 
-      Alert.alert('Thành công', result.message || 'Mã xác thực đã được gửi', [
-        {
-          text: 'OK',
-          onPress: () => {
-            router.push({
-              pathname: '/otp-verification',
-              params: { email: email.trim(), mode: 'forgot-password' },
-            });
-          },
-        },
-      ]);
+      const message = result.message || 'Mã xác thực đã được gửi';
+      setSuccessMessage(message);
+      showSuccessToast('Đã gửi mã xác thực', message);
+      setSuccessVisible(true);
     } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể gửi mã, vui lòng thử lại',
-      });
+      showErrorToast('Không thể gửi mã', 'Không thể gửi mã, vui lòng thử lại');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
       >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="w-full max-w-[420px] flex-1 self-center px-4" style={{ backgroundColor: colors.background }}>
           {/* Top App Bar */}
           <View className="flex-row items-center justify-between py-4">
@@ -178,7 +167,24 @@ export default function ForgotPasswordScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <AppDialog
+        visible={successVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        cancelLabel="Ở lại"
+        confirmLabel="Nhập OTP"
+        onCancel={() => setSuccessVisible(false)}
+        onConfirm={() => {
+          setSuccessVisible(false);
+          router.push({
+            pathname: '/otp-verification',
+            params: { email: email.trim(), mode: 'forgot-password' },
+          });
+        }}
+      />
+    </SafeAreaView>
   );
 }

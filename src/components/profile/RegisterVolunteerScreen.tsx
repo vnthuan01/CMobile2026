@@ -1,4 +1,5 @@
 import '@/global.css';
+import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import {
   CreateVolunteerCertificateRequest,
@@ -9,6 +10,7 @@ import {
   VolunteerProfileResponse,
   volunteerService,
 } from '@/src/services/volunteerService';
+import { showErrorToast, showSuccessToast, showWarningToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, {
   DateTimePickerAndroid,
@@ -18,7 +20,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   ScrollView,
@@ -28,7 +29,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 import { useTheme } from '@/src/context/ThemeContext';
 
 interface RegisterVolunteerScreenProps {
@@ -102,6 +102,7 @@ export default function RegisterVolunteerScreen({
 }: RegisterVolunteerScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { dialogProps, showDialog } = useDialog();
   const [descriptions, setDescriptions] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [teamRolePreference, setTeamRolePreference] =
@@ -253,11 +254,7 @@ export default function RegisterVolunteerScreen({
   const pickAndUploadCertificateImage = async (index: number) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Bạn cần cấp quyền thư viện ảnh để chọn chứng chỉ.',
-      });
+      showWarningToast('Cần quyền truy cập', 'Bạn cần cấp quyền thư viện ảnh để chọn chứng chỉ.');
       return;
     }
 
@@ -279,20 +276,12 @@ export default function RegisterVolunteerScreen({
       );
 
       if (!uploadResult.success || !uploadResult.url) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: uploadResult.message || 'Upload ảnh thất bại.',
-        });
+        showErrorToast('Upload ảnh thất bại', uploadResult.message || 'Upload ảnh thất bại.');
         return;
       }
 
       updateCertificate(index, 'fileUrl', uploadResult.url);
-      Toast.show({
-        type: 'success',
-        text1: 'Thành công',
-        text2: 'Đã upload ảnh chứng chỉ lên Cloudinary.',
-      });
+      showSuccessToast('Upload thành công', 'Đã upload ảnh chứng chỉ lên Cloudinary.');
     } finally {
       setUploadingCertificateIndex(null);
     }
@@ -303,7 +292,7 @@ export default function RegisterVolunteerScreen({
       /^\d{4}-\d{2}-\d{2}$/.test(value);
 
     if (!descriptions.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập mô tả hồ sơ tình nguyện viên.');
+      showWarningToast('Thiếu thông tin', 'Vui lòng nhập mô tả hồ sơ tình nguyện viên.');
       return false;
     }
 
@@ -311,17 +300,17 @@ export default function RegisterVolunteerScreen({
       yearsOfExperience.trim() &&
       (Number.isNaN(Number(yearsOfExperience)) || Number(yearsOfExperience) < 0)
     ) {
-      Alert.alert('Lỗi', 'Số năm kinh nghiệm phải là số >= 0.');
+      showWarningToast('Dữ liệu chưa hợp lệ', 'Số năm kinh nghiệm phải là số >= 0.');
       return false;
     }
 
     if (!teamRolePreference) {
-      Alert.alert('Lỗi', 'Vui lòng chọn vai trò mong muốn trong đội.');
+      showWarningToast('Thiếu thông tin', 'Vui lòng chọn vai trò mong muốn trong đội.');
       return false;
     }
 
     if (selectedSkillIds.length === 0) {
-      Alert.alert('Lỗi', 'Vui lòng chọn ít nhất 1 kỹ năng.');
+      showWarningToast('Thiếu thông tin', 'Vui lòng chọn ít nhất 1 kỹ năng.');
       return false;
     }
 
@@ -332,31 +321,22 @@ export default function RegisterVolunteerScreen({
         !cert.issuedDate.trim() ||
         !cert.fileUrl.trim()
       ) {
-        Alert.alert('Lỗi', 'Vui lòng điền đủ thông tin chứng chỉ bắt buộc.');
+        showWarningToast('Thiếu thông tin', 'Vui lòng điền đủ thông tin chứng chỉ bắt buộc.');
         return false;
       }
 
       if (!/^https?:\/\//i.test(cert.fileUrl.trim())) {
-        Alert.alert(
-          'Lỗi',
-          'File URL của chứng chỉ phải là link hợp lệ (http/https).',
-        );
+        showWarningToast('Dữ liệu chưa hợp lệ', 'File URL của chứng chỉ phải là link hợp lệ (http/https).');
         return false;
       }
 
       if (!isValidDateOnly(cert.issuedDate.trim())) {
-        Alert.alert(
-          'Lỗi',
-          'Ngày cấp chứng chỉ phải đúng định dạng YYYY-MM-DD.',
-        );
+        showWarningToast('Dữ liệu chưa hợp lệ', 'Ngày cấp chứng chỉ phải đúng định dạng YYYY-MM-DD.');
         return false;
       }
 
       if (cert.expiryDate?.trim() && !isValidDateOnly(cert.expiryDate.trim())) {
-        Alert.alert(
-          'Lỗi',
-          'Ngày hết hạn chứng chỉ phải đúng định dạng YYYY-MM-DD.',
-        );
+        showWarningToast('Dữ liệu chưa hợp lệ', 'Ngày hết hạn chứng chỉ phải đúng định dạng YYYY-MM-DD.');
         return false;
       }
     }
@@ -398,21 +378,23 @@ export default function RegisterVolunteerScreen({
           : await volunteerService.createVolunteerProfile(createPayload);
 
       if (!result.success) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: result.message || 'Không thể gửi hồ sơ.',
-        });
+        showErrorToast('Không thể gửi hồ sơ', result.message || 'Không thể gửi hồ sơ.');
         return;
       }
 
-      Alert.alert(
-        'Thành công',
+      const successMessage =
         mode === 'resubmit'
           ? 'Đã gửi lại hồ sơ tình nguyện viên. Vui lòng chờ xét duyệt lại.'
-          : 'Đã gửi hồ sơ đăng ký tình nguyện viên. Vui lòng chờ xét duyệt.',
-        [{ text: 'OK', onPress: () => onSuccess?.() }],
-      );
+          : 'Đã gửi hồ sơ đăng ký tình nguyện viên. Vui lòng chờ xét duyệt.';
+      showSuccessToast('Gửi hồ sơ thành công', successMessage);
+      showDialog({
+        title: 'Thành công',
+        message: successMessage,
+        type: 'success',
+        cancelLabel: 'Ở lại',
+        confirmLabel: 'Hoàn tất',
+        onConfirm: () => onSuccess?.(),
+      });
     } finally {
       setLoading(false);
     }
@@ -420,11 +402,7 @@ export default function RegisterVolunteerScreen({
 
   const handleSaveDraft = () => {
     setDraftSaved(true);
-    Toast.show({
-      type: 'success',
-      text1: 'Đã lưu nháp',
-      text2: 'Thông tin chỉnh sửa đã được giữ lại trên màn hình hiện tại.',
-    });
+    showSuccessToast('Đã lưu nháp', 'Thông tin chỉnh sửa đã được giữ lại trên màn hình hiện tại.');
   };
 
   return (
@@ -727,6 +705,7 @@ export default function RegisterVolunteerScreen({
           onChange={onDateTimeChange}
         />
       ) : null}
+      <AppDialog {...dialogProps} />
     </View>
   );
 }

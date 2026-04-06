@@ -1,57 +1,99 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenHeaderProps {
     title: string;
+    subtitle?: string;
     onBack?: () => void;
+    rightAction?: React.ReactNode;
     backgroundColor?: string;
     titleColor?: string;
-    iconColor?: string;
-    rightAction?: React.ReactNode;
+    // Legacy aliases for backward compatibility with Header
+    center?: boolean;
+    rightComponent?: React.ReactNode;
 }
 
 export default function ScreenHeader({
     title,
+    subtitle,
     onBack,
+    rightAction,
     backgroundColor,
     titleColor,
-    iconColor,
-    rightAction,
+    center: _center,
+    rightComponent,
 }: ScreenHeaderProps) {
     const { top } = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
 
     const bgColor = backgroundColor ?? colors.card;
     const txtColor = titleColor ?? colors.text;
-    const icnColor = iconColor ?? colors.text;
+    const resolvedRightAction = rightAction ?? rightComponent ?? null;
+    const backButtonBg = isDark ? colors.surface : `${colors.primary}15`;
 
     return (
         <View
-            style={{
-                paddingTop: top,
-                backgroundColor: bgColor,
-                borderBottomColor: colors.border,
-            }}
-            className="flex-row items-center justify-between border-b px-4 pb-3"
+            style={[
+                {
+                    paddingTop: top + 10,
+                    paddingBottom: 10,
+                    paddingHorizontal: 16,
+                    backgroundColor: bgColor,
+                    borderBottomColor: colors.border,
+                },
+                !isDark && styles.shadow,
+            ]}
+            className="border-b"
         >
-            <TouchableOpacity
-                onPress={onBack}
-                className="h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: isDark ? colors.card : colors.primary }}
-            >
-                <Ionicons name="arrow-back" size={24} color={isDark ? colors.text : colors.white} />
-            </TouchableOpacity>
-            <Text
-                className="flex-1 text-center text-lg font-bold leading-tight tracking-tight"
-                style={{ color: txtColor }}
-                numberOfLines={1}
-            >
-                {title}
-            </Text>
-            {rightAction ? rightAction : <View className="w-10" />}
+            <View className="flex-row items-center">
+                {onBack ? (
+                    <TouchableOpacity
+                        onPress={onBack}
+                        style={{ width: 40, height: 40, backgroundColor: backButtonBg }}
+                        className="items-center justify-center rounded-full"
+                    >
+                        <Ionicons name="arrow-back-outline" size={22} color={colors.primary} />
+                    </TouchableOpacity>
+                ) : (
+                    <View style={{ width: 40 }} />
+                )}
+
+                <View className="flex-1 items-center">
+                    <Text
+                        style={{ color: txtColor, fontSize: 18 }}
+                        className="font-bold text-center leading-tight"
+                        numberOfLines={1}
+                    >
+                        {title}
+                    </Text>
+                    {subtitle ? (
+                        <Text
+                            style={{ color: colors.textSecondary, fontSize: 13 }}
+                            className="mt-0.5 text-center"
+                            numberOfLines={1}
+                        >
+                            {subtitle}
+                        </Text>
+                    ) : null}
+                </View>
+
+                <View style={{ width: 40 }} className="items-end">
+                    {resolvedRightAction}
+                </View>
+            </View>
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    shadow: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+});

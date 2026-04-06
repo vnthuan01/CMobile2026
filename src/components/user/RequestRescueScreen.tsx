@@ -1,6 +1,8 @@
 import '@/global.css';
+import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import Header from '@/src/components/header/header';
 import { useTheme } from '@/src/context/ThemeContext';
+import { showErrorToast, showSuccessToast, showWarningToast } from '@/src/utils/toast';
 import {
   DisasterType,
   PriorityCriteria,
@@ -18,7 +20,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   Text,
@@ -27,7 +28,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 import RequestRescueMiniMap from './RequestRescueMiniMap';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -79,6 +79,7 @@ export default function RequestRescueScreen({
 }: RequestRescueScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { dialogProps, showDialog } = useDialog();
 
   // ── Form state ───────────────────────────────────────────────────────────
   const [rescueType, setRescueType] = useState<RescueType>(0);
@@ -137,13 +138,7 @@ export default function RequestRescueScreen({
     setSelectedCriteriaByCategory({ HUMAN: null, ENV: null, SCALE: null });
     fetchPriorityCriteria(disasterType)
       .then(setCriteria)
-      .catch(() =>
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: 'Không thể tải danh sách tiêu chí ưu tiên.',
-        }),
-      )
+      .catch(() => showErrorToast('Không thể tải dữ liệu', 'Không thể tải danh sách tiêu chí ưu tiên.'))
       .finally(() => setLoadingCriteria(false));
   }, [disasterType, rescueType]);
 
@@ -151,11 +146,7 @@ export default function RequestRescueScreen({
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Toast.show({
-        type: 'error',
-        text1: 'Cần quyền',
-        text2: 'Cho phép truy cập thư viện ảnh để đính kèm hình ảnh.',
-      });
+      showWarningToast('Cần quyền truy cập', 'Cho phép truy cập thư viện ảnh để đính kèm hình ảnh.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -176,12 +167,7 @@ export default function RequestRescueScreen({
           );
 
           if (!uploadResult.success || !uploadResult.url) {
-            Toast.show({
-              type: 'error',
-              text1: 'Lỗi',
-              text2:
-                uploadResult.message || 'Không thể upload ảnh lên Cloudinary.',
-            });
+            showErrorToast('Upload ảnh thất bại', uploadResult.message || 'Không thể upload ảnh lên Cloudinary.');
             continue;
           }
 
@@ -214,23 +200,20 @@ export default function RequestRescueScreen({
   // ── Validation ────────────────────────────────────────────────────────────
   const validate = (): boolean => {
     if (!reporterPhone.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập số điện thoại liên hệ.');
+      showWarningToast('Thiếu thông tin', 'Vui lòng nhập số điện thoại liên hệ.');
       return false;
     }
     if (latitude === null || longitude === null) {
-      Alert.alert(
-        'Chưa có vị trí',
-        'Vui lòng chờ ứng dụng xác định vị trí của bạn.',
-      );
+      showWarningToast('Chưa có vị trí', 'Vui lòng chờ ứng dụng xác định vị trí của bạn.');
       return false;
     }
     if (rescueType === 0) {
       if (!reporterFullName.trim()) {
-        Alert.alert('Thiếu thông tin', 'Vui lòng nhập họ tên người báo cáo.');
+        showWarningToast('Thiếu thông tin', 'Vui lòng nhập họ tên người báo cáo.');
         return false;
       }
       if (!description.trim()) {
-        Alert.alert('Thiếu thông tin', 'Vui lòng mô tả tình trạng.');
+        showWarningToast('Thiếu thông tin', 'Vui lòng mô tả tình trạng.');
         return false;
       }
     }
@@ -274,15 +257,17 @@ export default function RequestRescueScreen({
         });
       }
 
-      Alert.alert('Thành công', 'Yêu cầu cứu hộ đã được gửi!', [
-        { text: 'OK', onPress: onBack },
-      ]);
-    } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể gửi yêu cầu. Vui lòng thử lại.',
+      showSuccessToast('Gửi yêu cầu thành công', 'Yêu cầu cứu hộ đã được gửi!');
+      showDialog({
+        title: 'Thành công',
+        message: 'Yêu cầu cứu hộ đã được gửi!',
+        type: 'success',
+        cancelLabel: 'Ở lại',
+        confirmLabel: 'Quay lại',
+        onConfirm: () => onBack?.(),
       });
+    } catch {
+      showErrorToast('Không thể gửi yêu cầu', 'Không thể gửi yêu cầu. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -782,6 +767,7 @@ export default function RequestRescueScreen({
           </View>
         )}
       </View>
+      <AppDialog {...dialogProps} />
     </View>
   );
 }

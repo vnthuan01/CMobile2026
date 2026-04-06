@@ -25,10 +25,10 @@ import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import TeamTasksMap from './TeamTasksMap';
+import WebViewMap from '@/src/components/common/WebViewMap';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   Text,
@@ -36,6 +36,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from '@/src/utils/toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TasksScreenType = 'list' | 'map';
@@ -778,10 +783,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const pickLeaderImages = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== 'granted') {
-      Alert.alert(
-        'Cần quyền',
-        'Cho phép truy cập thư viện ảnh để đính kèm minh chứng.',
-      );
+      showWarningToast('Cần quyền thư viện ảnh', 'Cho phép truy cập để đính kèm minh chứng.');
       return;
     }
 
@@ -805,10 +807,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
         );
 
         if (!uploadResult.success || !uploadResult.url) {
-          Alert.alert(
-            'Upload thất bại',
-            uploadResult.message || 'Không thể upload ảnh minh chứng.',
-          );
+          showErrorToast('Upload thất bại', uploadResult.message || 'Không thể upload ảnh minh chứng.');
           continue;
         }
 
@@ -846,10 +845,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
       const targetMission = mission || activeActionMission || selectedMission;
 
       if (!targetMission?.rescueRequestId) {
-        Alert.alert(
-          'Thiếu dữ liệu',
-          'Không xác định được yêu cầu cứu hộ hiện tại.',
-        );
+        showWarningToast('Thiếu dữ liệu', 'Không xác định được yêu cầu cứu hộ hiện tại.');
         return;
       }
 
@@ -883,14 +879,11 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           }));
         }
 
-        Alert.alert('Thành công', 'Đã cập nhật tiến độ nhiệm vụ.');
+        showSuccessToast('Cập nhật thành công', 'Đã cập nhật tiến độ nhiệm vụ.');
         resetLeaderForms();
         await loadData(true);
       } catch (error: any) {
-        Alert.alert(
-          'Không thể cập nhật',
-          error?.message || 'Cập nhật tiến độ thất bại.',
-        );
+        showErrorToast('Không thể cập nhật', error?.message || 'Cập nhật tiến độ thất bại.');
       } finally {
         actionSubmittingRef.current = false;
         setActionSubmitting(false);
@@ -912,18 +905,12 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
       const targetMission = mission || activeActionMission || selectedMission;
 
       if (!targetMission?.rescueRequestId) {
-        Alert.alert(
-          'Thiếu dữ liệu',
-          'Không xác định được yêu cầu cứu hộ hiện tại.',
-        );
+        showWarningToast('Thiếu dữ liệu', 'Không xác định được yêu cầu cứu hộ hiện tại.');
         return;
       }
 
       if (leaderImages.length === 0) {
-        Alert.alert(
-          'Thiếu ảnh minh chứng',
-          'Cần ít nhất 1 ảnh trước khi hoàn thành nhiệm vụ.',
-        );
+        showWarningToast('Thiếu ảnh minh chứng', 'Cần ít nhất 1 ảnh trước khi hoàn thành nhiệm vụ.');
         return;
       }
 
@@ -960,15 +947,12 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           }));
         }
 
-        Alert.alert('Hoàn thành', 'Đã xác nhận hoàn thành nhiệm vụ.');
+        showSuccessToast('Hoàn thành nhiệm vụ', 'Đã xác nhận hoàn thành nhiệm vụ thành công.');
         setSelectedMission(null);
         resetLeaderForms();
         await loadData(true);
       } catch (error: any) {
-        Alert.alert(
-          'Không thể hoàn thành',
-          error?.message || 'Hoàn thành nhiệm vụ thất bại.',
-        );
+        showErrorToast('Không thể hoàn thành', error?.message || 'Hoàn thành nhiệm vụ thất bại.');
       } finally {
         actionSubmittingRef.current = false;
         setActionSubmitting(false);
@@ -1964,34 +1948,68 @@ function FallbackMapPreview({
   colors: any;
   supportsNativeMap: boolean;
 }) {
+  const markers = (batch?.items ?? [])
+    .map((item) => {
+      const coordinate = rescueTeamService.toMapCoordinate(item)
+      if (!coordinate) return null
+      const emergency = item.rescueRequestType === 'Emergency'
+      return {
+        id: item.rescueBatchItemId,
+        coordinate,
+        color: emergency ? colors.error : colors.info,
+        size: 14,
+      }
+    })
+    .filter(Boolean) as Array<{
+    id: string
+    coordinate: [number, number]
+    color: string
+    size?: number
+  }>
+
+  const center =
+    (selectedMission && rescueTeamService.toMapCoordinate(selectedMission)) ||
+    markers[0]?.coordinate ||
+    ([106.629, 10.724] as const)
+
   return (
-    <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: colors.surface }}>
-      <View className="w-full max-w-[420px] rounded-3xl border p-5" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
-        <View className="flex-row items-center gap-2">
-          <Ionicons name="map-outline" size={22} color={colors.primary} />
-          <Text className="text-lg font-bold" style={{ color: colors.text }}>
-            {supportsNativeMap ? 'Xem trước bản đồ Goong' : 'Bản xem trước bản đồ'}
-          </Text>
-        </View>
+    <View className="flex-1" style={{ backgroundColor: colors.surface }}>
+      <WebViewMap
+        center={center}
+        zoom={13}
+        markers={markers}
+        routeCoordinates={routeCoordinates}
+        routeColor={colors.info}
+        onMarkerPress={(id) => {
+          const mission = (batch?.items ?? []).find(
+            (item) => item.rescueBatchItemId === id,
+          )
+          if (mission) {
+            // Reuse the same selection behavior as native map
+            // (selection state lives in the parent, so we can't set it here)
+          }
+        }}
+        style={{ flex: 1 }}
+      />
 
-        <Text className="mt-3 text-sm leading-6" style={{ color: colors.textSecondary }}>
-          {supportsNativeMap
-            ? 'Bản đồ native đã được tích hợp, nhưng màn hình hiện đang dùng chế độ xem trước an toàn để tránh lỗi trong môi trường hiện tại.'
-            : 'Expo Go không hỗ trợ module bản đồ native này. Hãy dùng dev build để xem bản đồ Goong đầy đủ trong ứng dụng.'}
-        </Text>
-
-        <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
+      <View
+        className="absolute bottom-0 left-0 right-0 px-4 pb-4"
+        style={{ paddingBottom: 12 }}
+        pointerEvents="none"
+      >
+        <View
+          className="rounded-2xl border px-4 py-3"
+          style={{
+            borderColor: colors.border,
+            backgroundColor: `${colors.card}F2`,
+          }}
+        >
           <Text className="text-sm font-semibold" style={{ color: colors.text }}>
             {selectedMission?.description || 'Chưa chọn nhiệm vụ'}
           </Text>
-          <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
-            Số điểm nhiệm vụ: {batch?.items?.length || 0}
-          </Text>
-          <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-            Số điểm tuyến đường: {routeCoordinates.length}
-          </Text>
-          <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-            Địa chỉ: {selectedMission?.address || '---'}
+          <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+            Số điểm nhiệm vụ: {batch?.items?.length || 0} · Tuyến đường:{' '}
+            {routeCoordinates.length}
           </Text>
         </View>
       </View>

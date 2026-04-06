@@ -1,5 +1,5 @@
 import '@/global.css';
-import Header from '@/src/components/header/header';
+import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
   fetchRescueRequestDetail,
@@ -10,16 +10,16 @@ import {
 import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import UserRescueTrackingMap from './UserRescueTrackingMap';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import UserRescueTrackingMap from './UserRescueTrackingMap';
 
 interface ViewRequestRescueScreenProps {
   requestId: string;
@@ -165,7 +165,7 @@ export default function ViewRequestRescueScreen({
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Header title="Theo dõi yêu cầu" onBack={onBack} center />
+      <ScreenHeader title="Theo dõi yêu cầu" onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: bottom + 120 }}
@@ -367,7 +367,7 @@ export default function ViewRequestRescueScreen({
           </View>
         ) : null}
 
-        <View className="px-4 pb-6">
+        <View className="px-4 pb-6 mt-4">
           <TouchableOpacity
             className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl border"
             style={{ backgroundColor: colors.card, borderColor: colors.status.error }}

@@ -80,7 +80,6 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
                 onBack={onBack}
                 backgroundColor={colors.secondary}
                 titleColor="#fff"
-                iconColor="#fff"
                 rightAction={
                     <TouchableOpacity className="h-10 w-10 items-center justify-center rounded-full">
                         <Ionicons name="ellipsis-vertical" size={22} color="#fff" />

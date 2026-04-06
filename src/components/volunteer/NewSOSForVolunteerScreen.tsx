@@ -100,7 +100,7 @@ export default function NewSOSForVolunteerScreen({
         <View className="flex-1" style={{ backgroundColor: colors.background }}>
             {/* Header */}
             <ScreenHeader
-                title=""
+                title="Tạo SOS mới"
                 onBack={onBack}
                 rightAction={
                     <TouchableOpacity className="relative p-2">

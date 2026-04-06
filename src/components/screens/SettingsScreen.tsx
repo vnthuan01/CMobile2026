@@ -1,5 +1,5 @@
 import '@/global.css';
-import Header from '@/src/components/header/header';
+import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,7 +55,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
             className="flex-1"
             style={{ backgroundColor: colors.background }}
         >
-            <Header title="Cài đặt" onBack={onBack} />
+            <ScreenHeader title="Cài đặt" onBack={onBack} />
 
             <ScrollView
                 contentContainerStyle={{ paddingBottom: bottom + 32 }}

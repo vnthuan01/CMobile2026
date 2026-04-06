@@ -1,11 +1,12 @@
 import '@/global.css';
+import AppDialog from '@/src/components/common/AppDialog';
 import { authService } from '@/src/services/authService';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,8 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useTheme } from '@/src/context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Đăng ký thành công. Vui lòng xác thực OTP.');
 
   const handleRegister = async () => {
     if (
@@ -40,20 +43,12 @@ export default function RegisterScreen() {
       !password ||
       !confirmPassword
     ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Vui lòng nhập đầy đủ thông tin',
-      });
+      showErrorToast('Thiếu thông tin', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
 
     if (password !== confirmPassword) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu xác nhận không khớp',
-      });
+      showErrorToast('Mật khẩu không khớp', 'Mật khẩu xác nhận không khớp');
       return;
     }
 
@@ -70,37 +65,34 @@ export default function RegisterScreen() {
       });
 
       if (!result.success) {
-        Toast.show({ type: 'error', text1: 'Lỗi', text2: result.message });
+        showErrorToast('Đăng ký thất bại', result.message || 'Vui lòng thử lại.');
         return;
       }
 
       if (result.status === 201 || result.status === 200) {
-        router.replace({
-          pathname: '/otp-verification',
-          params: { email: email.trim() },
-        });
+        const message = result.message || 'Đăng ký thành công. Vui lòng xác thực OTP.';
+        setSuccessMessage(message);
+        showSuccessToast('Đăng ký thành công', message);
+        setSuccessVisible(true);
       }
     } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Có lỗi xảy ra, vui lòng thử lại',
-      });
+      showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
       >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="w-full max-w-[420px] flex-1 self-center px-5 pb-8 pt-6">
           {/* Header */}
           <View className="mb-6 flex-row items-center justify-between">
@@ -308,7 +300,24 @@ export default function RegisterScreen() {
             </Text>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <AppDialog
+        visible={successVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        cancelLabel="Ở lại"
+        confirmLabel="Nhập OTP"
+        onCancel={() => setSuccessVisible(false)}
+        onConfirm={() => {
+          setSuccessVisible(false);
+          router.replace({
+            pathname: '/otp-verification',
+            params: { email: email.trim() },
+          });
+        }}
+      />
+    </SafeAreaView>
   );
 }

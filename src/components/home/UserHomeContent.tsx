@@ -166,7 +166,6 @@ export default function UserHomeContent() {
           />
         </View>
       </View>
-r
       <View className="mt-6 px-4">
         <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>
           Yêu cầu đang xử lý

@@ -3,8 +3,9 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import { appToastConfig } from '../src/components/common/AppToast';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { useTheme } from '../src/context/ThemeContext';
 import { authService } from '../src/services/authService';
@@ -34,7 +35,15 @@ function RootLayoutContent() {
   useEffect(() => {
     if (isLoading) return;
 
+    const authScreen = segments[1];
+
     if (!isAuthenticated && !inAuthRoute) {
+      router.replace('/welcome');
+      return;
+    }
+
+    // If router restores directly to /login, still show /welcome first.
+    if (!isAuthenticated && inAuthRoute && authScreen === 'login') {
       router.replace('/welcome');
       return;
     }
@@ -50,8 +59,10 @@ function RootLayoutContent() {
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <Slot />
-      <Toast />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
+        <Slot />
+      </SafeAreaView>
+      <Toast config={appToastConfig} />
     </>
   );
 }

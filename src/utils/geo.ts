@@ -52,6 +52,10 @@ export function toMapCoordinate(item: {
   return [item.longitude, item.latitude];
 }
 
+export function getGoongWebStyleUrl(): string {
+  return `https://tiles.goong.io/assets/goong_map_web.json?api_key=${process.env.EXPO_PUBLIC_GOONG_MAP_KEY ?? ''}`;
+}
+
 export async function fetchDirectionsPolyline(
   origin: { latitude: number; longitude: number },
   destination: { latitude: number; longitude: number },

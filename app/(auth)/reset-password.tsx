@@ -1,11 +1,12 @@
 import '@/global.css';
+import AppDialog from '@/src/components/common/AppDialog';
 import { authService } from '@/src/services/authService';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,8 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useTheme } from '@/src/context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -33,41 +34,27 @@ export default function ResetPasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Đặt lại mật khẩu thành công.');
 
   const handleSubmit = async () => {
     if (!email || !resetToken) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Thiếu thông tin reset token. Vui lòng thử lại từ đầu.',
-      });
+      showErrorToast('Thiếu thông tin', 'Thiếu thông tin reset token. Vui lòng thử lại từ đầu.');
       return;
     }
 
     if (!newPassword.trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Vui lòng nhập mật khẩu mới.',
-      });
+      showErrorToast('Thiếu mật khẩu', 'Vui lòng nhập mật khẩu mới.');
       return;
     }
 
     if (newPassword.length < 6) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu mới phải từ 6 ký tự trở lên.',
-      });
+      showErrorToast('Mật khẩu chưa hợp lệ', 'Mật khẩu mới phải từ 6 ký tự trở lên.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu xác nhận không khớp.',
-      });
+      showErrorToast('Mật khẩu không khớp', 'Mật khẩu xác nhận không khớp.');
       return;
     }
 
@@ -80,31 +67,27 @@ export default function ResetPasswordScreen() {
       });
 
       if (!result.success) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: result.message || 'Không thể đặt lại mật khẩu.',
-        });
+        showErrorToast('Không thể đặt lại mật khẩu', result.message || 'Không thể đặt lại mật khẩu.');
         return;
       }
 
-      Alert.alert(
-        'Thành công',
-        result.message || 'Đặt lại mật khẩu thành công.',
-        [{ text: 'Đăng nhập', onPress: () => router.replace('/login') }],
-      );
+      const message = result.message || 'Đặt lại mật khẩu thành công.';
+      setSuccessMessage(message);
+      showSuccessToast('Đặt lại mật khẩu thành công', message);
+      setSuccessVisible(true);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-    >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View className="w-full max-w-[420px] flex-1 self-center px-4" style={{ backgroundColor: colors.background }}>
           <View className="flex-row items-center justify-between py-4">
             <TouchableOpacity
@@ -170,7 +153,21 @@ export default function ResetPasswordScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <AppDialog
+        visible={successVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        cancelLabel="Ở lại"
+        confirmLabel="Đăng nhập"
+        onCancel={() => setSuccessVisible(false)}
+        onConfirm={() => {
+          setSuccessVisible(false);
+          router.replace('/login');
+        }}
+      />
+    </SafeAreaView>
   );
 }

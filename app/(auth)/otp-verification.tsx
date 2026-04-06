@@ -1,11 +1,12 @@
 import '@/global.css';
+import AppDialog from '@/src/components/common/AppDialog';
 import { authService } from '@/src/services/authService';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,8 +17,8 @@ import {
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useTheme } from '@/src/context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OTPScreen() {
   const router = useRouter();
@@ -28,6 +29,8 @@ export default function OTPScreen() {
   const [counter, setCounter] = useState(30);
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Xác thực OTP thành công.');
   const inputsRef = useRef<TextInput[]>([]);
 
   const email = Array.isArray(params.email) ? params.email[0] : params.email;
@@ -60,23 +63,18 @@ export default function OTPScreen() {
 
   const handleVerify = async () => {
     if (!email) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: isForgotPasswordMode
+      showErrorToast(
+        'Thiếu email',
+        isForgotPasswordMode
           ? 'Không tìm thấy email để khôi phục mật khẩu. Vui lòng thử lại.'
           : 'Không tìm thấy email để xác thực. Vui lòng đăng ký lại.',
-      });
+      );
       return;
     }
 
     const code = otp.join('');
     if (code.length < 6) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Vui lòng nhập đủ 6 số OTP.',
-      });
+      showErrorToast('Thiếu mã OTP', 'Vui lòng nhập đủ 6 số OTP.');
       return;
     }
 
@@ -89,14 +87,11 @@ export default function OTPScreen() {
         });
 
         if (!forgotResult.success || !forgotResult.resetToken) {
-          Toast.show({
-            type: 'error',
-            text1: 'Lỗi',
-            text2: forgotResult.message || 'Xác thực OTP thất bại.',
-          });
+          showErrorToast('Xác thực OTP thất bại', forgotResult.message || 'Xác thực OTP thất bại.');
           return;
         }
 
+        showSuccessToast('Xác minh thành công', forgotResult.message || 'Bạn có thể đặt lại mật khẩu mới.');
         router.replace({
           pathname: '/(auth)/reset-password',
           params: {
@@ -109,20 +104,14 @@ export default function OTPScreen() {
 
       const result = await authService.verifyEmailOtp({ email, code });
       if (!result.success) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: result.message || 'Xác thực OTP thất bại.',
-        });
+        showErrorToast('Xác thực OTP thất bại', result.message || 'Xác thực OTP thất bại.');
         return;
       }
 
-      Alert.alert('Thành công', result.message || 'Xác thực OTP thành công.', [
-        {
-          text: 'Đăng nhập',
-          onPress: () => router.replace('/login'),
-        },
-      ]);
+      const message = result.message || 'Xác thực OTP thành công.';
+      setSuccessMessage(message);
+      showSuccessToast('Xác thực OTP thành công', message);
+      setSuccessVisible(true);
     } finally {
       setVerifying(false);
     }
@@ -136,55 +125,40 @@ export default function OTPScreen() {
       if (isForgotPasswordMode) {
         const forgotResend = await authService.sendForgotPasswordOtp({ email });
         if (!forgotResend.success) {
-          Toast.show({
-            type: 'error',
-            text1: 'Lỗi',
-            text2: forgotResend.message || 'Không thể gửi lại OTP.',
-          });
+          showErrorToast('Không thể gửi lại OTP', forgotResend.message || 'Không thể gửi lại OTP.');
           return;
         }
 
         setCounter(30);
         setOtp(Array(6).fill(''));
         inputsRef.current[0]?.focus();
-        Toast.show({
-          type: 'success',
-          text1: 'Thông báo',
-          text2: forgotResend.message || 'Đã gửi lại mã OTP.',
-        });
+        showSuccessToast('Đã gửi lại OTP', forgotResend.message || 'Đã gửi lại mã OTP.');
         return;
       }
 
       const result = await authService.resendEmailOtp(email);
       if (!result.success) {
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: result.message || 'Không thể gửi lại OTP.',
-        });
+        showErrorToast('Không thể gửi lại OTP', result.message || 'Không thể gửi lại OTP.');
         return;
       }
 
       setCounter(30);
       setOtp(Array(6).fill(''));
       inputsRef.current[0]?.focus();
-      Toast.show({
-        type: 'success',
-        text1: 'Thông báo',
-        text2: result.message || 'Đã gửi lại mã OTP.',
-      });
+      showSuccessToast('Đã gửi lại OTP', result.message || 'Đã gửi lại mã OTP.');
     } finally {
       setResending(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-    >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View className="w-full max-w-md flex-1 self-center" style={{ backgroundColor: colors.background }}>
           <View className="sticky top-0 z-10 flex-row items-center px-4 py-3">
             <TouchableOpacity
@@ -293,7 +267,21 @@ export default function OTPScreen() {
             </View>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <AppDialog
+        visible={successVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        cancelLabel="Ở lại"
+        confirmLabel="Đăng nhập"
+        onCancel={() => setSuccessVisible(false)}
+        onConfirm={() => {
+          setSuccessVisible(false);
+          router.replace('/login');
+        }}
+      />
+    </SafeAreaView>
   );
 }

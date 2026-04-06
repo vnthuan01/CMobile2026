@@ -1,9 +1,11 @@
 import '@/global.css';
+import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ChangePasswordScreenProps {
@@ -21,6 +23,7 @@ const MIN_PASSWORD_LENGTH = 8;
 export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenProps) {
     const { bottom } = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
+    const { dialogProps, showDialog } = useDialog();
 
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -112,23 +115,24 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
 
         if (!validate()) return;
 
-        Alert.alert(
-            'Xác nhận',
-            'Bạn có chắc chắn muốn đổi mật khẩu?',
-            [
-                { text: 'Hủy', style: 'cancel' },
-                {
-                    text: 'Đổi mật khẩu',
-                    style: 'destructive',
-                    onPress: () => {
-                        // TODO: Call API to change password
-                        Alert.alert('Thành công', 'Mật khẩu đã được cập nhật!', [
-                            { text: 'OK', onPress: onBack },
-                        ]);
-                    },
-                },
-            ],
-        );
+        showDialog({
+            title: 'Xác nhận đổi mật khẩu',
+            message: 'Bạn có chắc chắn muốn đổi mật khẩu?',
+            type: 'info',
+            confirmLabel: 'Đổi mật khẩu',
+            cancelLabel: 'Huỷ',
+            onConfirm: () => {
+                showSuccessToast('Cập nhật thành công', 'Mật khẩu đã được cập nhật!');
+                showDialog({
+                    title: 'Thành công',
+                    message: 'Mật khẩu đã được cập nhật!',
+                    type: 'success',
+                    showCancel: false,
+                    confirmLabel: 'OK',
+                    onConfirm: () => onBack?.(),
+                });
+            },
+        });
     };
 
     const renderPasswordField = (
@@ -359,6 +363,7 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
                     </Text>
                 </View>
             </ScrollView>
+            <AppDialog {...dialogProps} />
         </View>
     );
 }

@@ -26,7 +26,8 @@ export default function WelcomeScreen() {
 						left: 0,
 						right: 0,
 						bottom: 0,
-						backgroundColor: colors.overlay,
+						backgroundColor: 'transparent',
+						opacity: 0.5,
 					}}
 				/>
 
@@ -37,7 +38,8 @@ export default function WelcomeScreen() {
 					<View
 						className="rounded-2xl border p-5"
 						style={{
-							backgroundColor: `${colors.card}E6`,
+							backgroundColor: colors.background,
+							opacity: 0.7,
 							borderColor: colors.border,
 						}}
 					>

@@ -72,7 +72,6 @@ export default function ProgressForRescueScreen({
                 onBack={onBack}
                 backgroundColor={isDark ? colors.card : colors.primary}
                 titleColor={isDark ? colors.text : colors.white}
-                iconColor={isDark ? colors.text : colors.white}
             />
 
             <ScrollView
