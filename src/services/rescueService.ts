@@ -13,6 +13,7 @@ import type {
   TeamLocationResponse,
   UpdateRescueOperationStatusPayload,
   CompleteRescueOperationPayload,
+  CancelRescueRequestPayload,
 } from '../types/rescue';
 
 export type {
@@ -29,6 +30,7 @@ export type {
   RescueOperationInfo,
   UpdateRescueOperationStatusPayload,
   CompleteRescueOperationPayload,
+  CancelRescueRequestPayload,
   TeamLocationResponse,
   NormalRescuePayload,
   EmergencyRescuePayload,
@@ -89,6 +91,17 @@ export async function fetchRescueTeamLocation(
 ): Promise<TeamLocationResponse> {
   const res = await api.get<TeamLocationResponse>(
     `/RescueRequest/${requestId}/team-location`,
+  );
+  return res.data;
+}
+
+export async function cancelRescueRequest(
+  requestId: string,
+  payload: CancelRescueRequestPayload,
+): Promise<RescueRequestDetailResponse> {
+  const res = await api.patch<RescueRequestDetailResponse>(
+    `/RescueRequest/${requestId}/cancel`,
+    payload,
   );
   return res.data;
 }

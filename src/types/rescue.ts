@@ -1,13 +1,13 @@
 // ── Enums / value types ────────────────────────────────────────────────────────
 export type RescueType = 0 | 1;        // 0 = Normal, 1 = Emergency
-export type DisasterType = 0 | 1 | 2;  // 0 = Flood, 1 = Landslide, 2 = Earthquake
+export type DisasterType = 0 | 1 | 2 | 3 | 4 | 5;  // 0 = Flood, 1 = Landslide, 2 = Earthquake, 3 = Fire, 4 = Storm, 5 = Other
 
 // ── Shared domain interfaces ──────────────────────────────────────────────────
 export interface PriorityCriteria {
   priorityCriteriaId: string;
   name: string;
   point: number;
-  disasterType: number;
+  disasterType: DisasterType;
   code: string;
   description: string;
   status: string;
@@ -106,6 +106,10 @@ export interface UpdateRescueOperationStatusPayload {
 export interface CompleteRescueOperationPayload {
   attachments: RescueAttachment[];
   note?: string | null;
+}
+
+export interface CancelRescueRequestPayload {
+  reason: string;
 }
 
 export interface TeamLocationResponse {

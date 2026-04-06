@@ -4,6 +4,7 @@ import type {
   TeamDetailResponse,
   TeamTrackingHeartbeatRequest,
   TeamTrackingHeartbeatResponse,
+  TeamTrackingPointResponse,
 } from '../types/team';
 
 export type {
@@ -14,6 +15,7 @@ export type {
   TeamDetailResponse,
   TeamTrackingHeartbeatRequest,
   TeamTrackingHeartbeatResponse,
+  TeamTrackingPointResponse,
 } from '../types/team';
 
 export const teamService = {
@@ -91,6 +93,45 @@ export const teamService = {
       data: null,
       status: 404,
       message: 'Không tìm thấy endpoint Team tracking-heartbeat.',
+    };
+  },
+
+  getLatestTracking: async (teamId: string, limit = 100) => {
+    const routes = [
+      `/Team/${teamId}/tracking/latest`,
+      `/api/Team/${teamId}/tracking/latest`,
+    ];
+
+    for (const route of routes) {
+      try {
+        const response = await api.get<TeamTrackingPointResponse[]>(route, {
+          params: { limit },
+        });
+        return {
+          success: response.status === 200,
+          data: Array.isArray(response.data) ? response.data : [],
+          message: 'Lấy lịch sử tracking mới nhất thành công',
+        };
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          return {
+            success: false,
+            data: null,
+            status: error?.response?.status,
+            message: extractApiErrorMessage(
+              error,
+              'Không thể tải lịch sử tracking team.',
+            ),
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      data: null,
+      status: 404,
+      message: 'Không tìm thấy endpoint Team tracking/latest.',
     };
   },
 };

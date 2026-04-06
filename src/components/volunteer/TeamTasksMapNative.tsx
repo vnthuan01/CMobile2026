@@ -3,6 +3,7 @@ import {
   RescueActiveBatchResponse,
   RescueBatchItem,
 } from '@/src/services/rescueTeamService';
+import { useTheme } from '@/src/context/ThemeContext';
 import Mapbox from '@rnmapbox/maps';
 import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
@@ -26,6 +27,7 @@ export default function TeamTasksMapNative({
   mapStyle,
   onSelectMission,
 }: TeamTasksMapNativeProps) {
+  const { colors } = useTheme();
   const cameraRef = useRef<any>(null);
 
   useEffect(() => {
@@ -100,13 +102,13 @@ export default function TeamTasksMapNative({
                 width: isSelected ? 26 : isCurrent ? 24 : 18,
                 height: isSelected ? 26 : isCurrent ? 24 : 18,
                 borderRadius: 14,
-                backgroundColor: emergency ? '#DC2626' : '#1565C0',
+                backgroundColor: emergency ? colors.error : colors.info,
                 borderWidth: isSelected ? 4 : 3,
                 borderColor: isSelected
-                  ? '#FACC15'
+                  ? colors.warning
                   : isCurrent
-                    ? '#22C55E'
-                    : '#FFFFFF',
+                    ? colors.success
+                    : colors.white,
               }}
             />
           </Mapbox.PointAnnotation>
@@ -128,7 +130,7 @@ export default function TeamTasksMapNative({
           <Mapbox.LineLayer
             id="lineLayer"
             style={{
-              lineColor: '#2E64FE',
+              lineColor: colors.info,
               lineWidth: 6,
               lineCap: 'round',
               lineJoin: 'round',
