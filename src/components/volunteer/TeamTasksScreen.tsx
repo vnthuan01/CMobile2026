@@ -501,7 +501,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     return { total, emergencyCount };
   }, [displayBatch?.items]);
 
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const mapStyle = rescueTeamService.getMapStyleUrl();
 
   const getMissionDisplayStatus = useCallback(
     (item?: RescueBatchItem | null) => {

@@ -1,6 +1,6 @@
 import '@/global.css';
-import UserHomeContent from '@/src/components/home/UserHomeContent';
-import VolunteerHomeContent from '@/src/components/home/VolunteerHomeContent';
+import UserHomeContent from '@/src/features/rescue/containers/UserHomeContent';
+import VolunteerHomeContent from '@/src/features/volunteer/containers/VolunteerHomeContent';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';

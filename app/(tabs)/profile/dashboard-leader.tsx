@@ -1,4 +1,4 @@
-import DashboardTeamLeaderScreen from '@/src/components/teamleader/DashboardTeamLeaderScreen';
+import DashboardTeamLeaderScreen from '@/src/features/teamleader/screens/DashboardTeamLeaderScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileDashboardLeaderRoute() {

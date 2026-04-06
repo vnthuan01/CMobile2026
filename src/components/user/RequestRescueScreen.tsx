@@ -109,7 +109,7 @@ export default function RequestRescueScreen({
   const [loadingCriteria, setLoadingCriteria] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const mapStyle = rescueTeamService.getMapStyleUrl();
 
   // ── Auto locate on mount ──────────────────────────────────────────────────
   useEffect(() => {

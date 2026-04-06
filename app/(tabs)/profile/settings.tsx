@@ -1,4 +1,4 @@
-import SettingsScreen from '@/src/components/screens/SettingsScreen';
+import SettingsScreen from '@/src/features/profile/screens/SettingsScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileSettingsRoute() {

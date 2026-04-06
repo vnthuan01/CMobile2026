@@ -1,5 +1,5 @@
 import Header from '@/src/components/header/header';
-import ViewRequestRescueScreen from '@/src/components/user/ViewRequestRescueScreen';
+import ViewRequestRescueScreen from '@/src/features/rescue/screens/ViewRequestRescueScreen';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
 import type { MyRescueRequestItem } from '@/src/types/rescue';

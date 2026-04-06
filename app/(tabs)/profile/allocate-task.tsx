@@ -1,4 +1,4 @@
-import AllocateTaskScreen from '@/src/components/teamleader/AllocateTaskScreen';
+import AllocateTaskScreen from '@/src/features/teamleader/screens/AllocateTaskScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileAllocateTaskRoute() {

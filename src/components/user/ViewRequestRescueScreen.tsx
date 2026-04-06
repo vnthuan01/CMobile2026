@@ -104,7 +104,7 @@ export default function ViewRequestRescueScreen({
     operationStatus === 'EnRoute' ||
     detail?.rescueRequestStatus === 'InProgress';
 
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const mapStyle = rescueTeamService.getMapStyleUrl();
 
   const victimCoordinate = useMemo(() => {
     if (detail?.longitude == null || detail?.latitude == null) return null;

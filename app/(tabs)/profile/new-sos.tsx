@@ -1,4 +1,4 @@
-import NewSOSForVolunteerScreen from '@/src/components/volunteer/NewSOSForVolunteerScreen';
+import NewSOSForVolunteerScreen from '@/src/features/volunteer/screens/NewSOSForVolunteerScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileNewSosRoute() {

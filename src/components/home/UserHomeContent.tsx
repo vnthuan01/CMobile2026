@@ -60,7 +60,7 @@ export default function UserHomeContent() {
       activeRequest?.assignedRescueTeam) ||
     null;
 
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const mapStyle = rescueTeamService.getMapStyleUrl();
 
   const teamCoordinate = useMemo(() => {
     if (

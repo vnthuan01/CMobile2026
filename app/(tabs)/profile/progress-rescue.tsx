@@ -1,4 +1,4 @@
-import ProgressForRescueScreen from '@/src/components/volunteer/ProgressForRescueScreen';
+import ProgressForRescueScreen from '@/src/features/volunteer/screens/ProgressForRescueScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileProgressRescueRoute() {

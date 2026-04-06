@@ -1,4 +1,5 @@
 import api from './api';
+import { extractApiErrorMessage } from '../utils/apiError';
 import type {
   TeamDetailResponse,
   TeamTrackingHeartbeatRequest,
@@ -14,15 +15,6 @@ export type {
   TeamTrackingHeartbeatRequest,
   TeamTrackingHeartbeatResponse,
 } from '../types/team';
-
-const extractApiErrorMessage = (error: any, fallback: string) => {
-  const data = error?.response?.data;
-  if (!data) return error?.message || fallback;
-  if (typeof data === 'string') return data;
-  return (
-    data.message || data.detail || data.title || error?.message || fallback
-  );
-};
 
 export const teamService = {
   getMyTeam: async () => {

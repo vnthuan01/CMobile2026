@@ -1,5 +1,5 @@
-import CitizenProfile from '@/src/components/profile/CitizenProfile';
-import VolunteerProfile from '@/src/components/profile/VolunteerProfile';
+import CitizenProfile from '@/src/features/profile/screens/CitizenProfileScreen';
+import VolunteerProfile from '@/src/features/profile/screens/VolunteerProfileScreen';
 import type { AuthState } from '@/src/store/authStore';
 import { useAuthStore } from '@/src/store/authStore';
 import { useRouter } from 'expo-router';

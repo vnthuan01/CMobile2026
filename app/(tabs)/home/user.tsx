@@ -1,5 +1,5 @@
 import '@/global.css';
-import ViewRequestRescueScreen from '@/src/components/user/ViewRequestRescueScreen';
+import ViewRequestRescueScreen from '@/src/features/rescue/screens/ViewRequestRescueScreen';
 import {
   fetchMyRescueRequests,
   MyRescueRequestItem,

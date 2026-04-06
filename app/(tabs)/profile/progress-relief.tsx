@@ -1,4 +1,4 @@
-import ProgressForReliefScreen from '@/src/components/volunteer/ProgressForReliefScreen';
+import ProgressForReliefScreen from '@/src/features/volunteer/screens/ProgressForReliefScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileProgressReliefRoute() {

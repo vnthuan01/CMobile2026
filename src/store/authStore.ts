@@ -19,17 +19,47 @@ export interface AuthState {
 const STORAGE_KEY = 'auth_tokens';
 const USER_STORAGE_KEY = 'auth_user';
 
+/** Web uses an empty ExpoSecureStore stub; fall back to AsyncStorage. */
+const FALLBACK_PREFIX = '@secure_fallback:';
+
+function fallbackKey(key: string) {
+  return `${FALLBACK_PREFIX}${key}`;
+}
+
+async function secureSetItem(key: string, value: string) {
+  if (await SecureStore.isAvailableAsync()) {
+    await AsyncStorage.removeItem(fallbackKey(key));
+    await SecureStore.setItemAsync(key, value);
+  } else {
+    await AsyncStorage.setItem(fallbackKey(key), value);
+  }
+}
+
+async function secureGetItem(key: string): Promise<string | null> {
+  if (await SecureStore.isAvailableAsync()) {
+    return SecureStore.getItemAsync(key);
+  }
+  return AsyncStorage.getItem(fallbackKey(key));
+}
+
+async function secureRemoveItem(key: string) {
+  if (await SecureStore.isAvailableAsync()) {
+    await SecureStore.deleteItemAsync(key);
+  }
+  await AsyncStorage.removeItem(fallbackKey(key));
+}
+
 async function saveTokens(tokens: AuthTokens | StoredAuthTokens | null) {
   if (!tokens?.accessToken) {
-    await SecureStore.deleteItemAsync(STORAGE_KEY);
+    await secureRemoveItem(STORAGE_KEY);
     return;
   }
 
-  await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(tokens));
+  await secureSetItem(STORAGE_KEY, JSON.stringify(tokens));
 }
 
 async function loadTokens(): Promise<StoredAuthTokens> {
-  const rawValue = await SecureStore.getItemAsync(STORAGE_KEY);
+  const rawValue = await secureGetItem(STORAGE_KEY);
 
   if (!rawValue) {
     return { accessToken: null, refreshToken: null };
@@ -42,7 +72,7 @@ async function loadTokens(): Promise<StoredAuthTokens> {
       refreshToken: parsed?.refreshToken ?? null,
     };
   } catch {
-    await SecureStore.deleteItemAsync(STORAGE_KEY);
+    await secureRemoveItem(STORAGE_KEY);
     return { accessToken: null, refreshToken: null };
   }
 }
@@ -83,7 +113,7 @@ export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>
   logout: async () => {
     try {
       await Promise.all([
-        SecureStore.deleteItemAsync(STORAGE_KEY),
+        secureRemoveItem(STORAGE_KEY),
         AsyncStorage.removeItem(USER_STORAGE_KEY),
       ]);
 
