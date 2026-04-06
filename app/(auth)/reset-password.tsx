@@ -1,6 +1,6 @@
 import '@/global.css';
 import AppDialog from '@/src/components/common/AppDialog';
-import { authService } from '@/src/services/authService';
+import { useResetForgotPassword } from '@/src/hooks/useAuthActions';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const resetForgotPasswordMutation = useResetForgotPassword();
   const params = useLocalSearchParams<{
     email?: string;
     resetToken?: string;
@@ -33,9 +34,9 @@ export default function ResetPasswordScreen() {
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Đặt lại mật khẩu thành công.');
+  const submitting = resetForgotPasswordMutation.isPending;
 
   const handleSubmit = async () => {
     if (!email || !resetToken) {
@@ -58,9 +59,8 @@ export default function ResetPasswordScreen() {
       return;
     }
 
-    setSubmitting(true);
     try {
-      const result = await authService.resetForgotPassword({
+      const result = await resetForgotPasswordMutation.mutateAsync({
         email,
         resetToken,
         newPassword,
@@ -75,8 +75,8 @@ export default function ResetPasswordScreen() {
       setSuccessMessage(message);
       showSuccessToast('Đặt lại mật khẩu thành công', message);
       setSuccessVisible(true);
-    } finally {
-      setSubmitting(false);
+    } catch {
+      // toast được xử lý ở mutation onError hoặc các nhánh result.success = false
     }
   };
 

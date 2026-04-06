@@ -2,15 +2,15 @@ import '@/global.css';
 import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import Header from '@/src/components/header/header';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
+import { usePriorityCriteria } from '@/src/hooks/useRescueMeta';
+import { useSubmitRescueRequest } from '@/src/hooks/useSubmitRescueRequest';
+import { useUploadImage } from '@/src/hooks/useUploadImage';
 import { showErrorToast, showSuccessToast, showWarningToast } from '@/src/utils/toast';
 import {
   DisasterType,
-  PriorityCriteria,
   RescueAttachment,
   RescueType,
-  fetchPriorityCriteria,
-  getCurrentLocation,
-  submitRescueRequest,
 } from '@/src/services/rescueService';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { uploadService } from '@/src/services/uploadService';
@@ -80,6 +80,8 @@ export default function RequestRescueScreen({
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
   const { dialogProps, showDialog } = useDialog();
+  const uploadImageMutation = useUploadImage();
+  const submitRescueRequestMutation = useSubmitRescueRequest();
 
   // ── Form state ───────────────────────────────────────────────────────────
   const [rescueType, setRescueType] = useState<RescueType>(0);
@@ -99,48 +101,40 @@ export default function RequestRescueScreen({
   });
 
   // ── Location state ───────────────────────────────────────────────────────
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
-  const [accuracy, setAccuracy] = useState<number | null>(null);
-  const [locationLabel, setLocationLabel] = useState('Đang lấy vị trí…');
-  const [locating, setLocating] = useState(true);
+  const {
+    latitude,
+    longitude,
+    accuracy,
+    address: detectedAddress,
+    setAddress: setDetectedAddress,
+    locationLabel,
+    locating,
+  } = useCurrentRescueLocation();
 
   // ── Remote data state ────────────────────────────────────────────────────
-  const [criteria, setCriteria] = useState<PriorityCriteria[]>([]);
-  const [loadingCriteria, setLoadingCriteria] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const mapStyle = rescueTeamService.getMapStyleUrl();
+  const priorityCriteriaQuery = usePriorityCriteria(disasterType, rescueType === 0);
+  const criteria = priorityCriteriaQuery.data ?? [];
+  const loadingCriteria = priorityCriteriaQuery.isLoading;
+  const submitting = submitRescueRequestMutation.isPending;
 
-  // ── Auto locate on mount ──────────────────────────────────────────────────
   useEffect(() => {
-    (async () => {
-      try {
-        const loc = await getCurrentLocation();
-        setLatitude(loc.latitude);
-        setLongitude(loc.longitude);
-        setAccuracy(loc.accuracy);
-        setAddress(loc.address);
-        setLocationLabel(loc.displayLabel);
-      } catch (err: any) {
-        setLocationLabel(err?.message ?? 'Không thể lấy vị trí.');
-      } finally {
-        setLocating(false);
-      }
-    })();
-  }, []);
+    if (detectedAddress && !address) {
+      setAddress(detectedAddress);
+    }
+  }, [address, detectedAddress]);
 
   // ── Fetch priority criteria when disaster type changes ────────────────────
   useEffect(() => {
-    // Only needed for Normal rescue type
-    if (rescueType !== 0) return;
-    setLoadingCriteria(true);
     setSelectedCriteriaByCategory({ HUMAN: null, ENV: null, SCALE: null });
-    fetchPriorityCriteria(disasterType)
-      .then(setCriteria)
-      .catch(() => showErrorToast('Không thể tải dữ liệu', 'Không thể tải danh sách tiêu chí ưu tiên.'))
-      .finally(() => setLoadingCriteria(false));
   }, [disasterType, rescueType]);
+
+  useEffect(() => {
+    if (priorityCriteriaQuery.error) {
+      showErrorToast('Không thể tải dữ liệu', 'Không thể tải danh sách tiêu chí ưu tiên.');
+    }
+  }, [priorityCriteriaQuery.error]);
 
   // ── Image picker ──────────────────────────────────────────────────────────
   const pickImage = async () => {
@@ -160,11 +154,11 @@ export default function RequestRescueScreen({
         const uploaded: RescueAttachment[] = [];
 
         for (const asset of result.assets.slice(0, 5 - attachments.length)) {
-          const uploadResult = await uploadService.uploadImageToCloudinary(
-            asset.uri,
-            asset.fileName || `rescue_${Date.now()}.jpg`,
-            asset.mimeType ?? 'image/jpeg',
-          );
+          const uploadResult = await uploadImageMutation.mutateAsync({
+            localUri: asset.uri,
+            fileName: asset.fileName || `rescue_${Date.now()}.jpg`,
+            mimeType: asset.mimeType ?? 'image/jpeg',
+          });
 
           if (!uploadResult.success || !uploadResult.url) {
             showErrorToast('Upload ảnh thất bại', uploadResult.message || 'Không thể upload ảnh lên Cloudinary.');
@@ -223,7 +217,6 @@ export default function RequestRescueScreen({
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!validate()) return;
-    setSubmitting(true);
     try {
       const base = {
         disasterType,
@@ -242,14 +235,14 @@ export default function RequestRescueScreen({
           selectedCriteriaByCategory,
         ).filter((x): x is string => !!x);
 
-        await submitRescueRequest({
+        await submitRescueRequestMutation.mutateAsync({
           ...base,
           rescueType: 0,
           description: description.trim(),
           selectedPriorityCriteriaIds,
         });
       } else {
-        await submitRescueRequest({
+        await submitRescueRequestMutation.mutateAsync({
           ...base,
           rescueType: 1,
           description: '',
@@ -268,8 +261,6 @@ export default function RequestRescueScreen({
       });
     } catch {
       showErrorToast('Không thể gửi yêu cầu', 'Không thể gửi yêu cầu. Vui lòng thử lại.');
-    } finally {
-      setSubmitting(false);
     }
   };
 

@@ -16,7 +16,7 @@
 Tài liệu này tổng hợp từ:
 
 - Backend: `SEP490-ReliefCare-BE/ReliefManagementSystem.API`
-- Mobile: `Capstone_Mobile_SP_2025`
+- Mobile: `CMobile2026`
 
 Mục tiêu:
 
@@ -376,7 +376,10 @@ export const teamService = {
     return res.data;
   },
 
-  getMyJoinRequests: async (params?: { pageIndex?: number; pageSize?: number }) => {
+  getMyJoinRequests: async (params?: {
+    pageIndex?: number;
+    pageSize?: number;
+  }) => {
     const res = await api.get<TeamJoinRequestListResponse>(
       '/TeamJoinRequest/my-requests',
       { params },
@@ -859,11 +862,7 @@ Nên có helper dùng chung kiểu:
 
 ```ts
 export function extractApiErrorMessage(error: any, fallback: string) {
-  return (
-    error?.response?.data?.message ||
-    error?.message ||
-    fallback
-  );
+  return error?.response?.data?.message || error?.message || fallback;
 }
 ```
 
@@ -919,7 +918,10 @@ export interface CancelRescueRequestPayload {
 ## Bước 2: add service
 
 ```ts
-export async function cancelRescueRequest(requestId: string, payload: CancelRescueRequestPayload) {
+export async function cancelRescueRequest(
+  requestId: string,
+  payload: CancelRescueRequestPayload,
+) {
   const res = await api.patch(`/RescueRequest/${requestId}/cancel`, payload);
   return res.data;
 }
@@ -932,8 +934,13 @@ export function useCancelRescueRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ requestId, payload }: { requestId: string; payload: CancelRescueRequestPayload }) =>
-      cancelRescueRequest(requestId, payload),
+    mutationFn: ({
+      requestId,
+      payload,
+    }: {
+      requestId: string;
+      payload: CancelRescueRequestPayload;
+    }) => cancelRescueRequest(requestId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rescueRequests'] });
     },

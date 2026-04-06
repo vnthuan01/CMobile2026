@@ -1,7 +1,8 @@
 import { useTheme } from '@/src/context/ThemeContext';
-import { authService, UserProfileResponse } from '@/src/services/authService';
+import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import { showErrorToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -33,20 +34,15 @@ export default function CitizenProfile({
 }: CitizenProfileProps) {
   const { top, bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
-  const [profile, setProfile] = useState<UserProfileResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadProfile = useCallback(async () => {
-    const result = await authService.getProfile();
-    if (result.success && result.data) {
-      setProfile(result.data);
-    }
-    setLoading(false);
-  }, []);
+  const profileQuery = useCitizenProfile();
+  const profile = profileQuery.data?.profile ?? null;
+  const loading = profileQuery.isLoading;
 
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    if (profileQuery.data?.errorMessage) {
+      showErrorToast('Không tải được hồ sơ', profileQuery.data.errorMessage);
+    }
+  }, [profileQuery.data?.errorMessage]);
 
   const formatDate = (date?: string | null) => {
     if (!date) return 'Chưa cập nhật';
@@ -102,7 +98,7 @@ export default function CitizenProfile({
           </View>
           <Text className="text-lg font-bold" style={{ color: colors.white }}>Hồ sơ người dùng</Text>
           <TouchableOpacity
-            onPress={loadProfile}
+            onPress={() => profileQuery.refetch()}
             className="h-10 w-10 items-center justify-center rounded-full bg-white/20"
           >
             <Ionicons name="refresh" size={18} color={colors.white} />

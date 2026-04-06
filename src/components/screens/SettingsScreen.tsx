@@ -34,8 +34,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                 setVibrationEnabled(parsed.vibrationEnabled ?? true);
                 setLocationEnabled(parsed.locationEnabled ?? true);
             }
-        } catch (error) {
-            console.log('Error loading settings:', error);
+        } catch {
         }
     };
 
@@ -45,8 +44,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
             const parsed = settings ? JSON.parse(settings) : {};
             parsed[key] = value;
             await AsyncStorage.setItem('app_settings', JSON.stringify(parsed));
-        } catch (error) {
-            console.log('Error saving settings:', error);
+        } catch {
         }
     };
 

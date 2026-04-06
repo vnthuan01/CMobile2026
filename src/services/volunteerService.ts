@@ -84,11 +84,6 @@ export const volunteerService = {
         };
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('Create volunteer profile error:', error);
-          console.error(
-            'Create volunteer profile response data:',
-            error?.response?.data,
-          );
           return {
             success: false,
             data: null,
@@ -131,7 +126,6 @@ export const volunteerService = {
         };
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('Get skills error:', error);
           return {
             success: false,
             data: [] as SkillResponse[],

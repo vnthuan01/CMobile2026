@@ -210,7 +210,6 @@ export default function WebViewMap({
           setLoading(false);
           setHasError(false);
         } else if (data.type === 'mapError') {
-          console.warn('[WebViewMap] map error:', data.message);
           setLoading(false);
           setHasError(true);
         } else if (data.type === 'markerPress' && onMarkerPress) {

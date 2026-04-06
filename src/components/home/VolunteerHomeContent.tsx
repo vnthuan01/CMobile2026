@@ -1,14 +1,11 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
-import { fetchRescueRequestDetail } from '@/src/services/rescueService';
-import {
-  RescueActiveBatchResponse,
-  rescueTeamService,
-} from '@/src/services/rescueTeamService';
-import { TeamDetailResponse, teamService } from '@/src/services/teamService';
+import { useVolunteerHomeOverview } from '@/src/hooks/useTeamOverview';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
+import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,77 +13,30 @@ export default function VolunteerHomeContent() {
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const volunteerHomeQuery = useVolunteerHomeOverview();
 
-  const [team, setTeam] = useState<TeamDetailResponse | null>(null);
-  const [batch, setBatch] = useState<RescueActiveBatchResponse | null>(null);
-  const [operationStatusMap, setOperationStatusMap] = useState<
-    Record<string, string>
-  >({});
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const team = volunteerHomeQuery.data?.team ?? null;
+  const batch = volunteerHomeQuery.data?.batch ?? null;
+  const operationStatusMap = volunteerHomeQuery.data?.operationStatusMap ?? {};
+  const loading = volunteerHomeQuery.isLoading || volunteerHomeQuery.isFetching;
+  const errorMessage = volunteerHomeQuery.data?.message ?? null;
 
-  const loadVolunteerHome = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const teamResult = await teamService.getMyTeam();
-
-      if (!teamResult.success || !teamResult.data?.teamId) {
-        setTeam(null);
-        setBatch(null);
-        setErrorMessage(teamResult.message || 'Không tải được thông tin đội.');
-        return;
-      }
-
-      setTeam(teamResult.data);
-
-      const batchResult = await rescueTeamService.getActiveBatchByTeam(
-        teamResult.data.teamId,
-      );
-
-      if (!batchResult.success || !batchResult.data) {
-        setBatch(null);
-        return;
-      }
-
-      setBatch(batchResult.data);
-
-      const statusEntries = await Promise.all(
-        (batchResult.data.items || []).map(async (item) => {
-          try {
-            const detail = await fetchRescueRequestDetail(item.rescueRequestId);
-            const operationStatus =
-              detail.assignedRescueTeam?.operationStatus || null;
-
-            return [item.rescueRequestId, operationStatus] as const;
-          } catch {
-            return [item.rescueRequestId, null] as const;
-          }
-        }),
-      );
-
-      setOperationStatusMap(
-        Object.fromEntries(
-          statusEntries.filter((entry) => Boolean(entry[1])) as Array<
-            readonly [string, string]
-          >,
-        ),
-      );
-    } catch {
-      setErrorMessage('Không tải được dữ liệu trang tình nguyện viên.');
-      setTeam(null);
-      setBatch(null);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    volunteerHomeQuery.refetch();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadVolunteerHome();
-    }, [loadVolunteerHome]),
-  );
+  useEffect(() => {
+    if (team || batch) {
+      setHasLoadedOnce(true);
+    }
+
+    if (!volunteerHomeQuery.isLoading && volunteerHomeQuery.data?.isEmpty && hasLoadedOnce) {
+      showInfoToast('Chưa có đội', volunteerHomeQuery.data.message || 'Bạn chưa thuộc đội nào.');
+    } else if (!volunteerHomeQuery.isLoading && !volunteerHomeQuery.data?.success && errorMessage && hasLoadedOnce) {
+      showErrorToast('Không tải được dữ liệu', errorMessage);
+    }
+  }, [batch, errorMessage, hasLoadedOnce, team, volunteerHomeQuery.data?.isEmpty, volunteerHomeQuery.data?.message, volunteerHomeQuery.data?.success, volunteerHomeQuery.isLoading]);
 
   const items = batch?.items ?? [];
 
@@ -277,7 +227,7 @@ export default function VolunteerHomeContent() {
                       {errorMessage}
                     </Text>
                     <TouchableOpacity
-                      onPress={loadVolunteerHome}
+                      onPress={() => volunteerHomeQuery.refetch()}
                       className="mt-4 self-start rounded-lg px-4 py-2"
                       style={{ backgroundColor: colors.primary }}
                     >
@@ -472,7 +422,7 @@ export default function VolunteerHomeContent() {
                       <ActionButton
                         label="Làm mới"
                         icon="refresh"
-                        onPress={loadVolunteerHome}
+                        onPress={() => volunteerHomeQuery.refetch()}
                       />
                     </View>
                   </Card>
@@ -499,7 +449,7 @@ export default function VolunteerHomeContent() {
                           : 'Hiện chưa có đợt hoạt động nào được giao cho đội của bạn.'}
                       </Text>
                       <TouchableOpacity
-                        onPress={loadVolunteerHome}
+                        onPress={() => volunteerHomeQuery.refetch()}
                         className="mt-4 rounded-xl px-4 py-3"
                         style={{ backgroundColor: colors.primary }}
                       >
@@ -591,7 +541,7 @@ export default function VolunteerHomeContent() {
                   <QuickAction
                     icon="refresh"
                     label="Làm mới dữ liệu"
-                    onPress={loadVolunteerHome}
+                    onPress={() => volunteerHomeQuery.refetch()}
                   />
                 </View>
               </View>

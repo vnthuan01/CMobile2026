@@ -2,13 +2,18 @@ import '@/global.css';
 import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import {
+  useCreateVolunteerProfile,
+  useResubmitVolunteerProfile,
+  useVolunteerSkills,
+} from '@/src/hooks/useVolunteerActions';
+import { useUploadImage } from '@/src/hooks/useUploadImage';
+import {
   CreateVolunteerCertificateRequest,
   CreateVolunteerRequest,
   ResubmitVolunteerProfileRequest,
   SkillResponse,
   TeamRolePreference,
   VolunteerProfileResponse,
-  volunteerService,
 } from '@/src/services/volunteerService';
 import { showErrorToast, showSuccessToast, showWarningToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,17 +108,19 @@ export default function RegisterVolunteerScreen({
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
   const { dialogProps, showDialog } = useDialog();
+  const skillsQuery = useVolunteerSkills();
+  const uploadImageMutation = useUploadImage();
+  const createVolunteerProfileMutation = useCreateVolunteerProfile();
+  const resubmitVolunteerProfileMutation = useResubmitVolunteerProfile();
   const [descriptions, setDescriptions] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [teamRolePreference, setTeamRolePreference] =
     useState<TeamRolePreference | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [skills, setSkills] = useState<SkillResponse[]>([]);
-  const [skillsLoading, setSkillsLoading] = useState(true);
   const [certificates, setCertificates] = useState<
     CreateVolunteerCertificateRequest[]
   >([{ ...EMPTY_CERT }]);
-  const [loading, setLoading] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const [uploadingCertificateIndex, setUploadingCertificateIndex] = useState<
     number | null
@@ -124,6 +131,10 @@ export default function RegisterVolunteerScreen({
     index: number;
     field: PickingField;
   } | null>(null);
+  const skillsLoading = skillsQuery.isLoading;
+  const loading =
+    createVolunteerProfileMutation.isPending ||
+    resubmitVolunteerProfileMutation.isPending;
 
   const toDateOnlyString = (d: Date) => {
     const year = d.getFullYear();
@@ -140,16 +151,11 @@ export default function RegisterVolunteerScreen({
   };
 
   useEffect(() => {
-    const loadSkills = async () => {
-      const result = await volunteerService.getAllSkills();
-      if (result.success) {
-        setSkills(Array.isArray(result.data) ? result.data : []);
-      }
-      setSkillsLoading(false);
-    };
-
-    loadSkills();
-  }, []);
+    setSkills(Array.isArray(skillsQuery.data?.skills) ? skillsQuery.data.skills : []);
+    if (skillsQuery.data?.errorMessage) {
+      showErrorToast('Không thể tải kỹ năng', skillsQuery.data.errorMessage);
+    }
+  }, [skillsQuery.data?.errorMessage, skillsQuery.data?.skills]);
 
   useEffect(() => {
     if (!initialProfile) return;
@@ -269,11 +275,11 @@ export default function RegisterVolunteerScreen({
     const asset = picked.assets[0];
     setUploadingCertificateIndex(index);
     try {
-      const uploadResult = await volunteerService.uploadImageToCloudinary(
-        asset.uri,
-        asset.fileName || `certificate_${Date.now()}.jpg`,
-        asset.mimeType || 'image/jpeg',
-      );
+      const uploadResult = await uploadImageMutation.mutateAsync({
+        localUri: asset.uri,
+        fileName: asset.fileName || `certificate_${Date.now()}.jpg`,
+        mimeType: asset.mimeType || 'image/jpeg',
+      });
 
       if (!uploadResult.success || !uploadResult.url) {
         showErrorToast('Upload ảnh thất bại', uploadResult.message || 'Upload ảnh thất bại.');
@@ -364,18 +370,17 @@ export default function RegisterVolunteerScreen({
       })),
     };
 
-    setLoading(true);
     try {
       const result =
         mode === 'resubmit'
-          ? await volunteerService.resubmitVolunteerProfile({
+          ? await resubmitVolunteerProfileMutation.mutateAsync({
               descriptions: createPayload.descriptions,
               skillIds: createPayload.skillIds,
               preferredTeamRole: teamRolePreference,
               yearsOfExperience: createPayload.yearsOfExperience,
               certificates: createPayload.certificates,
             } as ResubmitVolunteerProfileRequest)
-          : await volunteerService.createVolunteerProfile(createPayload);
+          : await createVolunteerProfileMutation.mutateAsync(createPayload);
 
       if (!result.success) {
         showErrorToast('Không thể gửi hồ sơ', result.message || 'Không thể gửi hồ sơ.');
@@ -395,8 +400,8 @@ export default function RegisterVolunteerScreen({
         confirmLabel: 'Hoàn tất',
         onConfirm: () => onSuccess?.(),
       });
-    } finally {
-      setLoading(false);
+    } catch {
+      // toast handled by mutation onError or result.success branch
     }
   };
 

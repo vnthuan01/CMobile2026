@@ -76,25 +76,6 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle network errors
-    if (!error.response) {
-      console.error('Network error:', error.message);
-      // Có thể là timeout hoặc no internet
-      if (error.code === 'ECONNABORTED') {
-        console.error('Request timeout');
-      }
-    }
-
-    // Handle server errors
-    if (error.response?.status >= 500) {
-      console.error(
-        'Server error:',
-        error.response.status,
-        error.response.data,
-      );
-    }
-
-    console.error('API error:', error);
     return Promise.reject(error);
   },
 );

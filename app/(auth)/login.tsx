@@ -1,6 +1,7 @@
 import '@/global.css';
 import AppDialog from '@/src/components/common/AppDialog';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useLogin } from '@/src/hooks/useAuthActions';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -19,17 +20,17 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { authService } from '../../src/services/authService';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const loginMutation = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [successDialogVisible, setSuccessDialogVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Đăng nhập thành công');
+  const loading = loginMutation.isPending;
 
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -58,10 +59,8 @@ export default function LoginScreen() {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const result = await authService.login({
+      const result = await loginMutation.mutateAsync({
         email: email.trim(),
         password: password.trim(),
       });
@@ -76,8 +75,6 @@ export default function LoginScreen() {
       }
     } catch {
       showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại sau');
-    } finally {
-      setLoading(false);
     }
   };
 
