@@ -1,45 +1,69 @@
-import { User } from '../store/authStore';
+import type { User } from '../types/auth';
 
-/**
- * Decode JWT token without verification (client-side)
- * Chỉ dùng để extract payload, không verify signature
- */
-export function decodeJWT(token: string): User | null {
+interface JwtPayload {
+  exp?: number;
+  sub?: string;
+  email?: string;
+  [key: string]: unknown;
+}
+
+function decodeBase64Url(value: string): string {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(
+    normalized.length + ((4 - (normalized.length % 4)) % 4),
+    '=',
+  );
+
+  return globalThis.atob(padded);
+}
+
+function parseJwtPayload(token: string): JwtPayload | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) {
       throw new Error('Invalid JWT format');
     }
 
-    // Decode base64url
-    const payload = parts[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = decodeURIComponent(
-      atob(base64)
+      decodeBase64Url(parts[1])
         .split('')
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join(''),
     );
 
-    const decoded = JSON.parse(jsonPayload);
-
-    console.log('JWT PAYLOAD:', decoded);
-
-    return {
-      id: decoded.sub,
-      email: decoded.email,
-      user_name:
-        decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
-        '',
-      role:
-        decoded[
-          'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
-        ] || '',
-    };
+    return JSON.parse(jsonPayload) as JwtPayload;
   } catch (error) {
     console.error('Error decoding JWT:', error);
     return null;
   }
+}
+
+/**
+ * Decode JWT token without verification (client-side)
+ * Chỉ dùng để extract payload, không verify signature
+ */
+export function decodeJWT(token: string): User | null {
+  const decoded = parseJwtPayload(token);
+  if (!decoded) {
+    return null;
+  }
+
+  return {
+    id: typeof decoded.sub === 'string' ? decoded.sub : '',
+    email: typeof decoded.email === 'string' ? decoded.email : '',
+    user_name:
+      typeof decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ===
+      'string'
+        ? (decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] as string)
+        : '',
+    role:
+      typeof decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ===
+      'string'
+        ? (decoded[
+            'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+          ] as string)
+        : '',
+  };
 }
 
 export function getUserFromToken(token: string): User | null {
@@ -54,27 +78,10 @@ export function getUserFromToken(token: string): User | null {
  * Check if token is expired
  */
 export function isTokenExpired(token: string): boolean {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return true;
-
-    const payload = parts[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    );
-
-    const decoded = JSON.parse(jsonPayload);
-    const exp = decoded.exp;
-
-    if (!exp) return true;
-
-    // Check if expired (exp is in seconds, Date.now() is in milliseconds)
-    return Date.now() >= exp * 1000;
-  } catch (error) {
+  const decoded = parseJwtPayload(token);
+  if (!decoded || typeof decoded.exp !== 'number') {
     return true;
   }
+
+  return Date.now() >= decoded.exp * 1000;
 }

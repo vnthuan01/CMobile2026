@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import TeamTasksMap from './TeamTasksMap';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -62,16 +63,6 @@ const FILTER_OPTIONS: Array<{ label: string; value: MissionFilter }> = [
 ];
 
 const supportsNativeMap = Constants.appOwnership !== 'expo';
-
-let TeamTasksMapNative: any = null;
-
-if (supportsNativeMap) {
-  try {
-    TeamTasksMapNative = require('./TeamTasksMapNative').default;
-  } catch {
-    TeamTasksMapNative = null;
-  }
-}
 
 export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const { bottom } = useSafeAreaInsets();
@@ -1086,8 +1077,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
         {mapStyle ? (
           <View className="flex-1">
-            {supportsNativeMap && TeamTasksMapNative ? (
-              <TeamTasksMapNative
+            {supportsNativeMap ? (
+              <TeamTasksMap
                 batch={batch}
                 selectedMission={selectedMission}
                 currentMission={currentMission}

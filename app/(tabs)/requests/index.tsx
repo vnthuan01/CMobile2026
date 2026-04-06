@@ -1,12 +1,11 @@
 import Header from '@/src/components/header/header';
 import ViewRequestRescueScreen from '@/src/components/user/ViewRequestRescueScreen';
 import { useTheme } from '@/src/context/ThemeContext';
-import {
-  fetchMyRescueRequests,
-  MyRescueRequestItem,
-} from '@/src/services/rescueService';
+import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
+import type { MyRescueRequestItem } from '@/src/types/rescue';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,29 +37,17 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
     null,
   );
-  const [requests, setRequests] = useState<MyRescueRequestItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<RequestFilter>('all');
 
   const { colors, isDark } = useTheme();
 
-  const loadRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetchMyRescueRequests({
-        pageNumber: 1,
-        pageSize: 20,
-      });
-      setRequests(response.data || []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const queryClient = useQueryClient();
+  const { data: requests = [], isLoading: loading } = useMyRescueRequests({ pageSize: 20 });
 
   useFocusEffect(
     useCallback(() => {
-      loadRequests();
-    }, [loadRequests]),
+      queryClient.invalidateQueries({ queryKey: ['rescueRequests'] });
+    }, [queryClient]),
   );
 
   const filteredRequests = useMemo(() => {

@@ -10,6 +10,7 @@ import {
 import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import UserRescueTrackingMap from './UserRescueTrackingMap';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,17 +27,6 @@ interface ViewRequestRescueScreenProps {
 }
 
 const supportsNativeMap = Constants.appOwnership !== 'expo';
-
-let UserRescueTrackingMapNative: any = null;
-
-if (supportsNativeMap) {
-  try {
-    UserRescueTrackingMapNative =
-      require('./UserRescueTrackingMapNative').default;
-  } catch {
-    UserRescueTrackingMapNative = null;
-  }
-}
 
 export default function ViewRequestRescueScreen({
   requestId,
@@ -183,8 +173,8 @@ export default function ViewRequestRescueScreen({
         showsVerticalScrollIndicator={false}
       >
         <View className="relative h-64 w-full overflow-hidden">
-          {mapStyle && supportsNativeMap && UserRescueTrackingMapNative ? (
-            <UserRescueTrackingMapNative
+          {mapStyle && supportsNativeMap ? (
+            <UserRescueTrackingMap
               victimCoordinate={victimCoordinate}
               teamCoordinate={teamCoordinate}
               routeCoordinates={routeCoordinates}

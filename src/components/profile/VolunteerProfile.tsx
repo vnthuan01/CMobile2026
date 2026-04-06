@@ -10,17 +10,16 @@ interface VolunteerProfileProps {
   onLogout?: () => void;
   onNavigate?: (
     screen:
-      | 'profile'
-      | 'requests'
-      | 'tasks'
-      | 'settings'
-      | 'help'
-      | 'change-password'
-      | 'progress-rescue'
-      | 'progress-relief'
-      | 'dashboard-leader'
-      | 'report-leader'
-      | 'my-team',
+      | '/profile/requests'
+      | '/profile/tasks'
+      | '/profile/settings'
+      | '/profile/help'
+      | '/profile/change-password'
+      | '/profile/progress-rescue'
+      | '/profile/progress-relief'
+      | '/profile/dashboard-leader'
+      | '/profile/report-leader'
+      | '/profile/my-team',
   ) => void;
 }
 
@@ -140,7 +139,7 @@ export default function VolunteerProfile({
                 </Text>
               </View>
               <TouchableOpacity
-                onPress={() => onNavigate?.('my-team')}
+                onPress={() => onNavigate?.('/profile/my-team')}
                 className="rounded-xl bg-primary px-4 py-2.5"
               >
                 <Text className="font-semibold text-white">Mở</Text>
@@ -343,7 +342,7 @@ export default function VolunteerProfile({
             </View>
             <View className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
               <TouchableOpacity
-                onPress={() => onNavigate?.('tasks')}
+                onPress={() => onNavigate?.('/profile/tasks')}
                 className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
@@ -366,7 +365,7 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('progress-rescue')}
+                onPress={() => onNavigate?.('/profile/progress-rescue')}
                 className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
@@ -384,7 +383,7 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('progress-relief')}
+                onPress={() => onNavigate?.('/profile/progress-relief')}
                 className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-900/20">
@@ -402,7 +401,7 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('dashboard-leader')}
+                onPress={() => onNavigate?.('/profile/dashboard-leader')}
                 className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/20">
@@ -420,7 +419,7 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('report-leader')}
+                onPress={() => onNavigate?.('/profile/report-leader')}
                 className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/20">
@@ -438,7 +437,7 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('requests')}
+                onPress={() => onNavigate?.('/profile/requests')}
                 className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
@@ -461,7 +460,7 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('change-password')}
+                onPress={() => onNavigate?.('/profile/change-password')}
                 className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
@@ -479,7 +478,7 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('settings')}
+                onPress={() => onNavigate?.('/profile/settings')}
                 className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
@@ -499,7 +498,7 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('help')}
+                onPress={() => onNavigate?.('/profile/help')}
                 className="flex-row items-center gap-4 p-4"
               >
                 <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">

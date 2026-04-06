@@ -15,6 +15,7 @@ import { uploadService } from '@/src/services/uploadService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
+import RequestRescueMiniMap from './RequestRescueMiniMap';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -71,17 +72,6 @@ const getCriteriaCategory = (code?: string): CriteriaCategory | null => {
 };
 
 const supportsNativeMap = Constants.appOwnership !== 'expo';
-
-let RequestRescueMiniMapNative: any = null;
-
-if (supportsNativeMap) {
-  try {
-    RequestRescueMiniMapNative =
-      require('./RequestRescueMiniMapNative').default;
-  } catch {
-    RequestRescueMiniMapNative = null;
-  }
-}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function RequestRescueScreen({
@@ -476,10 +466,9 @@ export default function RequestRescueScreen({
           >
             {mapStyle &&
             supportsNativeMap &&
-            RequestRescueMiniMapNative &&
             latitude != null &&
             longitude != null ? (
-              <RequestRescueMiniMapNative
+              <RequestRescueMiniMap
                 coordinate={[longitude, latitude]}
                 mapStyle={mapStyle}
               />

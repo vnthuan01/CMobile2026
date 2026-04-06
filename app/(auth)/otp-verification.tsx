@@ -94,7 +94,7 @@ export default function OTPScreen() {
         }
 
         router.replace({
-          pathname: '/reset-password',
+          pathname: '/(auth)/reset-password',
           params: {
             email,
             resetToken: forgotResult.resetToken,

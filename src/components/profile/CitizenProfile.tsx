@@ -18,14 +18,10 @@ interface CitizenProfileProps {
   onLogout?: () => void;
   onNavigate?: (
     screen:
-      | 'profile'
-      | 'requests'
-      | 'tasks'
-      | 'settings'
-      | 'help'
-      | 'change-password'
-      | 'register-volunteer'
-      | 'my-volunteer-profile',
+      | '/profile/my-volunteer-profile'
+      | '/profile/change-password'
+      | '/profile/settings'
+      | '/profile/help',
   ) => void;
 }
 
@@ -186,7 +182,7 @@ export default function CitizenProfile({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => onNavigate?.('my-volunteer-profile')}
+              onPress={() => onNavigate?.('/profile/my-volunteer-profile')}
               className="flex-row items-center justify-between border-b border-surface-dark px-4 py-4"
             >
               <View className="flex-row items-center gap-3">
@@ -199,7 +195,7 @@ export default function CitizenProfile({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => onNavigate?.('change-password')}
+              onPress={() => onNavigate?.('/profile/change-password')}
               className="flex-row items-center justify-between border-b border-surface-dark px-4 py-4"
             >
               <View className="flex-row items-center gap-3">
@@ -216,7 +212,7 @@ export default function CitizenProfile({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => onNavigate?.('settings')}
+              onPress={() => onNavigate?.('/profile/settings')}
               className="flex-row items-center justify-between border-b border-surface-dark px-4 py-4"
             >
               <View className="flex-row items-center gap-3">
@@ -229,7 +225,7 @@ export default function CitizenProfile({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => onNavigate?.('help')}
+              onPress={() => onNavigate?.('/profile/help')}
               className="flex-row items-center justify-between px-4 py-4"
             >
               <View className="flex-row items-center gap-3">

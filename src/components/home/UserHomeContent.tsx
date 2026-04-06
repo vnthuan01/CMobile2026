@@ -1,14 +1,13 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
-import {
-  fetchMyRescueRequests,
-  MyRescueRequestItem,
-} from '@/src/services/rescueService';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
+import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import UserRescueTrackingMap from '../user/UserRescueTrackingMap';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -21,41 +20,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const supportsNativeMap = Constants.appOwnership !== 'expo';
 
-let UserRescueTrackingMapNative: any = null;
-
-if (supportsNativeMap) {
-  try {
-    UserRescueTrackingMapNative =
-      require('../user/UserRescueTrackingMapNative').default;
-  } catch {
-    UserRescueTrackingMapNative = null;
-  }
-}
-
 export default function UserHomeContent() {
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const [requests, setRequests] = useState<MyRescueRequestItem[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(true);
 
-  const loadRequests = useCallback(async () => {
-    try {
-      setLoadingRequests(true);
-      const response = await fetchMyRescueRequests({
-        pageNumber: 1,
-        pageSize: 10,
-      });
-      setRequests(response.data || []);
-    } finally {
-      setLoadingRequests(false);
-    }
-  }, []);
+  const queryClient = useQueryClient();
+  const { data: requests = [], isLoading: loadingRequests } = useMyRescueRequests({ pageSize: 10 });
 
   useFocusEffect(
     useCallback(() => {
-      loadRequests();
-    }, [loadRequests]),
+      queryClient.invalidateQueries({ queryKey: ['rescueRequests'] });
+    }, [queryClient]),
   );
 
   const activeRequest = useMemo(
@@ -222,9 +198,8 @@ r
             >
               {shouldShowTrackingMap &&
               mapStyle &&
-              supportsNativeMap &&
-              UserRescueTrackingMapNative ? (
-                <UserRescueTrackingMapNative
+              supportsNativeMap ? (
+                <UserRescueTrackingMap
                   victimCoordinate={null}
                   teamCoordinate={teamCoordinate}
                   routeCoordinates={routeCoordinates}

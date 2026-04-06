@@ -1,69 +1,19 @@
 import api from './api';
+import type {
+  TeamDetailResponse,
+  TeamTrackingHeartbeatRequest,
+  TeamTrackingHeartbeatResponse,
+} from '../types/team';
 
-export interface TeamSkillResponse {
-  skillId: string;
-  code: string;
-  name: string;
-  description: string | null;
-}
-
-export interface TeamUserSummary {
-  userId: string;
-  displayName: string;
-  email: string;
-}
-
-export interface TeamLeaderSummary extends TeamUserSummary {
-  skills: TeamSkillResponse[];
-}
-
-export interface TeamMemberSummary extends TeamUserSummary {
-  role: 'Leader' | 'Member' | string;
-  skills: TeamSkillResponse[];
-  joinedAt: string;
-}
-
-export interface TeamDetailResponse {
-  teamId: string;
-  name: string;
-  description: string | null;
-  contactPhone: string | null;
-  status: 'Draft' | 'Active' | 'Inactive' | string;
-  moderator: TeamUserSummary | null;
-  leader: TeamLeaderSummary | null;
-  members: TeamMemberSummary[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TeamTrackingHeartbeatRequest {
-  latitude: number;
-  longitude: number;
-  accuracyMeters?: number | null;
-  speedKph?: number | null;
-  headingDegree?: number | null;
-  source?: number;
-  capturedAtUtc?: string;
-  rescueBatchId?: string | null;
-  rescueOperationId?: string | null;
-  note?: string | null;
-}
-
-export interface TeamTrackingHeartbeatResponse {
-  teamTrackingPointId: string;
-  teamId: string;
-  rescueBatchId: string | null;
-  rescueOperationId: string | null;
-  latitude: number;
-  longitude: number;
-  accuracyMeters: number | null;
-  speedKph: number | null;
-  headingDegree: number | null;
-  source: number;
-  capturedAtUtc: string;
-  createdAtUtc: string;
-  note: string | null;
-}
+export type {
+  TeamSkillResponse,
+  TeamUserSummary,
+  TeamLeaderSummary,
+  TeamMemberSummary,
+  TeamDetailResponse,
+  TeamTrackingHeartbeatRequest,
+  TeamTrackingHeartbeatResponse,
+} from '../types/team';
 
 const extractApiErrorMessage = (error: any, fallback: string) => {
   const data = error?.response?.data;

@@ -1,48 +1,73 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { create } from 'zustand';
+import * as SecureStore from 'expo-secure-store';
+import create from 'zustand';
+import type { AuthTokens, StoredAuthTokens, User } from '../types/auth';
 
-export interface User {
-  id: string;
-  email: string;
-  user_name: string;
-  role: string;
-}
-
-interface AuthState {
+export interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  setTokens: (accessToken: string, refreshToken: string) => Promise<void>;
+  setTokens: (accessToken: string, refreshToken: string | null) => Promise<void>;
   setUser: (user: User) => Promise<void>;
+  setLoading: (isLoading: boolean) => void;
   logout: () => Promise<void>;
-  restoreToken: () => Promise<void>;
+  hydrateAuth: () => Promise<void>;
 }
 
 const STORAGE_KEY = 'auth_tokens';
 const USER_STORAGE_KEY = 'auth_user';
 
-export const useAuthStore = create<AuthState>((set) => ({
+async function saveTokens(tokens: AuthTokens | StoredAuthTokens | null) {
+  if (!tokens?.accessToken) {
+    await SecureStore.deleteItemAsync(STORAGE_KEY);
+    return;
+  }
+
+  await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(tokens));
+}
+
+async function loadTokens(): Promise<StoredAuthTokens> {
+  const rawValue = await SecureStore.getItemAsync(STORAGE_KEY);
+
+  if (!rawValue) {
+    return { accessToken: null, refreshToken: null };
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as StoredAuthTokens;
+    return {
+      accessToken: parsed?.accessToken ?? null,
+      refreshToken: parsed?.refreshToken ?? null,
+    };
+  } catch {
+    await SecureStore.deleteItemAsync(STORAGE_KEY);
+    return { accessToken: null, refreshToken: null };
+  }
+}
+
+export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>) => void) => ({
   accessToken: null,
   refreshToken: null,
   user: null,
   isAuthenticated: false,
   isLoading: true,
 
-  setTokens: async (accessToken, refreshToken) => {
+  setTokens: async (accessToken: string, refreshToken: string | null) => {
     try {
-      await AsyncStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ accessToken, refreshToken }),
-      );
-      set({ accessToken, refreshToken, isAuthenticated: true });
+      await saveTokens({ accessToken, refreshToken });
+      set({
+        accessToken,
+        refreshToken,
+        isAuthenticated: Boolean(accessToken),
+      });
     } catch (error) {
       console.error('Error saving tokens:', error);
     }
   },
 
-  setUser: async (user) => {
+  setUser: async (user: User) => {
     try {
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
       set({ user });
@@ -51,38 +76,44 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  setLoading: (isLoading: boolean) => {
+    set({ isLoading });
+  },
+
   logout: async () => {
     try {
-      await AsyncStorage.multiRemove([STORAGE_KEY, USER_STORAGE_KEY]);
+      await Promise.all([
+        SecureStore.deleteItemAsync(STORAGE_KEY),
+        AsyncStorage.removeItem(USER_STORAGE_KEY),
+      ]);
+
       set({
         accessToken: null,
         refreshToken: null,
         user: null,
         isAuthenticated: false,
+        isLoading: false,
       });
     } catch (error) {
       console.error('Error logging out:', error);
     }
   },
 
-  restoreToken: async () => {
+  hydrateAuth: async () => {
     try {
-      const [tokensData, userData] = await AsyncStorage.multiGet([
-        STORAGE_KEY,
-        USER_STORAGE_KEY,
+      const [{ accessToken, refreshToken }, userData] = await Promise.all([
+        loadTokens(),
+        AsyncStorage.getItem(USER_STORAGE_KEY),
       ]);
 
-      if (tokensData[1]) {
-        const { accessToken, refreshToken } = JSON.parse(tokensData[1]);
-        set({
-          accessToken,
-          refreshToken,
-          isAuthenticated: true,
-        });
-      }
+      set({
+        accessToken,
+        refreshToken,
+        isAuthenticated: Boolean(accessToken),
+      });
 
-      if (userData[1]) {
-        const user = JSON.parse(userData[1]);
+      if (userData) {
+        const user = JSON.parse(userData) as User;
         set({ user });
       }
     } catch (error) {

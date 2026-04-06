@@ -1,14 +1,11 @@
 import { useAuthStore } from '../store/authStore';
+import type { RefreshTokenResponse } from '../types/auth';
 import { decodeJWT } from '../utils/jwt';
+import { isTokenExpired } from '../utils/jwt';
 import api from './api';
+import type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
 
-export interface RegisterRequest {
-  fullName: string;
-  phone: string;
-  email: string;
-  username: string;
-  password: string;
-}
+export type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
 
 interface LoginCredentials {
   email: string;
@@ -56,17 +53,6 @@ interface ForgotPasswordResetRequest {
   email: string;
   resetToken: string;
   newPassword: string;
-}
-
-export interface UserProfileResponse {
-  id: string;
-  displayName: string | null;
-  email: string;
-  phoneNumber: string | null;
-  dateOfBirth: string | null;
-  gender: string | null;
-  pictureUrl: string | null;
-  roles: string[];
 }
 
 export const authService = {
@@ -343,7 +329,99 @@ export const authService = {
    * Restore token from AsyncStorage on app start
    */
   restoreToken: async () => {
-    await useAuthStore.getState().restoreToken();
+    const authStore = useAuthStore.getState();
+
+    authStore.setLoading(true);
+
+    try {
+      await authStore.hydrateAuth();
+
+      const { accessToken, refreshToken } = useAuthStore.getState();
+
+      if (!accessToken) {
+        await authStore.logout();
+        return;
+      }
+
+      if (!isTokenExpired(accessToken)) {
+        authStore.setLoading(false);
+        return;
+      }
+
+      if (!refreshToken) {
+        await authStore.logout();
+        return;
+      }
+
+      await authService.refreshSession(refreshToken);
+    } catch (error) {
+      console.error('Restore token error:', error);
+      await authStore.logout();
+    } finally {
+      useAuthStore.getState().setLoading(false);
+    }
+  },
+
+  refreshSession: async (refreshToken?: string | null) => {
+    const currentRefreshToken = refreshToken ?? useAuthStore.getState().refreshToken;
+
+    if (!currentRefreshToken) {
+      throw new Error('Missing refresh token');
+    }
+
+    const refreshRoutes = ['/Auth/refresh-token', '/Auth/refresh'];
+    let lastError: unknown;
+
+    for (const route of refreshRoutes) {
+      try {
+        const requestConfig = {
+          headers: {
+            Authorization: undefined,
+          },
+          skipAuthRefresh: true,
+        } as any;
+
+        const response = await api.post<RefreshTokenResponse>(
+          route,
+          { refreshToken: currentRefreshToken },
+          requestConfig,
+        );
+
+        const responseData = response.data as RefreshTokenResponse;
+        const nextAccessToken = responseData.accessToken;
+        const nextRefreshToken = responseData.refreshToken ?? currentRefreshToken;
+
+        if (!nextAccessToken) {
+          throw new Error('Missing access token in refresh response');
+        }
+
+        const user = decodeJWT(nextAccessToken);
+
+        if (!user) {
+          throw new Error('Invalid refreshed token');
+        }
+
+        await useAuthStore.getState().setTokens(nextAccessToken, nextRefreshToken);
+        await useAuthStore.getState().setUser(user);
+
+        return {
+          success: true,
+          accessToken: nextAccessToken,
+          refreshToken: nextRefreshToken,
+          user,
+        };
+      } catch (error: any) {
+        if (error?.response?.status === 404) {
+          lastError = error;
+          continue;
+        }
+
+        lastError = error;
+        break;
+      }
+    }
+
+    throw lastError ?? new Error('Token refresh failed');
   },
 
   mapToRegisterDto: async (data: RegisterRequest) => ({

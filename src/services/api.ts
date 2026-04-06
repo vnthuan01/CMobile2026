@@ -1,10 +1,19 @@
 import axios from 'axios';
 
+declare module 'axios' {
+  export interface InternalAxiosRequestConfig {
+    skipAuthRefresh?: boolean;
+    _retry?: boolean;
+  }
+}
+
 const api = axios.create({
   baseURL:
   process.env.EXPO_PUBLIC_API_URL,
   timeout: 30000,
 });
+
+let refreshPromise: Promise<string> | null = null;
 
 api.interceptors.request.use(
   async (config) => {
@@ -12,7 +21,7 @@ api.interceptors.request.use(
     // Import động để tránh circular dependency
     const { useAuthStore } = require('../store/authStore');
     const token = useAuthStore.getState().accessToken;
-    if (token) {
+    if (token && !config.headers?.Authorization) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
@@ -24,13 +33,47 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Handle authentication errors
-    if (error.response?.status === 401) {
-      console.warn('401 Unauthorized - Token expired or invalid');
-      // Import động để tránh circular dependency
-      const { useAuthStore } = require('../store/authStore');
-      useAuthStore.getState().logout();
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest.skipAuthRefresh &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        const { useAuthStore } = require('../store/authStore');
+        const authState = useAuthStore.getState();
+        const currentRefreshToken = authState.refreshToken;
+
+        if (!currentRefreshToken) {
+          await authState.logout();
+          return Promise.reject(error);
+        }
+
+        if (!refreshPromise) {
+          refreshPromise = (async () => {
+            const { authService } = require('./authService');
+            const refreshed = await authService.refreshSession(currentRefreshToken);
+            return refreshed.accessToken;
+          })().finally(() => {
+            refreshPromise = null;
+          });
+        }
+
+        const nextAccessToken = await refreshPromise;
+        originalRequest.headers = originalRequest.headers ?? {};
+        originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        const { useAuthStore } = require('../store/authStore');
+        await useAuthStore.getState().logout();
+        return Promise.reject(refreshError);
+      }
     }
 
     // Handle network errors

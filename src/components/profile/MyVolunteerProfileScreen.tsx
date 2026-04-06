@@ -1,14 +1,14 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import {
-  SkillResponse,
   TeamRolePreference,
   VolunteerProfileResponse,
-  volunteerService,
 } from '@/src/services/volunteerService';
+import { useMyVolunteerProfile, useAllSkills, volunteerProfileKeys } from '@/src/hooks/useMyVolunteerProfile';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -31,40 +31,18 @@ export default function MyVolunteerProfileScreen({
   onResubmit,
 }: MyVolunteerProfileScreenProps) {
   const { bottom } = useSafeAreaInsets();
-  const [profile, setProfile] = useState<VolunteerProfileResponse | null>(null);
-  const [skills, setSkills] = useState<SkillResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadProfile = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage(null);
+  const queryClient = useQueryClient();
+  const { data: profileData, isLoading: loading } = useMyVolunteerProfile();
+  const { data: skills = [] } = useAllSkills();
 
-    try {
-      const [profileResult, skillsResult] = await Promise.all([
-        volunteerService.getMyVolunteerProfile(),
-        volunteerService.getAllSkills(),
-      ]);
-
-      if (!profileResult.success) {
-        setErrorMessage(
-          profileResult.message || 'Không thể tải hồ sơ volunteer.',
-        );
-        setProfile(null);
-        return;
-      }
-
-      setProfile(profileResult.data);
-      setSkills(skillsResult.success ? skillsResult.data : []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const profile = profileData?.profile ?? null;
+  const errorMessage = profileData?.errorMessage ?? null;
 
   useFocusEffect(
     useCallback(() => {
-      loadProfile();
-    }, [loadProfile]),
+      queryClient.invalidateQueries({ queryKey: volunteerProfileKeys.all });
+    }, [queryClient]),
   );
 
   const normalizedStatus = useMemo(() => {
@@ -129,7 +107,7 @@ export default function MyVolunteerProfileScreen({
             {errorMessage}
           </Text>
           <TouchableOpacity
-            onPress={loadProfile}
+            onPress={() => queryClient.invalidateQueries({ queryKey: volunteerProfileKeys.all })}
             className="mt-6 rounded-xl bg-primary px-5 py-3"
           >
             <Text className="font-bold text-white">Thử lại</Text>

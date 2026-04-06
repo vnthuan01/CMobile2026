@@ -1,68 +1,19 @@
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
 import api from './api';
+import type {
+  RescueBatchItem,
+  RescueActiveBatchResponse,
+  RescueTeamHistoryResponse,
+} from '../types/team';
 
-export interface RescueBatchItem {
-  rescueBatchItemId: string;
-  rescueRequestId: string;
-  disasterType: string;
-  rescueRequestType: 'Normal' | 'Emergency' | string;
-  rescueRequestStatus: string;
-  description: string;
-  address: string;
-  latitude: number | null;
-  longitude: number | null;
-  reporterFullName: string;
-  reporterPhone: string;
-  sequenceOrder: number;
-  isAutoAssigned: boolean;
-  distanceKm: number | null;
-  estimatedMinutes: number | null;
-  status: 'Pending' | 'InProgress' | 'Done' | 'Cancelled' | string;
-  createdAt: string;
-}
-
-export interface RescueActiveBatchResponse {
-  rescueBatchId: string;
-  teamId: string;
-  isActive: boolean;
-  status: string;
-  routePolyline: string | null;
-  totalDistanceKm: number | null;
-  estimatedMinutes: number | null;
-  createdAt: string;
-  closedAt: string | null;
-  items: RescueBatchItem[];
-}
-
-export interface RescueTeamHistoryRequestItem {
-  requestId: string;
-  address: string;
-  disasterType: string;
-  rescueRequestStatus: string;
-  reporterFullName: string;
-  reporterPhone: string;
-  createdAt: string;
-  updatedAt: string;
-  sequenceOrder: number;
-  batchItemStatus: string;
-}
-
-export interface RescueTeamHistoryBatch {
-  rescueBatchId: string;
-  createdAt: string;
-  closedAt: string | null;
-  totalRequests: number;
-  completedRequests: number;
-  requests: RescueTeamHistoryRequestItem[];
-}
-
-export interface RescueTeamHistoryResponse {
-  totalCount: number;
-  pageNumber: number;
-  pageSize: number;
-  data: RescueTeamHistoryBatch[];
-}
+export type {
+  RescueBatchItem,
+  RescueActiveBatchResponse,
+  RescueTeamHistoryRequestItem,
+  RescueTeamHistoryBatch,
+  RescueTeamHistoryResponse,
+} from '../types/team';
 
 const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY ?? '';
 
