@@ -4,10 +4,8 @@ import { create } from 'zustand';
 export interface User {
   id: string;
   email: string;
-  full_name: string;
-  phone: string;
+  user_name: string;
   role: string;
-  dealership_id?: string;
 }
 
 interface AuthState {

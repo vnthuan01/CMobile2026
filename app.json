@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "capstone_mobile_sp_25_-_reliefcare",
-    "slug": "capstone_mobile_sp_25_-_reliefcare",
+    "name": "capstone_mobile_sp_25_reliefcare",
+    "slug": "capstone_mobile_sp_25_reliefcare",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "capstone_mobile_sp_25_-_reliefcare",
+    "scheme": "reliefcare",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.capstone_mobile_sp_25_-_reliefcare"
+      "bundleIdentifier": "com.reliefcare.mobile"
     },
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.capstone_mobile_sp_25_-_reliefcare"
+      "package": "com.reliefcare.mobile"
     },
     "web": {
       "output": "static",
@@ -23,6 +23,13 @@
     "plugins": [
       "expo-router",
       "expo-font"
+      "@react-native-community/datetimepicker",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "${EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN}"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

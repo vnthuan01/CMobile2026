@@ -23,18 +23,31 @@ export function decodeJWT(token: string): User | null {
 
     const decoded = JSON.parse(jsonPayload);
 
+    console.log('JWT PAYLOAD:', decoded);
+
     return {
-      id: decoded.id,
+      id: decoded.sub,
       email: decoded.email,
-      full_name: decoded.full_name,
-      phone: decoded.phone,
-      role: decoded.role,
-      dealership_id: decoded.dealership_id,
+      user_name:
+        decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
+        '',
+      role:
+        decoded[
+          'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+        ] || '',
     };
   } catch (error) {
     console.error('Error decoding JWT:', error);
     return null;
   }
+}
+
+export function getUserFromToken(token: string): User | null {
+  const decoded = decodeJWT(token);
+  if (!decoded) {
+    return null;
+  }
+  return decoded.role ? decoded : null;
 }
 
 /**
