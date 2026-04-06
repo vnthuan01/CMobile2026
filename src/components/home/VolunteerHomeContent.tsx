@@ -174,7 +174,7 @@ export default function VolunteerHomeContent() {
               <View className="flex-row items-center gap-2">
                 <View
                   className="rounded-full px-3 py-1"
-                  style={{ backgroundColor: isDark ? '#1f2937' : '#f3f4f6' }}
+                  style={{ backgroundColor: colors.surface }}
                 >
                   <Text
                     className="text-xs font-semibold"
@@ -204,7 +204,7 @@ export default function VolunteerHomeContent() {
             <View
               className="h-12 w-12 items-center justify-center rounded-2xl"
               style={{
-                backgroundColor: isDark ? 'rgba(218,37,29,0.18)' : '#fee2e2',
+                backgroundColor: `${colors.primary}20`,
               }}
             >
               <Ionicons name="people" size={24} color={colors.primary} />
@@ -228,7 +228,7 @@ export default function VolunteerHomeContent() {
                 rescueTeamService.openCallReporter(team.contactPhone)
               }
               className="mt-4 h-11 flex-row items-center justify-center gap-2 rounded-xl"
-              style={{ backgroundColor: isDark ? '#111827' : '#f9fafb' }}
+              style={{ backgroundColor: colors.surface }}
             >
               <Ionicons name="call-outline" size={18} color={colors.primary} />
               <Text className="font-semibold" style={{ color: colors.text }}>
@@ -258,11 +258,11 @@ export default function VolunteerHomeContent() {
           {!!errorMessage && !team && (
             <View className="mt-6 px-4">
               <Card
-                colors="#fecaca"
-                bg={isDark ? 'rgba(127,29,29,0.25)' : '#fef2f2'}
+                colors={colors.status.error}
+                bg={isDark ? `${colors.status.error}20` : `${colors.status.error}10`}
               >
                 <View className="flex-row items-start gap-3">
-                  <Ionicons name="alert-circle" size={22} color="#dc2626" />
+                    <Ionicons name="alert-circle" size={22} color={colors.status.error} />
                   <View className="flex-1">
                     <Text
                       className="text-base font-bold"
@@ -342,7 +342,7 @@ export default function VolunteerHomeContent() {
                   </View>
                   <View
                     className="mt-3 h-2 overflow-hidden rounded-full"
-                    style={{ backgroundColor: isDark ? '#1f2937' : '#e5e7eb' }}
+                     style={{ backgroundColor: colors.border }}
                   >
                     <View
                       className="h-full rounded-full"
@@ -374,18 +374,18 @@ export default function VolunteerHomeContent() {
                             )}
                             bg={
                               currentMission.rescueRequestType === 'Emergency'
-                                ? '#fef2f2'
-                                : '#eff6ff'
+                                ? `${colors.status.error}22`
+                                : `${colors.status.incoming}22`
                             }
                             text={
                               currentMission.rescueRequestType === 'Emergency'
-                                ? '#b91c1c'
-                                : '#1d4ed8'
+                                ? colors.status.error
+                                : colors.status.incoming
                             }
                           />
                           <Badge
                             label={formatMissionStatus(currentMission.status)}
-                            bg={isDark ? '#1f2937' : '#f3f4f6'}
+                            bg={colors.surface}
                             text={colors.textSecondary}
                           />
                         </View>
@@ -425,7 +425,7 @@ export default function VolunteerHomeContent() {
                       <View
                         className="h-12 w-12 items-center justify-center rounded-2xl"
                         style={{
-                          backgroundColor: isDark ? '#1f2937' : '#f3f4f6',
+                          backgroundColor: colors.surface,
                         }}
                       >
                         <Ionicons
@@ -544,11 +544,11 @@ export default function VolunteerHomeContent() {
                               {mission.address || 'Chưa có địa chỉ'}
                             </Text>
                           </View>
-                          <Badge
-                            label={formatMissionStatus(mission.status)}
-                            bg={isDark ? '#1f2937' : '#f3f4f6'}
-                            text={colors.textSecondary}
-                          />
+                        <Badge
+                          label={formatMissionStatus(mission.status)}
+                          bg={colors.surface}
+                          text={colors.textSecondary}
+                        />
                         </View>
                       </Card>
                     ))}
@@ -651,7 +651,7 @@ function MiniInfo({ label, value }: { label: string; value: string }) {
   return (
     <View
       className="flex-1 rounded-xl p-3"
-      style={{ backgroundColor: isDark ? '#111827' : '#f9fafb' }}
+      style={{ backgroundColor: colors.surface }}
     >
       <Text className="text-xs" style={{ color: colors.textSecondary }}>
         {label}
@@ -720,18 +720,14 @@ function ActionButton({
   const { colors, isDark } = useTheme();
 
   const backgroundColor = disabled
-    ? isDark
-      ? '#1f2937'
-      : '#e5e7eb'
+    ? colors.surface
     : primary
       ? colors.primary
-      : isDark
-        ? '#111827'
-        : '#f9fafb';
+      : colors.surface;
 
-  const iconColor = disabled ? '#9ca3af' : primary ? '#ffffff' : colors.primary;
+  const iconColor = disabled ? colors.textSecondary : primary ? colors.white : colors.primary;
 
-  const textColor = disabled ? '#9ca3af' : primary ? '#ffffff' : colors.text;
+  const textColor = disabled ? colors.textSecondary : primary ? colors.white : colors.text;
 
   return (
     <TouchableOpacity

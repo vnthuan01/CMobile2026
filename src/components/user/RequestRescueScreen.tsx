@@ -15,7 +15,6 @@ import { uploadService } from '@/src/services/uploadService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
-import RequestRescueMiniMap from './RequestRescueMiniMap';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,6 +28,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import RequestRescueMiniMap from './RequestRescueMiniMap';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DISASTER_OPTIONS: { label: string; value: DisasterType; icon: string }[] =
@@ -323,7 +323,7 @@ export default function RequestRescueScreen({
                   rescueType === opt.value
                     ? {
                         backgroundColor:
-                          opt.value === 1 ? '#ef4444' : colors.primary,
+                          opt.value === 1 ? colors.status.error : colors.primary,
                       }
                     : {}
                 }
@@ -332,7 +332,7 @@ export default function RequestRescueScreen({
                   className="font-semibold"
                   style={{
                     color:
-                      rescueType === opt.value ? '#fff' : colors.textSecondary,
+                      rescueType === opt.value ? colors.white : colors.textSecondary,
                   }}
                 >
                   {opt.label}
@@ -345,10 +345,10 @@ export default function RequestRescueScreen({
           {rescueType === 1 && (
             <View
               className="mt-3 flex-row items-start gap-2 rounded-xl border p-3"
-              style={{ backgroundColor: '#fef2f2', borderColor: '#fca5a5' }}
+              style={{ backgroundColor: `${colors.status.error}12`, borderColor: `${colors.status.error}55` }}
             >
-              <Ionicons name="warning" size={16} color="#ef4444" />
-              <Text className="flex-1 text-xs" style={{ color: '#b91c1c' }}>
+              <Ionicons name="warning" size={16} color={colors.status.error} />
+              <Text className="flex-1 text-xs" style={{ color: colors.status.error }}>
                 Chế độ khẩn cấp: chỉ cần cung cấp số điện thoại và vị trí. Đội
                 cứu hộ sẽ liên hệ ngay lập tức.
               </Text>
@@ -438,9 +438,9 @@ export default function RequestRescueScreen({
         <Section>
           <View className="flex-row items-center justify-between">
             <SectionTitle title="Vị trí hiện tại" colors={colors} noMargin />
-            <View className="flex-row items-center gap-1 rounded-full bg-green-50 px-2 py-1">
-              <Ionicons name="location" size={12} color="#16a34a" />
-              <Text className="text-xs font-medium text-green-600">
+            <View className="flex-row items-center gap-1 rounded-full px-2 py-1" style={{ backgroundColor: `${colors.status.completed}18` }}>
+              <Ionicons name="location" size={12} color={colors.status.completed} />
+              <Text className="text-xs font-medium" style={{ color: colors.status.completed }}>
                 Tự động
               </Text>
             </View>
@@ -473,9 +473,9 @@ export default function RequestRescueScreen({
                 mapStyle={mapStyle}
               />
             ) : (
-              <View className="flex-1 items-center justify-center bg-slate-100">
-                <Ionicons name="map-outline" size={32} color="#64748b" />
-                <Text className="mt-2 text-sm text-text-secondary">
+              <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.surface }}>
+                <Ionicons name="map-outline" size={32} color={colors.textSecondary} />
+                <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
                   Bản đồ vị trí hiện tại sẽ hiển thị tại đây
                 </Text>
               </View>
@@ -642,7 +642,7 @@ export default function RequestRescueScreen({
                                       <Ionicons
                                         name="checkmark"
                                         size={14}
-                                        color="#fff"
+                                        color={colors.white}
                                       />
                                     )}
                                   </View>
@@ -694,9 +694,10 @@ export default function RequestRescueScreen({
                 />
                 <TouchableOpacity
                   onPress={() => removeAttachment(idx)}
-                  className="absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full bg-red-500"
+                  className="absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.status.error }}
                 >
-                  <Ionicons name="close" size={12} color="#fff" />
+                  <Ionicons name="close" size={12} color={colors.white} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -746,16 +747,16 @@ export default function RequestRescueScreen({
           className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl shadow-lg"
           style={[
             {
-              backgroundColor: rescueType === 1 ? '#ef4444' : colors.primary,
+              backgroundColor: rescueType === 1 ? colors.status.error : colors.primary,
               opacity: submitting ? 0.7 : 1,
             },
           ]}
         >
           {submitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
-              <Text className="text-base font-bold leading-normal text-white">
+              <Text className="text-base font-bold leading-normal" style={{ color: colors.white }}>
                 {rescueType === 1
                   ? 'GỬI NGAY — KHẨN CẤP'
                   : 'GỬI YÊU CẦU CỨU HỘ'}
@@ -763,7 +764,7 @@ export default function RequestRescueScreen({
               <Ionicons
                 name={rescueType === 1 ? 'warning' : 'send'}
                 size={18}
-                color="#fff"
+                color={colors.white}
               />
             </>
           )}
@@ -776,7 +777,7 @@ export default function RequestRescueScreen({
               className="text-center text-xs"
               style={{ color: colors.textSecondary }}
             >
-              AI sẽ ưu tiên xử lý dựa trên tiêu chí đã chọn
+              Hệ thống sẽ ưu tiên xử lý dựa trên tiêu chí đã chọn
             </Text>
           </View>
         )}

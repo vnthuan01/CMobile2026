@@ -6,15 +6,17 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { ThemeProvider } from '../src/context/ThemeContext';
+import { useTheme } from '../src/context/ThemeContext';
 import { authService } from '../src/services/authService';
 import type { AuthState } from '../src/store/authStore';
 import { useAuthStore } from '../src/store/authStore';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../src/lib/queryClient';
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const router = useRouter();
   const segments = useSegments();
+  const { isDark, colors } = useTheme();
 
   const isAuthenticated = useAuthStore(
     (state: AuthState) => state.isAuthenticated,
@@ -33,7 +35,7 @@ export default function RootLayout() {
     if (isLoading) return;
 
     if (!isAuthenticated && !inAuthRoute) {
-      router.replace('/login');
+      router.replace('/welcome');
       return;
     }
 
@@ -43,13 +45,24 @@ export default function RootLayout() {
   }, [inAuthRoute, isAuthenticated, isLoading, router]);
 
   return (
+    <>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
+      <Slot />
+      <Toast />
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           <ThemeProvider>
-            <StatusBar barStyle="light-content" backgroundColor="#161616" />
-            <Slot />
-            <Toast />
+            <RootLayoutContent />
           </ThemeProvider>
         </SafeAreaProvider>
       </QueryClientProvider>

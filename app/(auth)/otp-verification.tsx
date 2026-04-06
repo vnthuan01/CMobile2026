@@ -13,11 +13,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  NativeSyntheticEvent,
+  TextInputKeyPressEventData,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { useTheme } from '@/src/context/ThemeContext';
 
 export default function OTPScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{ email?: string; mode?: string }>();
 
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
@@ -177,40 +181,50 @@ export default function OTPScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background-light"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="w-full max-w-md flex-1 self-center bg-white">
+        <View className="w-full max-w-md flex-1 self-center" style={{ backgroundColor: colors.background }}>
           <View className="sticky top-0 z-10 flex-row items-center px-4 py-3">
             <TouchableOpacity
               onPress={() => router.back()}
               className="h-10 w-10 items-center justify-center rounded-full"
             >
-              <Ionicons name="chevron-back" size={22} color="#0f172a" />
+              <Ionicons name="chevron-back" size={22} color={colors.text} />
             </TouchableOpacity>
 
-            <Text className="flex-1 pr-10 text-center text-lg font-bold text-text-primary">
+            <Text
+              className="flex-1 pr-10 text-center text-lg font-bold"
+              style={{ color: colors.text }}
+            >
               {isForgotPasswordMode ? 'Xác minh OTP khôi phục' : 'Xác minh OTP'}
             </Text>
           </View>
 
           <View className="flex-1 items-center px-6 pt-10">
             <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-              <Ionicons name="mail-outline" size={40} color="#1565C0" />
+              <Ionicons name="mail-outline" size={40} color={colors.secondary} />
             </View>
 
-            <Text className="mb-3 text-center text-2xl font-bold text-text-primary">
+            <Text
+              className="mb-3 text-center text-2xl font-bold"
+              style={{ color: colors.text }}
+            >
               {isForgotPasswordMode
                 ? 'Nhập mã OTP khôi phục'
                 : 'Nhập mã xác thực'}
             </Text>
 
-            <Text className="mb-8 max-w-xs text-center text-base leading-relaxed text-text-secondary">
+            <Text
+              className="mb-8 max-w-xs text-center text-base leading-relaxed"
+              style={{ color: colors.textSecondary }}
+            >
               {isForgotPasswordMode
                 ? 'Chúng tôi đã gửi một mã OTP 6 số để khôi phục mật khẩu, mã này sẽ có tác dụng trong 10p.'
                 : 'Chúng tôi đã gửi một mã OTP 6 số đến gmail của bạn, mã này sẽ có tác dụng trong 10p.'}
               {`\n`}
-              <Text className="font-bold text-text-primary">
+              <Text className="font-bold" style={{ color: colors.text }}>
                 {email || 'email của bạn'}
               </Text>
             </Text>
@@ -219,23 +233,22 @@ export default function OTPScreen() {
               {otp.map((value, index) => (
                 <TextInput
                   key={index}
-                  ref={(el) => {
+                  ref={(el: TextInput | null) => {
                     if (el) inputsRef.current[index] = el;
                   }}
                   value={value}
                   keyboardType="number-pad"
                   maxLength={1}
-                  onChangeText={(v) => handleChange(v, index)}
-                  onKeyPress={({ nativeEvent }) =>
-                    handleKeyPress(nativeEvent.key, index)
-                  }
-                  className="h-14 w-12 rounded-xl border border-surface-dark bg-background-light text-center text-xl font-bold text-text-primary"
+                  onChangeText={(v: string) => handleChange(v, index)}
+                  onKeyPress={(event: any) => handleKeyPress(event.nativeEvent.key, index)}
+                  className="h-14 w-12 rounded-xl text-center text-xl font-bold"
+                  style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
                 />
               ))}
             </View>
 
             <View className="mb-8 flex-row items-center gap-2">
-              <Text className="text-sm text-text-secondary">
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
                 Chưa nhận được mã?
               </Text>
               <TouchableOpacity
@@ -243,11 +256,13 @@ export default function OTPScreen() {
                 onPress={handleResend}
               >
                 <Text
-                  className={`text-sm font-medium ${
-                    counter > 0 || resending
-                      ? 'text-text-secondary'
-                      : 'text-primary'
-                  }`}
+                  className="text-sm font-medium"
+                  style={{
+                    color:
+                      counter > 0 || resending
+                        ? colors.textSecondary
+                        : colors.primary,
+                  }}
                 >
                   {resending
                     ? 'Đang gửi lại...'
@@ -264,15 +279,17 @@ export default function OTPScreen() {
               }`}
             >
               {verifying ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.white} />
               ) : (
                 <Text className="text-lg font-bold text-white">Xác minh</Text>
               )}
             </TouchableOpacity>
 
             <View className="mt-8 flex-row items-center gap-2">
-              <Ionicons name="help-circle-outline" size={18} color="#64748b" />
-              <Text className="text-sm text-text-secondary">Cần trợ giúp?</Text>
+              <Ionicons name="help-circle-outline" size={18} color={colors.textSecondary} />
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                Cần trợ giúp?
+              </Text>
             </View>
           </View>
         </View>

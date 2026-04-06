@@ -23,7 +23,7 @@ export default function Header({
 
     // Theme Styles
     // We mix inline styles for dynamic theme colors with Tailwind for layout
-    const arrowBgClass = isDark ? 'bg-gray-700' : 'bg-gray-100'; // Keep or move to colors if we have secondary background
+    const arrowBgColor = isDark ? colors.border : colors.surface;
 
     return (
         <View
@@ -39,7 +39,8 @@ export default function Header({
                 {onBack && (
                     <TouchableOpacity
                         onPress={onBack}
-                        className={`h-10 w-10 items-center justify-center rounded-full ${arrowBgClass}`}
+                        className="h-10 w-10 items-center justify-center rounded-full"
+                        style={{ backgroundColor: arrowBgColor }}
                     >
                         <Ionicons name="arrow-back" size={24} color={colors.text} />
                     </TouchableOpacity>

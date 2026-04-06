@@ -143,11 +143,11 @@ export default function NewSOSForVolunteerScreen({
                     <View
                         className="w-full h-32 rounded-xl overflow-hidden border items-center justify-center"
                         style={{
-                            backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                        backgroundColor: colors.surface,
                             borderColor: colors.border,
                         }}
                     >
-                        <View className="flex-row items-center gap-1 bg-white/90 dark:bg-black/70 px-3 py-1.5 rounded-full shadow-lg mb-2">
+                        <View className="flex-row items-center gap-1 px-3 py-1.5 rounded-full shadow-lg mb-2" style={{ backgroundColor: colors.card }}>
                             <Ionicons name="navigate" size={14} color={colors.primary} />
                             <Text className="text-xs font-bold" style={{ color: colors.text }}>
                                 Vị trí hiện tại
@@ -157,7 +157,7 @@ export default function NewSOSForVolunteerScreen({
                             className="flex-row items-center gap-1 px-3 py-1.5 rounded-lg shadow-md"
                             style={{ backgroundColor: colors.primary }}
                         >
-                            <Ionicons name="create-outline" size={14} color="#fff" />
+                            <Ionicons name="create-outline" size={14} color={colors.white} />
                             <Text className="text-[10px] font-semibold uppercase tracking-wide text-white">
                                 Chọn vị trí khác
                             </Text>
@@ -166,7 +166,7 @@ export default function NewSOSForVolunteerScreen({
                     <View className="flex-row items-center justify-between mt-2 px-1">
                         <Text className="text-[10px]" style={{ color: colors.textSecondary }}>
                             Độ chính xác:{' '}
-                            <Text style={{ color: '#16a34a' }} className="font-medium">
+                            <Text style={{ color: colors.status.completed }} className="font-medium">
                                 Cao (~5m)
                             </Text>
                         </Text>
@@ -261,7 +261,7 @@ export default function NewSOSForVolunteerScreen({
                         </Text>
                         <View
                             className="px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9' }}
+                            style={{                                 backgroundColor: colors.surface, }}
                         >
                             <Text className="text-[10px]" style={{ color: colors.textSecondary }}>
                                 Minh bạch
@@ -275,9 +275,9 @@ export default function NewSOSForVolunteerScreen({
                         >
                             <View
                                 className="h-10 w-10 items-center justify-center rounded-full"
-                                style={{ backgroundColor: isDark ? 'rgba(37,99,235,0.15)' : '#eff6ff' }}
+                                style={{ backgroundColor: `${colors.secondary}18` }}
                             >
-                                <Ionicons name="camera" size={22} color="#2563eb" />
+                                <Ionicons name="camera" size={22} color={colors.secondary} />
                             </View>
                             <View>
                                 <Text className="text-xs font-bold" style={{ color: colors.text }}>Chụp ảnh</Text>
@@ -290,9 +290,9 @@ export default function NewSOSForVolunteerScreen({
                         >
                             <View
                                 className="h-10 w-10 items-center justify-center rounded-full"
-                                style={{ backgroundColor: isDark ? 'rgba(147,51,234,0.15)' : '#faf5ff' }}
+                                style={{ backgroundColor: `${colors.accent}18` }}
                             >
-                                <Ionicons name="videocam" size={22} color="#9333ea" />
+                                <Ionicons name="videocam" size={22} color={colors.accent} />
                             </View>
                             <View>
                                 <Text className="text-xs font-bold" style={{ color: colors.text }}>Quay video</Text>
@@ -339,8 +339,8 @@ export default function NewSOSForVolunteerScreen({
                 <View
                     className="relative h-14 rounded-full overflow-hidden flex-row items-center p-1 border"
                     style={{
-                        backgroundColor: isDark ? '#2C2219' : '#e2e8f0',
-                        borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#cbd5e1',
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
                     }}
                 >
                     <View className="absolute inset-0 items-center justify-center">
@@ -354,7 +354,7 @@ export default function NewSOSForVolunteerScreen({
                     <View
                         className="h-12 w-14 items-center justify-center rounded-full bg-green-500 shadow-lg z-10"
                     >
-                        <Ionicons name="chevron-forward" size={24} color="#fff" />
+                        <Ionicons name="chevron-forward" size={24} color={colors.white} />
                     </View>
                 </View>
             </View>

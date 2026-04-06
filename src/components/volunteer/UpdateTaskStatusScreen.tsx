@@ -31,33 +31,24 @@ export default function UpdateTaskStatusScreen({
             title: 'Đang di chuyển',
             subtitle: 'Đang trên đường tới điểm cứu trợ',
             icon: 'car',
-            color: 'blue',
-            bgColor: isDark ? 'bg-blue-900/40' : 'bg-blue-100',
-            textColor: isDark ? 'text-blue-300' : 'text-primary',
-            borderColor: isDark ? 'border-primary' : 'border-primary',
-            ringColor: 'ring-primary',
+            color: colors.status.incoming,
+            bgColor: `${colors.status.incoming}18`,
         },
         {
             id: 'delivered' as StatusType,
             title: 'Đã giao hàng',
             subtitle: 'Hàng hóa đã được trao tận tay',
             icon: 'checkmark-circle',
-            color: 'green',
-            bgColor: isDark ? 'bg-green-900/40' : 'bg-green-100',
-            textColor: isDark ? 'text-green-300' : 'text-green-600',
-            borderColor: isDark ? 'border-green-500' : 'border-green-500',
-            ringColor: 'ring-green-500',
+            color: colors.status.completed,
+            bgColor: `${colors.status.completed}18`,
         },
         {
             id: 'failed' as StatusType,
             title: 'Thất bại / Bị chặn',
             subtitle: 'Không thể tiếp cận địa điểm',
             icon: 'ban',
-            color: 'orange',
-            bgColor: isDark ? 'bg-orange-900/40' : 'bg-orange-100',
-            textColor: isDark ? 'text-orange-300' : 'text-orange-500',
-            borderColor: isDark ? 'border-orange-500' : 'border-orange-500',
-            ringColor: 'ring-orange-500',
+            color: colors.status.pending,
+            bgColor: `${colors.status.pending}18`,
         },
     ];
 
@@ -96,8 +87,8 @@ export default function UpdateTaskStatusScreen({
                     >
                         <View className="flex-[2] flex-col justify-center gap-1">
                             <View className="mb-1 inline-flex items-center gap-2">
-                                <View className="rounded bg-blue-100 px-2 py-0.5">
-                                    <Text className="text-xs font-bold text-blue-800">
+                                <View className="rounded px-2 py-0.5" style={{ backgroundColor: `${colors.status.incoming}18` }}>
+                                    <Text className="text-xs font-bold" style={{ color: colors.status.incoming }}>
                                         ƯU TIÊN CAO
                                     </Text>
                                 </View>
@@ -115,9 +106,9 @@ export default function UpdateTaskStatusScreen({
                         </View>
                         <View
                             className="h-24 w-24 flex-none items-center justify-center rounded-lg border"
-                            style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderColor: colors.border }}
+                            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
                         >
-                            <Ionicons name="map" size={40} color="#6b7280" />
+                            <Ionicons name="map" size={40} color={colors.textSecondary} />
                         </View>
                     </View>
                 </View>
@@ -141,37 +132,28 @@ export default function UpdateTaskStatusScreen({
                                 <View
                                     className="h-5 w-5 rounded-full border-2"
                                     style={{
-                                        borderColor: selectedStatus === option.id ? colors.primary : '#d1d5db'
+                                        borderColor: selectedStatus === option.id ? colors.primary : colors.border
                                     }}
                                 >
                                     {selectedStatus === option.id && (
                                         <View
                                             className="h-full w-full items-center justify-center rounded-full"
                                             style={{
-                                                backgroundColor: option.color === 'blue'
-                                                    ? colors.primary
-                                                    : option.color === 'green'
-                                                        ? '#16a34a'
-                                                        : '#f97316'
+                                                backgroundColor: option.color
                                             }}
                                         >
-                                            <View className="h-3 w-3 rounded-full bg-white" />
+                                            <View className="h-3 w-3 rounded-full" style={{ backgroundColor: colors.white }} />
                                         </View>
                                     )}
                                 </View>
                                 <View
-                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${option.bgColor} ${option.textColor}`}
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                                    style={{ backgroundColor: option.bgColor }}
                                 >
                                     <Ionicons
                                         name={option.icon as any}
                                         size={20}
-                                        color={
-                                            option.color === 'blue'
-                                                ? colors.primary
-                                                : option.color === 'green'
-                                                    ? '#16a34a'
-                                                    : '#f97316'
-                                        }
+                                        color={option.color}
                                     />
                                 </View>
                                 <View className="flex grow flex-col">
@@ -207,13 +189,13 @@ export default function UpdateTaskStatusScreen({
                             {/* Preview Image */}
                             <View
                                 className="group relative h-28 w-28 shrink-0 overflow-hidden rounded-xl"
-                                style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}
+                                style={{ backgroundColor: colors.surface }}
                             >
                                 <View className="h-full w-full items-center justify-center">
-                                    <Ionicons name="image" size={40} color="#6b7280" />
+                                    <Ionicons name="image" size={40} color={colors.textSecondary} />
                                 </View>
                                 <TouchableOpacity className="absolute right-1 top-1 rounded-full bg-black/50 p-1">
-                                    <Ionicons name="close" size={12} color="#fff" />
+                                    <Ionicons name="close" size={12} color={colors.white} />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -257,7 +239,7 @@ export default function UpdateTaskStatusScreen({
                     <Text className="text-base font-bold tracking-tight text-white">
                         Cập nhật trạng thái
                     </Text>
-                    <Ionicons name="send" size={16} color="#fff" />
+                    <Ionicons name="send" size={16} color={colors.white} />
                 </TouchableOpacity>
             </View>
         </View>

@@ -104,13 +104,13 @@ export default function MyCurrentTeamScreen({
 
     switch (normalized) {
       case 'active':
-        return { bg: '#DCFCE7', text: '#166534', label: 'Đang hoạt động' };
+        return { bg: `${colors.status.completed}22`, text: colors.status.completed, label: 'Đang hoạt động' };
       case 'draft':
-        return { bg: '#FEF3C7', text: '#92400E', label: 'Bản nháp' };
+        return { bg: `${colors.status.pending}22`, text: colors.status.pending, label: 'Bản nháp' };
       default:
         return {
-          bg: '#E2E8F0',
-          text: '#475569',
+          bg: colors.surface,
+          text: colors.textSecondary,
           label: status ? String(status) : 'Không xác định',
         };
     }
@@ -120,11 +120,11 @@ export default function MyCurrentTeamScreen({
     const normalized = String(role ?? '').toLowerCase();
 
     if (normalized === 'leader') {
-      return { bg: '#DBEAFE', text: '#1D4ED8', label: 'Leader' };
+      return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Leader' };
     }
     return {
-      bg: '#E2E8F0',
-      text: '#475569',
+      bg: colors.surface,
+      text: colors.textSecondary,
       label: role ? String(role) : 'Member',
     };
   };
@@ -132,7 +132,7 @@ export default function MyCurrentTeamScreen({
   const renderSkillChips = (skills?: TeamSkillResponse[]) => {
     if (!skills || skills.length === 0) {
       return (
-        <Text className="text-sm text-text-secondary">
+        <Text className="text-sm" style={{ color: colors.textSecondary }}>
           Chưa cập nhật kỹ năng
         </Text>
       );
@@ -146,16 +146,17 @@ export default function MyCurrentTeamScreen({
         {visible.map((skill) => (
           <View
             key={skill.skillId}
-            className="rounded-full bg-surface px-3 py-1"
+            className="rounded-full px-3 py-1"
+            style={{ backgroundColor: colors.surface }}
           >
-            <Text className="text-xs font-medium text-text-primary">
+            <Text className="text-xs font-medium" style={{ color: colors.text }}>
               {skill.name}
             </Text>
           </View>
         ))}
         {remaining > 0 ? (
-          <View className="rounded-full bg-surface px-3 py-1">
-            <Text className="text-xs font-medium text-text-secondary">
+          <View className="rounded-full px-3 py-1" style={{ backgroundColor: colors.surface }}>
+            <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
               +{remaining}
             </Text>
           </View>
@@ -165,7 +166,7 @@ export default function MyCurrentTeamScreen({
   };
 
   return (
-    <View className="flex-1 bg-background-light">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
         title="Team của tôi"
         onBack={onBack}
@@ -188,7 +189,7 @@ export default function MyCurrentTeamScreen({
         </View>
       ) : emptyState ? (
         <View className="flex-1 items-center justify-center px-6">
-          <View className="h-20 w-20 items-center justify-center rounded-full bg-surface">
+          <View className="h-20 w-20 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
             <Ionicons name="people-outline" size={34} color={colors.primary} />
           </View>
           <Text className="mt-4 text-center text-xl font-bold text-text-primary">
@@ -200,7 +201,7 @@ export default function MyCurrentTeamScreen({
         </View>
       ) : errorMessage ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="alert-circle-outline" size={38} color="#DC2626" />
+          <Ionicons name="alert-circle-outline" size={38} color={colors.status.error} />
           <Text className="mt-4 text-center text-xl font-bold text-text-primary">
             Không tải được thông tin team.
           </Text>
@@ -228,18 +229,18 @@ export default function MyCurrentTeamScreen({
         >
           <View className="px-4 pt-4">
             {isLeader ? (
-              <View className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                <Text className="text-base font-bold text-blue-800">
+              <View className="mb-4 rounded-2xl border p-4" style={{ borderColor: `${colors.status.incoming}33`, backgroundColor: `${colors.status.incoming}14` }}>
+                <Text className="text-base font-bold" style={{ color: colors.status.incoming }}>
                   Bạn đang là trưởng nhóm của team này
                 </Text>
-                <Text className="mt-1 text-sm text-blue-700">
+                <Text className="mt-1 text-sm" style={{ color: colors.status.incoming }}>
                   Theo dõi thành viên, điều phối liên lạc và đi nhanh sang nhiệm
                   vụ hiện tại.
                 </Text>
               </View>
             ) : null}
 
-            <View className="rounded-3xl bg-secondary p-5">
+            <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
               <View className="flex-row items-start justify-between gap-3">
                 <View className="flex-1">
                   <Text className="text-2xl font-bold text-white">
@@ -282,7 +283,7 @@ export default function MyCurrentTeamScreen({
                   onPress={() => openPhone(team.contactPhone)}
                   className="bg-white/12 mt-4 flex-row items-center gap-2 rounded-2xl px-3 py-3"
                 >
-                  <Ionicons name="call-outline" size={18} color="#fff" />
+                  <Ionicons name="call-outline" size={18} color={colors.white} />
                   <Text className="font-medium text-white">
                     {team.contactPhone}
                   </Text>
@@ -290,9 +291,9 @@ export default function MyCurrentTeamScreen({
               ) : null}
             </View>
 
-            <View className="mt-4 rounded-2xl border border-surface-dark bg-white p-4">
+            <View className="mt-4 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-text-primary">
+                <Text className="text-lg font-bold" style={{ color: colors.text }}>
                   Trưởng nhóm hiện tại
                 </Text>
                 <View
@@ -310,24 +311,25 @@ export default function MyCurrentTeamScreen({
 
               {team?.leader ? (
                 <>
-                  <Text className="mt-3 text-xl font-bold text-text-primary">
+                  <Text className="mt-3 text-xl font-bold" style={{ color: colors.text }}>
                     {team.leader.displayName}
                   </Text>
-                  <Text className="mt-1 text-sm text-text-secondary">
+                  <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
                     {team.leader.email}
                   </Text>
                   {renderSkillChips(team.leader.skills)}
                   <View className="mt-4 flex-row gap-3">
                     <TouchableOpacity
                       onPress={() => openEmail(team.leader?.email)}
-                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-surface-dark py-3"
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
+                      style={{ borderColor: colors.border, backgroundColor: colors.card }}
                     >
                       <Ionicons
                         name="mail-outline"
                         size={18}
                         color={colors.primary}
                       />
-                      <Text className="font-semibold text-text-primary">
+                      <Text className="font-semibold" style={{ color: colors.text }}>
                         Gửi email
                       </Text>
                     </TouchableOpacity>
@@ -335,7 +337,7 @@ export default function MyCurrentTeamScreen({
                       onPress={onOpenTasks}
                       className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
                     >
-                      <Ionicons name="map-outline" size={18} color="#fff" />
+                      <Ionicons name="map-outline" size={18} color={colors.white} />
                       <Text className="font-semibold text-white">
                         {isLeader ? 'Xem nhiệm vụ hiện tại' : 'Xem nhiệm vụ'}
                       </Text>
@@ -343,19 +345,19 @@ export default function MyCurrentTeamScreen({
                   </View>
                 </>
               ) : (
-                <Text className="mt-3 text-base text-text-secondary">
+                <Text className="mt-3 text-base" style={{ color: colors.textSecondary }}>
                   Chưa có trưởng nhóm
                 </Text>
               )}
             </View>
 
-            <View className="mt-4 rounded-2xl border border-surface-dark bg-white p-4">
-              <Text className="text-lg font-bold text-text-primary">
+            <View className="mt-4 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
                 Moderator quản lý
               </Text>
               {team?.moderator ? (
                 <>
-                  <Text className="mt-3 text-base font-semibold text-text-primary">
+                  <Text className="mt-3 text-base font-semibold" style={{ color: colors.text }}>
                     {team.moderator.displayName}
                   </Text>
                   <TouchableOpacity
@@ -367,14 +369,14 @@ export default function MyCurrentTeamScreen({
                   </TouchableOpacity>
                 </>
               ) : (
-                <Text className="mt-3 text-base text-text-secondary">
+                <Text className="mt-3 text-base" style={{ color: colors.textSecondary }}>
                   Chưa có moderator
                 </Text>
               )}
             </View>
 
-            <View className="mt-4 rounded-2xl border border-surface-dark bg-white p-4">
-              <Text className="text-lg font-bold text-text-primary">
+            <View className="mt-4 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
                 Danh sách đồng đội
               </Text>
               {team?.members?.length ? (
@@ -384,7 +386,8 @@ export default function MyCurrentTeamScreen({
                     return (
                       <View
                         key={member.userId}
-                        className="rounded-2xl border border-surface-dark bg-background-light p-4"
+                        className="rounded-2xl border p-4"
+                        style={{ borderColor: colors.border, backgroundColor: colors.surface }}
                       >
                         <View className="flex-row items-start gap-3">
                           <View className="h-12 w-12 items-center justify-center rounded-full bg-surface">
@@ -434,7 +437,8 @@ export default function MyCurrentTeamScreen({
             <View className="mt-4 flex-row gap-3">
               <TouchableOpacity
                 onPress={onOpenTasks}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-surface-dark bg-white py-3"
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
+                style={{ borderColor: colors.border, backgroundColor: colors.card }}
               >
                 <Ionicons
                   name="list-outline"
@@ -454,7 +458,7 @@ export default function MyCurrentTeamScreen({
                   <Ionicons
                     name="chatbubble-ellipses-outline"
                     size={18}
-                    color="#fff"
+                    color={colors.white}
                   />
                   <Text className="font-semibold text-white">
                     Liên hệ trưởng nhóm

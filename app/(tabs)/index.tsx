@@ -27,7 +27,7 @@ export default function IndexScreen() {
   const { colors, isDark } = useTheme();
 
   const STICKY_HEIGHT = 88; // chiều cao khu SOS
-  const iconWrapperBg = isDark ? 'bg-gray-700' : 'bg-gray-100'; // Keep or refactor to style if specific color needed
+  const iconWrapperBg = isDark ? colors.border : colors.surface;
 
   const avatarSource = require('@/src/assets/images/Anh-avatar-nam-dep.jpeg');
 
@@ -111,12 +111,13 @@ export default function IndexScreen() {
 
             {/* Icon */}
             <TouchableOpacity
-              className={`h-10 w-10 items-center justify-center rounded-full ${iconWrapperBg}`}
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: iconWrapperBg }}
             >
               <Ionicons
                 name="notifications-outline"
                 size={22}
-                color={isDark ? '#fff' : '#111418'}
+                color={colors.text}
               />
             </TouchableOpacity>
           </View>
@@ -125,10 +126,11 @@ export default function IndexScreen() {
         {/* Map */}
         <View className="mb-4 px-4">
           <View
-            className={`h-48 items-center justify-center overflow-hidden rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}
+            className="h-48 items-center justify-center overflow-hidden rounded-xl"
+            style={{ backgroundColor: colors.surface }}
           >
-            <Ionicons name="map" size={48} color="#6b7280" />
-            <Text className="mt-2 text-sm text-gray-500">
+            <Ionicons name="map" size={48} color={colors.textSecondary} />
+            <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
               Bản đồ khu vực cứu trợ
             </Text>
           </View>
@@ -153,7 +155,7 @@ export default function IndexScreen() {
                 resizeMode="cover"
               >
                 <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.7)']}
+                  colors={['transparent', `${colors.black}B3`]}
                   className="absolute inset-0"
                 />
                 <View className="p-4">
@@ -189,15 +191,16 @@ export default function IndexScreen() {
             transform: [{ scale: pulseAnim }],
           }}
         >
-          <TouchableOpacity
-            activeOpacity={0.85}
-            className="h-12 w-12 items-center justify-center rounded-full bg-red-600 shadow-lg"
-          >
-            {/* Icon flash */}
-            <Animated.View style={{ opacity: flashAnim }}>
-              <Ionicons name="warning" size={30} color="#ffdd00ff" />
-            </Animated.View>
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              className="h-12 w-12 items-center justify-center rounded-full shadow-lg"
+              style={{ backgroundColor: colors.status.error }}
+            >
+              {/* Icon flash */}
+              <Animated.View style={{ opacity: flashAnim }}>
+                <Ionicons name="warning" size={30} color={colors.white} />
+              </Animated.View>
+            </TouchableOpacity>
         </Animated.View>
       </View>
     </View>

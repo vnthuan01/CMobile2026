@@ -15,9 +15,11 @@ import {
   View,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { useTheme } from '@/src/context/ThemeContext';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{
     email?: string;
     resetToken?: string;
@@ -99,24 +101,31 @@ export default function ResetPasswordScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background-light"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="w-full max-w-[420px] flex-1 self-center bg-white px-4">
+        <View className="w-full max-w-[420px] flex-1 self-center px-4" style={{ backgroundColor: colors.background }}>
           <View className="flex-row items-center justify-between py-4">
             <TouchableOpacity
               className="h-12 w-12 items-center justify-center rounded-full"
               onPress={() => router.back()}
             >
-              <Ionicons name="chevron-back" size={24} color="#0f172a" />
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
 
-            <Text className="flex-1 pr-12 text-center text-lg font-bold text-text-primary">
+            <Text
+              className="flex-1 pr-12 text-center text-lg font-bold"
+              style={{ color: colors.text }}
+            >
               Đặt lại mật khẩu
             </Text>
           </View>
 
-          <Text className="mb-2 text-sm font-semibold text-text-primary">
+          <Text
+            className="mb-2 text-sm font-semibold"
+            style={{ color: colors.text }}
+          >
             Mật khẩu mới
           </Text>
           <TextInput
@@ -124,10 +133,15 @@ export default function ResetPasswordScreen() {
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="Nhập mật khẩu mới"
-            className="mb-4 h-12 rounded-lg border border-surface-dark bg-background-light px-4 text-base text-text-primary"
+            className="mb-4 h-12 rounded-lg px-4 text-base"
+            style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
+            placeholderTextColor={colors.textSecondary}
           />
 
-          <Text className="mb-2 text-sm font-semibold text-text-primary">
+          <Text
+            className="mb-2 text-sm font-semibold"
+            style={{ color: colors.text }}
+          >
             Xác nhận mật khẩu mới
           </Text>
           <TextInput
@@ -135,7 +149,9 @@ export default function ResetPasswordScreen() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="Nhập lại mật khẩu mới"
-            className="mb-6 h-12 rounded-lg border border-surface-dark bg-background-light px-4 text-base text-text-primary"
+            className="mb-6 h-12 rounded-lg px-4 text-base"
+            style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
+            placeholderTextColor={colors.textSecondary}
           />
 
           <TouchableOpacity
@@ -146,7 +162,7 @@ export default function ResetPasswordScreen() {
             }`}
           >
             {submitting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.white} />
             ) : (
               <Text className="text-base font-bold text-white">
                 Xác nhận mật khẩu mới

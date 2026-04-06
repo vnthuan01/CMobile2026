@@ -22,9 +22,9 @@ export default function ScreenHeader({
     rightAction,
 }: ScreenHeaderProps) {
     const { top } = useSafeAreaInsets();
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
 
-    const bgColor = backgroundColor ?? colors.background;
+    const bgColor = backgroundColor ?? colors.card;
     const txtColor = titleColor ?? colors.text;
     const icnColor = iconColor ?? colors.text;
 
@@ -40,8 +40,9 @@ export default function ScreenHeader({
             <TouchableOpacity
                 onPress={onBack}
                 className="h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: isDark ? colors.card : colors.primary }}
             >
-                <Ionicons name="arrow-back" size={24} color={icnColor} />
+                <Ionicons name="arrow-back" size={24} color={isDark ? colors.text : colors.white} />
             </TouchableOpacity>
             <Text
                 className="flex-1 text-center text-lg font-bold leading-tight tracking-tight"

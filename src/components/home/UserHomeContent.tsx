@@ -93,40 +93,40 @@ export default function UserHomeContent() {
       case 'Pending':
         return {
           label: 'Chờ xác minh',
-          bg: 'bg-amber-100',
-          text: 'text-amber-700',
+          bgColor: `${colors.status.pending}22`,
+          textColor: colors.status.pending,
         };
       case 'Verified':
         return {
           label: 'Đã xác minh',
-          bg: 'bg-blue-100',
-          text: 'text-blue-700',
+          bgColor: `${colors.status.incoming}22`,
+          textColor: colors.status.incoming,
         };
       case 'Assigned':
         return {
           label: 'Đã điều phối đội',
-          bg: 'bg-violet-100',
-          text: 'text-violet-700',
+          bgColor: `${colors.status.inProgress}22`,
+          textColor: colors.status.inProgress,
         };
       case 'InProgress':
         return {
           label: 'Đội đang tiếp cận / xử lý',
-          bg: 'bg-green-100',
-          text: 'text-green-700',
+          bgColor: `${colors.status.completed}22`,
+          textColor: colors.status.completed,
         };
       case 'Completed':
         return {
           label: 'Hoàn thành',
-          bg: 'bg-green-100',
-          text: 'text-green-700',
+          bgColor: `${colors.status.completed}22`,
+          textColor: colors.status.completed,
         };
       case 'Cancelled':
-        return { label: 'Đã hủy', bg: 'bg-red-100', text: 'text-red-700' };
+        return { label: 'Đã hủy', bgColor: `${colors.status.cancelled}22`, textColor: colors.status.cancelled };
       default:
         return {
           label: status || 'Khác',
-          bg: 'bg-gray-100',
-          text: 'text-gray-700',
+          bgColor: colors.surface,
+          textColor: colors.textSecondary,
         };
     }
   };
@@ -173,7 +173,7 @@ r
         </Text>
 
         {loadingRequests ? (
-          <View className="items-center justify-center rounded-xl bg-white py-10 shadow-sm">
+          <View className="items-center justify-center rounded-xl py-10 shadow-sm" style={{ backgroundColor: colors.card }}>
             <ActivityIndicator color={colors.primary} />
             <Text
               className="mt-3 text-sm"
@@ -194,7 +194,7 @@ r
           >
             <View
               className="h-32 overflow-hidden"
-              style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}
+              style={{ backgroundColor: colors.surface }}
             >
               {shouldShowTrackingMap &&
               mapStyle &&
@@ -214,16 +214,18 @@ r
             <View className="p-4">
               <View className="mb-2 flex-row items-center gap-2">
                 <View
-                  className={`rounded-full px-2 py-0.5 ${getStatusUi(activeRequest.rescueRequestStatus).bg}`}
+                  className="rounded-full px-2 py-0.5"
+                  style={{ backgroundColor: getStatusUi(activeRequest.rescueRequestStatus).bgColor }}
                 >
                   <Text
-                    className={`text-xs font-bold ${getStatusUi(activeRequest.rescueRequestStatus).text}`}
+                    className="text-xs font-bold"
+                    style={{ color: getStatusUi(activeRequest.rescueRequestStatus).textColor }}
                   >
                     {getStatusUi(activeRequest.rescueRequestStatus).label}
                   </Text>
                 </View>
-                <View className="rounded-full bg-amber-100 px-2 py-0.5">
-                  <Text className="text-xs font-bold text-amber-700">
+                <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${colors.status.pending}22` }}>
+                  <Text className="text-xs font-bold" style={{ color: colors.status.pending }}>
                     {getTypeLabel(activeRequest.rescueRequestType)}
                   </Text>
                 </View>
@@ -248,15 +250,13 @@ r
                 <View
                   className="mt-3 flex-row items-center gap-2 rounded-lg p-2"
                   style={{
-                    backgroundColor: isDark
-                      ? 'rgba(59, 130, 246, 0.15)'
-                      : '#eff6ff',
+                    backgroundColor: `${colors.status.incoming}18`,
                   }}
                 >
-                  <Ionicons name="car" size={18} color={colors.primary} />
+                  <Ionicons name="car" size={18} color={colors.status.incoming} />
                   <Text
                     className="text-sm font-medium"
-                    style={{ color: isDark ? '#93c5fd' : colors.primary }}
+                    style={{ color: colors.status.incoming }}
                   >
                     {activeRequest.assignedRescueTeam.teamName} đang đến -{' '}
                     {activeRequest.assignedRescueTeam
@@ -268,7 +268,7 @@ r
             </View>
           </TouchableOpacity>
         ) : (
-          <View className="rounded-xl bg-white p-4 shadow-sm">
+          <View className="rounded-xl p-4 shadow-sm" style={{ backgroundColor: colors.card }}>
             <Text style={{ color: colors.textSecondary }}>
               Bạn hiện chưa có yêu cầu cứu hộ nào đang xử lý.
             </Text>
@@ -320,6 +320,7 @@ function QuickActionCard({
   color: 'primary' | 'green' | 'orange';
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
   const bgColor =
     color === 'primary'
       ? 'bg-primary'
@@ -409,7 +410,7 @@ function QuickActionCard({
             height: 56,
             borderRadius: 28,
             borderWidth: 2,
-            borderColor: 'rgba(255,255,255,0.9)',
+            borderColor: `${colors.white}E6`,
             opacity: outlineOpacity,
             transform: [{ scale: outlineScale }],
           }}
@@ -422,7 +423,7 @@ function QuickActionCard({
               : { transform: [{ scale: pulseAnim }] }
           }
         >
-          <Ionicons name={icon} size={32} color="#fff" />
+          <Ionicons name={icon} size={32} color={colors.white} />
         </Animated.View>
       </View>
       <Text className="text-center font-bold text-white">{label}</Text>
@@ -445,36 +446,38 @@ function RequestHistoryItem({
   date: string;
   onPress: () => void;
 }) {
-  const bgColor =
+  const { colors } = useTheme();
+  const badgeBg =
     statusColor === 'green'
-      ? 'bg-green-50'
+      ? `${colors.status.completed}22`
       : statusColor === 'red'
-        ? 'bg-red-50'
-        : 'bg-gray-50';
-  const textColor =
+        ? `${colors.status.error}22`
+        : colors.surface;
+  const badgeText =
     statusColor === 'green'
-      ? 'text-green-700'
+      ? colors.status.completed
       : statusColor === 'red'
-        ? 'text-red-700'
-        : 'text-gray-700';
+        ? colors.status.error
+        : colors.textSecondary;
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center justify-between rounded-xl bg-white p-4 shadow-sm"
+      className="flex-row items-center justify-between rounded-xl p-4 shadow-sm"
+      style={{ backgroundColor: colors.card }}
     >
       <View className="flex-1">
         <View className="mb-1 flex-row items-center gap-2">
-          <View className={`rounded-full ${bgColor} px-2 py-0.5`}>
-            <Text className={`text-xs font-bold ${textColor}`}>{status}</Text>
+          <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: badgeBg }}>
+            <Text className="text-xs font-bold" style={{ color: badgeText }}>{status}</Text>
           </View>
         </View>
-        <Text className="font-bold">{id}</Text>
-        <Text className="mt-0.5 text-sm text-text-secondary">
+        <Text className="font-bold" style={{ color: colors.text }}>{id}</Text>
+        <Text className="mt-0.5 text-sm" style={{ color: colors.textSecondary }}>
           {type} • {date}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
     </TouchableOpacity>
   );
 }

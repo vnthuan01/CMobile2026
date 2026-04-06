@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FlatList, Modal, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface DropdownItem {
   label: string;
@@ -20,6 +21,7 @@ export default function CustomDropdown({
   placeholder = '-- Chọn --',
 }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { colors } = useTheme();
 
   const selectedLabel =
     items.find((item) => item.value === selectedValue)?.label || placeholder;
@@ -27,19 +29,23 @@ export default function CustomDropdown({
   return (
     <>
       <TouchableOpacity
-        className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3"
+        className="flex-row items-center justify-between rounded-lg px-4 py-3"
+        style={{
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+        }}
         onPress={() => setIsOpen(true)}
         activeOpacity={0.7}
       >
         <Text
-          className={`font-inter text-base ${
-            selectedValue ? 'text-gray-900' : 'text-gray-500'
-          }`}
+          className="font-inter text-base"
+          style={{ color: selectedValue ? colors.text : colors.textSecondary }}
           numberOfLines={1}
         >
           {selectedLabel}
         </Text>
-        <Text className="text-gray-400">▼</Text>
+        <Text style={{ color: colors.icon }}>▼</Text>
       </TouchableOpacity>
 
       <Modal
@@ -54,10 +60,19 @@ export default function CustomDropdown({
           onPress={() => setIsOpen(false)}
         >
           <View className="flex-1 justify-end">
-            <View className="max-h-96 rounded-t-2xl bg-white">
+            <View
+              className="max-h-96 rounded-t-2xl"
+              style={{ backgroundColor: colors.card }}
+            >
               {/* Header */}
-              <View className="border-b border-gray-200 p-5">
-                <Text className="font-inter text-lg font-bold text-gray-900">
+              <View
+                className="p-5"
+                style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
+              >
+                <Text
+                  className="font-inter text-lg font-bold"
+                  style={{ color: colors.text }}
+                >
                   Chọn mẫu xe
                 </Text>
               </View>
@@ -68,20 +83,30 @@ export default function CustomDropdown({
                 keyExtractor={(item) => item.value}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    className={`border-b border-gray-100 p-5 ${
-                      selectedValue === item.value ? 'bg-blue-50' : ''
-                    }`}
+                    className="p-5"
+                    style={{
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
+                      backgroundColor:
+                        selectedValue === item.value
+                          ? `${colors.info}18`
+                          : 'transparent',
+                    }}
                     onPress={() => {
                       onValueChange(item.value);
                       setIsOpen(false);
                     }}
                   >
                     <Text
-                      className={`font-inter text-base ${
-                        selectedValue === item.value
-                          ? 'font-semibold text-blue-600'
-                          : 'text-gray-900'
-                      }`}
+                      className="font-inter text-base"
+                      style={{
+                        color:
+                          selectedValue === item.value
+                            ? colors.info
+                            : colors.text,
+                        fontWeight:
+                          selectedValue === item.value ? '600' : '400',
+                      }}
                     >
                       {item.label}
                     </Text>

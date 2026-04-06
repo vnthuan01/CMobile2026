@@ -16,47 +16,47 @@ interface ProgressForReliefScreenProps {
     onMarkSOS?: () => void;
 }
 
-const STATUSES: {
+const getStatuses = (colors: ReturnType<typeof useTheme>['colors']): {
     id: ReliefStatusType;
     icon: string;
     title: string;
     subtitle: string;
     color: string;
-}[] = [
+}[] => [
         {
             id: 'moving',
             icon: 'car',
             title: 'Đang di chuyển',
             subtitle: 'Đang trên đường tới điểm hỗ trợ',
-            color: '#1565C0',
+            color: colors.status.incoming,
         },
         {
             id: 'in_progress',
             icon: 'time',
             title: 'Đang tiến hành',
             subtitle: 'Đang thực hiện công tác cứu trợ',
-            color: '#3b82f6',
+            color: colors.secondary,
         },
         {
             id: 'delivered',
             icon: 'checkmark-circle',
             title: 'Đã phân phát hàng xong',
             subtitle: 'Hoàn thành nhiệm vụ cứu trợ',
-            color: '#16a34a',
+            color: colors.status.completed,
         },
         {
             id: 'interrupted',
             icon: 'warning',
             title: 'Bị gián đoạn',
             subtitle: 'Gặp chướng ngại vật, tắc đường...',
-            color: '#f97316',
+            color: colors.status.pending,
         },
         {
             id: 'failed',
             icon: 'close-circle',
             title: 'Thất bại',
             subtitle: 'Không thể tiếp cận hoặc hết hàng',
-            color: '#dc2626',
+            color: colors.status.error,
         },
     ];
 
@@ -66,6 +66,7 @@ export default function ProgressForReliefScreen({
 }: ProgressForReliefScreenProps) {
     const { bottom } = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
+    const STATUSES = getStatuses(colors);
     const [selectedStatus, setSelectedStatus] = useState<ReliefStatusType>('moving');
     const [notes, setNotes] = useState('');
     const [images, setImages] = useState<string[]>([]);
@@ -76,9 +77,9 @@ export default function ProgressForReliefScreen({
             <ScreenHeader
                 title="Cập nhật tiến độ"
                 onBack={onBack}
-                backgroundColor={colors.primary}
-                titleColor="#fff"
-                iconColor="#fff"
+                backgroundColor={isDark ? colors.card : colors.primary}
+                titleColor={isDark ? colors.text : colors.white}
+                iconColor={isDark ? colors.text : colors.text}
             />
 
             <ScrollView
@@ -94,8 +95,8 @@ export default function ProgressForReliefScreen({
                     >
                         <View className="flex-[2] flex-col justify-center gap-1">
                             <View className="mb-1 flex-row items-center gap-2">
-                                <View className="rounded bg-red-100 px-2 py-0.5">
-                                    <Text className="text-xs font-bold text-red-700">
+                                <View className="rounded px-2 py-0.5" style={{ backgroundColor: `${colors.status.error}18` }}>
+                                    <Text className="text-xs font-bold" style={{ color: colors.status.error }}>
                                         CỨU TRỢ KHẨN CẤP
                                     </Text>
                                 </View>
@@ -115,22 +116,22 @@ export default function ProgressForReliefScreen({
                         </View>
                         <View
                             className="h-24 w-24 flex-none items-center justify-center rounded-lg border"
-                            style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderColor: colors.border }}
+                            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
                         >
-                            <Ionicons name="map" size={40} color="#6b7280" />
+                            <Ionicons name="map" size={40} color={colors.textSecondary} />
                         </View>
                     </View>
                 </View>
 
                 {/* Tab Selector */}
                 <View className="px-4">
-                    <View className="flex-row gap-1 rounded-lg p-1" style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}>
+                    <View className="flex-row gap-1 rounded-lg p-1" style={{ backgroundColor: colors.surface }}>
                         <View className="flex-1 items-center rounded-md py-2 px-3 border shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
                             <Text className="text-sm font-bold" style={{ color: colors.secondary }}>
                                 Cứu trợ (Relief)
                             </Text>
                         </View>
-                        <View className="flex-1 items-center rounded-md py-2 px-3" style={{ backgroundColor: isDark ? '#4b5563' : '#e5e7eb' }}>
+                        <View className="flex-1 items-center rounded-md py-2 px-3" style={{ backgroundColor: colors.background }}>
                             <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
                                 Cứu hộ (Rescue)
                             </Text>
@@ -169,8 +170,8 @@ export default function ProgressForReliefScreen({
                     <View
                         className="rounded-xl border p-4"
                         style={{
-                            backgroundColor: isDark ? 'rgba(220,38,38,0.1)' : '#fef2f2',
-                            borderColor: isDark ? 'rgba(220,38,38,0.3)' : '#fecaca',
+                            backgroundColor: `${colors.status.error}12`,
+                            borderColor: `${colors.status.error}33`,
                         }}
                     >
                         <View className="flex-row items-start gap-3">
@@ -187,7 +188,7 @@ export default function ProgressForReliefScreen({
                                     className="flex-row items-center justify-center gap-2 rounded-lg px-4 py-2.5 shadow-sm"
                                     style={{ backgroundColor: colors.primary }}
                                 >
-                                    <Ionicons name="warning" size={16} color="#fff" />
+                                    <Ionicons name="warning" size={16} color={colors.white} />
                                     <Text className="text-sm font-bold text-white">
                                         Đánh dấu SOS mới
                                     </Text>

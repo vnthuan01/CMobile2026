@@ -18,9 +18,11 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { authService } from '../../src/services/authService';
+import { useTheme } from '@/src/context/ThemeContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -93,7 +95,8 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background-light"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
@@ -103,14 +106,17 @@ export default function LoginScreen() {
           {/* Header */}
           <View className="mb-10 items-center">
             <View className="mb-4 h-20 w-20 items-center justify-center rounded-full bg-primary">
-              <Ionicons name="shield-checkmark" size={40} color="#ffffff" />
+              <Ionicons name="shield-checkmark" size={40} color={colors.white} />
             </View>
             <View className="absolute right-0 top-0">
               <TouchableOpacity
                 onPress={() => router.push('/donate')}
-                className="h-14 flex-row items-center rounded-full border border-surface-dark bg-white px-3"
+                className="h-14 flex-row items-center rounded-full px-3"
                 style={{
-                  shadowColor: '#ff4a4aff',
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  shadowColor: colors.primary,
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.2,
                   shadowRadius: 6,
@@ -121,14 +127,14 @@ export default function LoginScreen() {
                   <Ionicons
                     name="heart-outline"
                     size={20}
-                    color="#DA251D"
+                    color={colors.primary}
                     className="mt-1"
                   />
                 </Animated.View>
 
                 {/* Label che border */}
-                <View className="bg-white px-1">
-                  <Text className="text-sm font-bold text-[#DA251D]">
+                <View className="px-1" style={{ backgroundColor: colors.card }}>
+                  <Text className="text-sm font-bold" style={{ color: colors.primary }}>
                     Donation
                   </Text>
                 </View>
@@ -136,18 +142,22 @@ export default function LoginScreen() {
             </View>
             <TouchableOpacity
               onPress={() => router.push('/hotline')}
-              className="flex-row items-center gap-1 rounded-full bg-red-50 px-3 py-1.5"
+              className="flex-row items-center gap-1 rounded-full px-3 py-1.5"
+              style={{ backgroundColor: `${colors.status.error}18` }}
             >
-              <Ionicons name="alert-circle" size={18} color="#dc2626" />
-              <Text className="text-sm font-bold text-red-600">
+              <Ionicons name="alert-circle" size={18} color={colors.status.error} />
+              <Text className="text-sm font-bold" style={{ color: colors.status.error }}>
                 Cần hỗ trợ ngay lập tức!
               </Text>
             </TouchableOpacity>
 
-            <Text className="text-[32px] font-bold text-text-primary">
+            <Text className="text-[32px] font-bold" style={{ color: colors.text }}>
               Đăng nhập
             </Text>
-            <Text className="mt-2 text-center text-base text-text-secondary">
+            <Text
+              className="mt-2 text-center text-base"
+              style={{ color: colors.textSecondary }}
+            >
               Kết nối để nhận hỗ trợ khẩn cấp và cập nhật tình hình thiên tai.
             </Text>
           </View>
@@ -156,13 +166,22 @@ export default function LoginScreen() {
           <View className="space-y-5">
             {/* Email / Phone */}
             <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
+              <Text
+                className="mb-2 text-base font-medium"
+                style={{ color: colors.text }}
+              >
                 Email hoặc số điện thoại
               </Text>
               <TextInput
-                className="h-14 rounded-xl border border-surface-dark bg-surface px-4 text-base text-text-primary"
+                className="h-14 rounded-xl px-4 text-base"
+                style={{
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                }}
                 placeholder="Nhập email hoặc số điện thoại"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textSecondary}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -173,15 +192,24 @@ export default function LoginScreen() {
 
             {/* Password */}
             <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
+              <Text
+                className="mb-2 text-base font-medium"
+                style={{ color: colors.text }}
+              >
                 Mật khẩu
               </Text>
 
               <View className="relative">
                 <TextInput
-                  className="h-14 rounded-xl border border-surface-dark bg-surface px-4 pr-12 text-base text-text-primary"
+                  className="h-14 rounded-xl px-4 pr-12 text-base"
+                  style={{
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                    backgroundColor: colors.surface,
+                    color: colors.text,
+                  }}
                   placeholder="Nhập mật khẩu"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.textSecondary}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -194,7 +222,10 @@ export default function LoginScreen() {
                   onPress={() => setShowPassword(!showPassword)}
                   disabled={loading}
                 >
-                  <Text className="text-lg text-text-secondary">
+                  <Text
+                    className="text-lg"
+                    style={{ color: colors.textSecondary }}
+                  >
                     {showPassword ? '🙈' : '👁️'}
                   </Text>
                 </TouchableOpacity>
@@ -219,7 +250,7 @@ export default function LoginScreen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.white} />
               ) : (
                 <Text className="text-base font-bold text-white">
                   Đăng nhập
@@ -230,18 +261,31 @@ export default function LoginScreen() {
             {/* Biometric */}
             <View className="mt-6 items-center">
               <View className="mb-4 flex-row items-center gap-3">
-                <View className="h-px flex-1 bg-surface-dark" />
-                <Text className="text-sm text-text-secondary">
+                <View
+                  className="h-px flex-1"
+                  style={{ backgroundColor: colors.divider }}
+                />
+                <Text className="text-sm" style={{ color: colors.textSecondary }}>
                   Hoặc đăng nhập bằng
                 </Text>
-                <View className="h-px flex-1 bg-surface-dark" />
+                <View
+                  className="h-px flex-1"
+                  style={{ backgroundColor: colors.divider }}
+                />
               </View>
 
-              <TouchableOpacity className="h-14 w-14 items-center justify-center rounded-full border border-surface-dark bg-white">
+              <TouchableOpacity
+                className="h-14 w-14 items-center justify-center rounded-full"
+                style={{
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  backgroundColor: colors.card,
+                }}
+              >
                 <Ionicons
                   name="lock-closed-outline"
                   size={26}
-                  color="#111827"
+                  color={colors.text}
                 />
               </TouchableOpacity>
             </View>
@@ -253,7 +297,7 @@ export default function LoginScreen() {
             className="mt-10 items-center"
             onPress={() => router.push('/register')}
           >
-            <Text className="text-sm text-text-secondary">
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>
               Chưa có tài khoản?
             </Text>
             <Text className="font-bold text-primary">Đăng ký ngay</Text>

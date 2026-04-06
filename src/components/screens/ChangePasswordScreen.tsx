@@ -32,6 +32,13 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
 
     const [errors, setErrors] = useState<ValidationErrors>({});
     const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const strengthPalette = {
+        error: colors.status.error,
+        pending: colors.status.pending,
+        warning: colors.status.pending,
+        success: colors.status.completed,
+        successStrong: colors.status.completed,
+    };
 
     // ─── Validation helpers ───
     const hasUppercase = /[A-Z]/.test(newPassword);
@@ -52,14 +59,14 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
     const strengthPercent = (passedChecks / strengthChecks.length) * 100;
     const strengthColor =
         strengthPercent <= 20
-            ? '#ef4444'
+            ? strengthPalette.error
             : strengthPercent <= 40
-                ? '#f97316'
+                ? strengthPalette.pending
                 : strengthPercent <= 60
-                    ? '#eab308'
+                    ? strengthPalette.warning
                     : strengthPercent <= 80
-                        ? '#22c55e'
-                        : '#16a34a';
+                        ? strengthPalette.success
+                        : strengthPalette.successStrong;
     const strengthLabel =
         strengthPercent <= 20
             ? 'Rất yếu'
@@ -159,7 +166,7 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
                         className="w-full rounded-xl border h-14 px-4 pr-12 text-base"
                         style={{
                             backgroundColor: colors.card,
-                            borderColor: error ? '#ef4444' : colors.border,
+                            borderColor: error ? colors.status.error : colors.border,
                             color: colors.text,
                         }}
                     />
@@ -176,8 +183,8 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
                 </View>
                 {error && (
                     <View className="flex-row items-center gap-1 ml-1">
-                        <Ionicons name="alert-circle" size={14} color="#ef4444" />
-                        <Text className="text-xs font-medium" style={{ color: '#ef4444' }}>
+                        <Ionicons name="alert-circle" size={14} color={colors.status.error} />
+                        <Text className="text-xs font-medium" style={{ color: colors.status.error }}>
                             {error}
                         </Text>
                     </View>
@@ -253,7 +260,7 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
                                             className="flex-1 h-1.5 rounded-full"
                                             style={{
                                                 backgroundColor:
-                                                    i < passedChecks ? strengthColor : (isDark ? '#374151' : '#e5e7eb'),
+                                                    i < passedChecks ? strengthColor : colors.border,
                                             }}
                                         />
                                     ))}
@@ -267,12 +274,12 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
                                         <Ionicons
                                             name={check.passed ? 'checkmark-circle' : 'ellipse-outline'}
                                             size={16}
-                                            color={check.passed ? '#22c55e' : colors.textSecondary}
+                                            color={check.passed ? colors.status.completed : colors.textSecondary}
                                         />
                                         <Text
                                             className="text-xs"
                                             style={{
-                                                color: check.passed ? '#22c55e' : colors.textSecondary,
+                                                color: check.passed ? colors.status.completed : colors.textSecondary,
                                                 fontWeight: check.passed ? '500' : '400',
                                             }}
                                         >
@@ -301,12 +308,12 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
                             <Ionicons
                                 name={newPassword === confirmPassword ? 'checkmark-circle' : 'close-circle'}
                                 size={16}
-                                color={newPassword === confirmPassword ? '#22c55e' : '#ef4444'}
+                                color={newPassword === confirmPassword ? colors.status.completed : colors.status.error}
                             />
                             <Text
                                 className="text-xs font-medium"
                                 style={{
-                                    color: newPassword === confirmPassword ? '#22c55e' : '#ef4444',
+                                    color: newPassword === confirmPassword ? colors.status.completed : colors.status.error,
                                 }}
                             >
                                 {newPassword === confirmPassword ? 'Mật khẩu khớp' : 'Mật khẩu không khớp'}
@@ -337,7 +344,7 @@ export default function ChangePasswordScreen({ onBack }: ChangePasswordScreenPro
                     <TouchableOpacity
                         onPress={onBack}
                         className="w-full items-center justify-center h-12 rounded-xl"
-                        style={{ backgroundColor: isDark ? '#1f2937' : '#f1f5f9' }}
+                        style={{ backgroundColor: colors.surface }}
                     >
                         <Text className="font-semibold text-base" style={{ color: colors.textSecondary }}>
                             Hủy bỏ
