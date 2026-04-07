@@ -1,14 +1,13 @@
 import '@/global.css';
-import AppDialog from '@/src/components/common/AppDialog';
+import { AppDialog } from '@/src/components/common/AppDialog';
 import { useTheme } from '@/src/context/ThemeContext';
-import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
+import { authService } from '@/src/services/authService';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
-  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,48 +15,64 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { authService } from '../../src/services/authService';
+
+const palette = {
+  light: {
+    bg: '#FFFFFF',
+    card: '#FFFFFF',
+    border: '#E5E7EB',
+    textPrimary: '#111827',
+    textSecondary: '#6B7280',
+    textDisabled: '#9CA3AF',
+    primary: '#2563EB',
+    primaryPressed: '#1E3A8A',
+    emergency: '#DC2626',
+  },
+  dark: {
+    bg: '#0F172A',
+    card: '#1E293B',
+    border: '#334155',
+    textPrimary: '#F1F5F9',
+    textSecondary: '#94A3B8',
+    textDisabled: '#64748B',
+    primary: '#2563EB',
+    primaryPressed: '#1E3A8A',
+    emergency: '#DC2626',
+  },
+};
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { isDark } = useTheme();
+  const colors = isDark ? palette.dark : palette.light;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
   const [successDialogVisible, setSuccessDialogVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Đăng nhập thành công');
-
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, {
-          toValue: 1.2,
-          duration: 500,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, []);
+  const { height, width } = useWindowDimensions();
+  const isShortScreen = height < 750;
+  const isLargeScreen = width >= 430;
+  const fieldHeight = isLargeScreen ? 56 : 48;
+  const fieldRadius = isLargeScreen ? 14 : 12;
+  const fieldFontSize = isLargeScreen ? 18 : 16;
+  const fieldIconSize = isLargeScreen ? 20 : 18;
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      showErrorToast('Thiếu thông tin', 'Vui lòng nhập đầy đủ email và mật khẩu');
+      const msg = 'Vui lòng nhập đầy đủ email và mật khẩu.';
+      setInlineError(msg);
+      showErrorToast('Thiếu thông tin', msg);
       return;
     }
 
+    setInlineError(null);
     setLoading(true);
 
     try {
@@ -67,241 +82,270 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
-        const message = result.message || 'Đăng nhập thành công';
-        setSuccessMessage(message);
-        showSuccessToast('Đăng nhập thành công', message);
+        setSuccessMessage('Đăng nhập thành công. Chào mừng bạn quay lại!');
         setSuccessDialogVisible(true);
       } else {
-        showErrorToast('Đăng nhập thất bại', result.message || 'Vui lòng kiểm tra lại thông tin đăng nhập.');
+        console.error('[Login failed detail]:', result.message);
+        const msg = 'Đăng nhập thất bại. Vui lòng thử lại.';
+        setInlineError(msg);
+        showErrorToast('Đăng nhập thất bại');
       }
-    } catch {
-      showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại sau');
+    } catch (error) {
+      console.error('[Login error detail]:', error);
+      const msg = 'Có lỗi xảy ra. Vui lòng thử lại sau.';
+      setInlineError(msg);
+      showErrorToast('Đăng nhập thất bại');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleLogin = () => {
+    showInfoToast('Thông báo', 'Tính năng đang được phát triển');
+  };
+
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView
+      edges={['top']}
+      style={{ flex: 1, backgroundColor: colors.bg }}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
         className="flex-1"
-        style={{ backgroundColor: colors.background }}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: isShortScreen ? 24 : 36,
+          }}
           keyboardShouldPersistTaps="handled"
         >
-        <View className="w-full max-w-[420px] flex-1 self-center px-6 pb-8 pt-10">
-          {/* Header */}
-          <View className="mb-10 items-center">
-            <View className="mb-4 h-20 w-20 items-center justify-center rounded-full bg-primary">
-              <Ionicons name="shield-checkmark" size={40} color={colors.white} />
-            </View>
-            <View className="absolute right-0 top-0">
-              <TouchableOpacity
-                onPress={() => router.push('/donate')}
-                className="h-14 flex-row items-center rounded-full px-3"
-                style={{
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                  shadowColor: colors.primary,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 6,
-                  elevation: 5,
-                }}
-              >
-                <Animated.View style={{ transform: [{ scale }] }}>
-                  <Ionicons
-                    name="heart-outline"
-                    size={20}
-                    color={colors.primary}
-                    className="mt-1"
-                  />
-                </Animated.View>
-
-                {/* Label che border */}
-                <View className="px-1" style={{ backgroundColor: colors.card }}>
-                  <Text className="text-sm font-bold" style={{ color: colors.primary }}>
-                    Donation
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push('/hotline')}
-              className="flex-row items-center gap-1 rounded-full px-3 py-1.5"
-              style={{ backgroundColor: `${colors.status.error}18` }}
-            >
-              <Ionicons name="alert-circle" size={18} color={colors.status.error} />
-              <Text className="text-sm font-bold" style={{ color: colors.status.error }}>
-                Cần hỗ trợ ngay lập tức!
-              </Text>
-            </TouchableOpacity>
-
-            <Text className="text-[32px] font-bold" style={{ color: colors.text }}>
-              Đăng nhập
-            </Text>
-            <Text
-              className="mt-2 text-center text-base"
-              style={{ color: colors.textSecondary }}
-            >
-              Kết nối để nhận hỗ trợ khẩn cấp và cập nhật tình hình thiên tai.
-            </Text>
-          </View>
-
-          {/* Form */}
-          <View className="space-y-5">
-            {/* Email / Phone */}
-            <View>
+          <View
+            className="w-full self-center px-5"
+            style={{ paddingTop: isShortScreen ? 20 : 40 }}
+          >
+            <View style={{ marginBottom: isShortScreen ? 20 : 28 }}>
               <Text
-                className="mb-2 text-base font-medium"
-                style={{ color: colors.text }}
+                className="text-[30px] font-bold"
+                style={{ color: colors.textPrimary }}
               >
-                Email hoặc số điện thoại
+                Đăng nhập
               </Text>
-              <TextInput
-                className="h-14 rounded-xl px-4 text-base"
-                style={{
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                  backgroundColor: colors.surface,
-                  color: colors.text,
-                }}
-                placeholder="Nhập email hoặc số điện thoại"
-                placeholderTextColor={colors.textSecondary}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!loading}
-              />
+              <Text
+                className="mt-2 text-base"
+                style={{ color: colors.textSecondary }}
+              >
+                Nhập thông tin để tiếp tục nhận hỗ trợ.
+              </Text>
             </View>
 
-            {/* Password */}
-            <View>
-              <Text
-                className="mb-2 text-base font-medium"
-                style={{ color: colors.text }}
-              >
-                Mật khẩu
-              </Text>
-
-              <View className="relative">
-                <TextInput
-                  className="h-14 rounded-xl px-4 pr-12 text-base"
-                  style={{
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    backgroundColor: colors.surface,
-                    color: colors.text,
-                  }}
-                  placeholder="Nhập mật khẩu"
-                  placeholderTextColor={colors.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  editable={!loading}
-                />
-
-                <TouchableOpacity
-                  className="absolute right-4 top-[18px]"
-                  onPress={() => setShowPassword(!showPassword)}
-                  disabled={loading}
+            <View className="rounded-xl" style={{ backgroundColor: colors.bg }}>
+              <View className="mb-4">
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: colors.textPrimary }}
                 >
-                  <Text
-                    className="text-lg"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    {showPassword ? '🙈' : '👁️'}
-                  </Text>
-                </TouchableOpacity>
+                  Email
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.card,
+                  }}
+                >
+                  <Ionicons
+                    name="mail-outline"
+                    size={fieldIconSize}
+                    color={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="ml-2 flex-1"
+                    style={{
+                      color: colors.textPrimary,
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="example@email.com"
+                    placeholderTextColor={colors.textDisabled}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    editable={!loading}
+                  />
+                </View>
               </View>
 
+              <View>
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Mật khẩu
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.card,
+                  }}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={fieldIconSize}
+                    color={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="ml-2 flex-1"
+                    style={{
+                      color: colors.textPrimary,
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="Nhập mật khẩu"
+                    placeholderTextColor={colors.textDisabled}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((prev) => !prev)}
+                    disabled={loading}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={fieldIconSize}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {!!inlineError && (
+                <View className="mt-3 flex-row items-center">
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={16}
+                    color={colors.emergency}
+                  />
+                  <Text
+                    className="ml-1 flex-1 text-sm"
+                    style={{ color: colors.emergency }}
+                  >
+                    {inlineError}
+                  </Text>
+                </View>
+              )}
+
               <TouchableOpacity
-                className="mt-2 self-end"
+                className="mt-3 self-end"
                 onPress={() => router.push('/forgot-password')}
               >
-                <Text className="text-sm font-semibold text-primary">
+                <Text
+                  className="text-sm font-semibold"
+                  style={{ color: colors.primary }}
+                >
                   Quên mật khẩu?
                 </Text>
               </TouchableOpacity>
-            </View>
-
-            {/* Login Button */}
-            <TouchableOpacity
-              className={`mt-4 h-12 items-center justify-center rounded-xl ${
-                loading ? 'bg-primary/50' : 'bg-primary'
-              }`}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text className="text-base font-bold text-white">
-                  Đăng nhập
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Biometric */}
-            <View className="mt-6 items-center">
-              <View className="mb-4 flex-row items-center gap-3">
-                <View
-                  className="h-px flex-1"
-                  style={{ backgroundColor: colors.divider }}
-                />
-                <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                  Hoặc đăng nhập bằng
-                </Text>
-                <View
-                  className="h-px flex-1"
-                  style={{ backgroundColor: colors.divider }}
-                />
-              </View>
 
               <TouchableOpacity
-                className="h-14 w-14 items-center justify-center rounded-full"
+                className="mt-5 h-12 items-center justify-center rounded-xl"
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.85}
                 style={{
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                  backgroundColor: colors.card,
+                  backgroundColor: loading
+                    ? colors.textDisabled
+                    : colors.primary,
                 }}
               >
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={26}
-                  color={colors.text}
-                />
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-base font-bold text-white">
+                    Đăng nhập
+                  </Text>
+                )}
               </TouchableOpacity>
+
+              <View className="mt-6 items-center">
+                <View className="mb-4 w-full flex-row items-center">
+                  <View
+                    className="h-px flex-1"
+                    style={{ backgroundColor: colors.border }}
+                  />
+                  <Text
+                    className="mx-3 text-sm"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Hoặc đăng nhập bằng
+                  </Text>
+                  <View
+                    className="h-px flex-1"
+                    style={{ backgroundColor: colors.border }}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  className="h-12 w-full flex-row items-center justify-center rounded-xl"
+                  style={{
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                    backgroundColor: colors.card,
+                  }}
+                  onPress={handleGoogleLogin}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name="logo-google"
+                    size={20}
+                    color={colors.primary}
+                  />
+                  <Text
+                    className="ml-2 text-base font-semibold"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    Tiếp tục với Google
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
+
+            <Pressable
+              className="items-center"
+              style={{ marginTop: isShortScreen ? 24 : 40 }}
+              onPress={() => router.push('/register')}
+            >
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                Chưa có tài khoản?
+              </Text>
+              <Text
+                className="mt-1 font-bold"
+                style={{ color: colors.primary }}
+              >
+                Đăng ký ngay
+              </Text>
+            </Pressable>
           </View>
-
-          {/* Footer */}
-
-          <Pressable
-            className="mt-10 items-center"
-            onPress={() => router.push('/register')}
-          >
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>
-              Chưa có tài khoản?
-            </Text>
-            <Text className="font-bold text-primary">Đăng ký ngay</Text>
-          </Pressable>
-        </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
       <AppDialog
         visible={successDialogVisible}
         title="Thành công"
         message={successMessage}
         type="success"
-        cancelLabel="Ở lại"
         confirmLabel="Vào ứng dụng"
+        showCancel={false}
         onCancel={() => setSuccessDialogVisible(false)}
         onConfirm={() => {
           setSuccessDialogVisible(false);

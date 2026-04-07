@@ -55,6 +55,21 @@ interface ForgotPasswordResetRequest {
   newPassword: string;
 }
 
+const getNoResponseErrorMessage = (error: any) => {
+  const code = error?.code;
+  const message = String(error?.message || '').toLowerCase();
+
+  if (code === 'ECONNABORTED') {
+    return 'Yêu cầu đến máy chủ bị quá thời gian. Vui lòng thử lại.';
+  }
+
+  if (code === 'ERR_NETWORK' || message.includes('network error')) {
+    return 'Không thể kết nối máy chủ. Vui lòng kiểm tra Internet hoặc địa chỉ API.';
+  }
+
+  return 'Không thể kết nối đến máy chủ (lỗi mạng/bảo mật). Vui lòng thử lại sau.';
+};
+
 export const authService = {
   register: async (data: RegisterRequest) => {
     try {
@@ -67,6 +82,14 @@ export const authService = {
       };
     } catch (error: any) {
       console.error('Register error:', error);
+
+      if (!error?.response) {
+        return {
+          success: false,
+          message: getNoResponseErrorMessage(error),
+        };
+      }
+
       return {
         success: false,
         message:
@@ -301,6 +324,13 @@ export const authService = {
     } catch (error: any) {
       console.error('Login error:', error);
 
+      if (!error?.response) {
+        return {
+          success: false,
+          message: getNoResponseErrorMessage(error),
+        };
+      }
+
       return {
         success: false,
         message:
@@ -363,7 +393,8 @@ export const authService = {
   },
 
   refreshSession: async (refreshToken?: string | null) => {
-    const currentRefreshToken = refreshToken ?? useAuthStore.getState().refreshToken;
+    const currentRefreshToken =
+      refreshToken ?? useAuthStore.getState().refreshToken;
 
     if (!currentRefreshToken) {
       throw new Error('Missing refresh token');
@@ -389,7 +420,8 @@ export const authService = {
 
         const responseData = response.data as RefreshTokenResponse;
         const nextAccessToken = responseData.accessToken;
-        const nextRefreshToken = responseData.refreshToken ?? currentRefreshToken;
+        const nextRefreshToken =
+          responseData.refreshToken ?? currentRefreshToken;
 
         if (!nextAccessToken) {
           throw new Error('Missing access token in refresh response');
@@ -401,7 +433,9 @@ export const authService = {
           throw new Error('Invalid refreshed token');
         }
 
-        await useAuthStore.getState().setTokens(nextAccessToken, nextRefreshToken);
+        await useAuthStore
+          .getState()
+          .setTokens(nextAccessToken, nextRefreshToken);
         await useAuthStore.getState().setUser(user);
 
         return {

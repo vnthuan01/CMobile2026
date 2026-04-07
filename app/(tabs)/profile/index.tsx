@@ -5,6 +5,7 @@ import { useAuthStore } from '@/src/store/authStore';
 import { useRouter } from 'expo-router';
 
 type CitizenProfileRoute =
+  | '/profile/user-profile'
   | '/profile/my-volunteer-profile'
   | '/profile/change-password'
   | '/profile/settings'
@@ -44,8 +45,7 @@ export default function ProfileIndexScreen() {
   ) : (
     <CitizenProfile
       onLogout={handleLogout}
-      onNavigate={(route: string) => router.push(route as any)}
-      onEdit={() => router.push('/profile/edit' as any)}
+      onNavigate={(route: CitizenProfileRoute) => router.push(route as any)}
     />
   );
 }

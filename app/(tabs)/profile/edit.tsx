@@ -12,6 +12,10 @@ export default function EditProfileRoute() {
   return isVolunteer ? (
     <UpdateProfileVolunteerScreen onBack={() => router.replace('/profile')} />
   ) : (
-    <UpdateProfileCitizenScreen onBack={() => router.replace('/profile')} />
+    <UpdateProfileCitizenScreen
+      hideBackButton
+      onCancel={() => router.replace('/profile/user-profile')}
+      onSave={() => router.replace('/profile/user-profile')}
+    />
   );
 }
