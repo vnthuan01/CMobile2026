@@ -21,12 +21,14 @@
 ## 2.1 Light Theme (Default)
 
 ### Background
+
 - `--bg-app`: `#FFFFFF`
 - `--bg-secondary`: `#F9FAFB`
 - `--bg-card`: `#FFFFFF`
 - `--border`: `#E5E7EB`
 
 ### Text
+
 - `--text-primary`: `#111827`
 - `--text-secondary`: `#6B7280`
 - `--text-disabled`: `#9CA3AF`
@@ -36,17 +38,21 @@
 ## 2.2 Semantic Colors
 
 ### Primary (Normal actions)
+
 - `--primary`: `#2563EB`
 - `--primary-dark`: `#1E3A8A`
 
 ### Emergency (Critical only)
+
 - `--emergency`: `#DC2626`
 - `--emergency-light`: `#EF4444`
 
 ### Warning
+
 - `--warning`: `#F59E0B`
 
 ### Success
+
 - `--success`: `#16A34A`
 
 ---
@@ -54,16 +60,19 @@
 ## 2.3 Dark Theme
 
 ### Background
+
 - `--bg-app`: `#0F172A`
 - `--bg-card`: `#1E293B`
 - `--border`: `#334155`
 
 ### Text
+
 - `--text-primary`: `#F1F5F9`
 - `--text-secondary`: `#94A3B8`
 - `--text-disabled`: `#64748B`
 
 ### Rule quan trọng
+
 - **Giữ nguyên semantic colors** giữa Light/Dark:
   - `--primary`: `#2563EB`
   - `--emergency`: `#DC2626`
@@ -74,14 +83,14 @@
 
 ## 3) Functional Color Mapping (Bắt buộc)
 
-| Feature / Trạng thái | Màu bắt buộc |
-|---|---|
-| SOS | Red (`#DC2626`) |
-| Emergency | Red (`#DC2626`) |
-| Relief Request | Amber (`#F59E0B`) |
-| Volunteer Task / Normal Actions | Blue (`#2563EB`) |
-| Completed | Green (`#16A34A`) |
-| Safe Area | Green (`#16A34A`) |
+| Feature / Trạng thái            | Màu bắt buộc      |
+| ------------------------------- | ----------------- |
+| SOS                             | Red (`#DC2626`)   |
+| Emergency                       | Red (`#DC2626`)   |
+| Relief Request                  | Amber (`#F59E0B`) |
+| Volunteer Task / Normal Actions | Blue (`#2563EB`)  |
+| Completed                       | Green (`#16A34A`) |
+| Safe Area                       | Green (`#16A34A`) |
 
 > Không đổi mapping theo màn hình. Cùng ý nghĩa = cùng màu.
 
@@ -90,17 +99,20 @@
 ## 4) Component Color Rules
 
 ## Buttons
+
 - Border radius: `12px`
 - Primary button: nền `--primary`, chữ trắng
 - SOS button: nền `--emergency`, kích thước lớn, luôn dễ thấy
 
 ## Cards
+
 - Light: nền `--bg-card`
 - Dark: nền `#1E293B`
 - Border: `--border`
 - Shadow nhẹ, không dùng màu rực để trang trí card
 
 ## Status/Badge
+
 - Dùng đúng semantic:
   - Critical/Emergency: đỏ
   - Warning/Pending: amber
@@ -115,6 +127,7 @@
 - ❌ Không dùng màu ngoài token (hardcoded hex) cho UI chính.
 - ❌ Không dùng đỏ cho hành động thường.
 - ❌ Không đổi màu semantic giữa Light và Dark mode.
+- ❌ Không dùng icon inline bằng emoji/ký tự unicode (ví dụ: `⚠️`, `👁️`, `🙈`, `🌊`).
 
 ---
 
@@ -125,10 +138,27 @@
 3. Kiểm tra dark mode vẫn giữ semantic colors.
 4. Tìm và loại bỏ hardcoded hex không nằm trong token.
 5. Xác nhận không có gradient.
+6. Xác nhận toàn bộ icon dùng thư viện icon thống nhất (ưu tiên `@expo/vector-icons/Ionicons`), không dùng emoji/ký tự icon inline.
 
 ---
 
-## 7) Ghi chú triển khai cho Design/Dev
+## 7) Icon Rules (Bắt buộc)
+
+- Dùng icon từ thư viện, thống nhất toàn project:
+  - Ưu tiên: `@expo/vector-icons` → `Ionicons`
+- Không render icon bằng `Text` chứa emoji/unicode.
+- Nếu cần biểu tượng mới, chọn từ thư viện trước; không tạo icon text tạm.
+- Mapping khuyến nghị:
+  - Cảnh báo: `warning-outline`
+  - Hiện/ẩn mật khẩu: `eye-outline` / `eye-off-outline`
+  - Email: `mail-outline`
+  - Mật khẩu: `lock-closed-outline`
+  - Người dùng: `person-outline`
+  - Điện thoại: `call-outline`
+
+---
+
+## 8) Ghi chú triển khai cho Design/Dev
 
 - Design team: chỉ dùng palette trong file này khi tạo Figma/components.
 - Dev team: map token 1-1 vào theme constants + tailwind config.
