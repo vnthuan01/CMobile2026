@@ -2,27 +2,28 @@ import '@/global.css';
 import { AppDialog } from '@/src/components/common/AppDialog';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useLogin } from '@/src/hooks/useAuthActions';
-import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { height } = useWindowDimensions();
   const loginMutation = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,27 +32,11 @@ export default function LoginScreen() {
   const [successDialogVisible, setSuccessDialogVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Đăng nhập thành công');
   const loading = loginMutation.isPending;
-
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, {
-          toValue: 1.2,
-          duration: 500,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, []);
+  const isShortScreen = height < 700;
+  const fieldHeight = isShortScreen ? 46 : 52;
+  const fieldRadius = 12;
+  const fieldFontSize = isShortScreen ? 15 : 16;
+  const fieldIconSize = isShortScreen ? 18 : 20;
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {

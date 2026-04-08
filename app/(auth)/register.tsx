@@ -1,7 +1,8 @@
 import '@/global.css';
-import AppDialog from '@/src/components/common/AppDialog';
+import { AppDialog } from '@/src/components/common/AppDialog';
+import { useTheme } from '@/src/context/ThemeContext';
 import { useRegister } from '@/src/hooks/useAuthActions';
-import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
+import { showErrorToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -18,34 +19,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const palette = {
-  light: {
-    bg: '#FFFFFF',
-    card: '#FFFFFF',
-    border: '#E5E7EB',
-    textPrimary: '#111827',
-    textSecondary: '#6B7280',
-    textDisabled: '#9CA3AF',
-    primary: '#2563EB',
-    primaryPressed: '#1E3A8A',
-    emergency: '#DC2626',
-  },
-  dark: {
-    bg: '#0F172A',
-    card: '#1E293B',
-    border: '#334155',
-    textPrimary: '#F1F5F9',
-    textSecondary: '#94A3B8',
-    textDisabled: '#64748B',
-    primary: '#2563EB',
-    primaryPressed: '#1E3A8A',
-    emergency: '#DC2626',
-  },
-};
-
 export default function RegisterScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { height } = useWindowDimensions();
   const registerMutation = useRegister();
 
   const [fullName, setFullName] = useState('');
@@ -56,9 +33,17 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
   const [successVisible, setSuccessVisible] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('Đăng ký thành công. Vui lòng xác thực OTP.');
+  const [successMessage, setSuccessMessage] = useState(
+    'Đăng ký thành công. Vui lòng xác thực OTP.',
+  );
   const loading = registerMutation.isPending;
+  const isShortScreen = height < 700;
+  const fieldHeight = isShortScreen ? 46 : 52;
+  const fieldRadius = 12;
+  const fieldFontSize = isShortScreen ? 15 : 16;
+  const fieldIconSize = isShortScreen ? 18 : 20;
 
   const handleRegister = async () => {
     if (
