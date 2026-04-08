@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import WebView, { WebViewMessageEvent } from 'react-native-webview';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/context/ThemeContext';
 
 // ─────────────────────────────────────────────
@@ -280,7 +281,7 @@ export default function WebViewMap({
       {/* Error state */}
       {hasError && (
         <View style={[styles.overlay, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.errorIcon, { color: colors.error }]}>⚠️</Text>
+          <Ionicons name="warning-outline" size={36} color={colors.error} />
           <Text style={[styles.errorTitle, { color: colors.text }]}>
             Không thể tải bản đồ
           </Text>
