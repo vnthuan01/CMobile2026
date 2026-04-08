@@ -1,8 +1,7 @@
 import '@/global.css';
 import AppDialog from '@/src/components/common/AppDialog';
-import { useTheme } from '@/src/context/ThemeContext';
-import { authService } from '@/src/services/authService';
-import { showErrorToast } from '@/src/utils/toast';
+import { useRegister } from '@/src/hooks/useAuthActions';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -46,8 +45,8 @@ const palette = {
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { isDark } = useTheme();
-  const colors = isDark ? palette.dark : palette.light;
+  const { colors } = useTheme();
+  const registerMutation = useRegister();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -57,19 +56,9 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [inlineError, setInlineError] = useState<string | null>(null);
   const [successVisible, setSuccessVisible] = useState(false);
-  const [successMessage, setSuccessMessage] = useState(
-    'Đăng ký thành công. Vui lòng xác thực OTP.',
-  );
-  const { height, width } = useWindowDimensions();
-  const isShortScreen = height < 750;
-  const isLargeScreen = width >= 430;
-  const fieldHeight = isLargeScreen ? 56 : 48;
-  const fieldRadius = isLargeScreen ? 14 : 12;
-  const fieldFontSize = isLargeScreen ? 18 : 16;
-  const fieldIconSize = isLargeScreen ? 20 : 18;
+  const [successMessage, setSuccessMessage] = useState('Đăng ký thành công. Vui lòng xác thực OTP.');
+  const loading = registerMutation.isPending;
 
   const handleRegister = async () => {
     if (
@@ -93,11 +82,8 @@ export default function RegisterScreen() {
       return;
     }
 
-    setInlineError(null);
-    setLoading(true);
-
     try {
-      const result = await authService.register({
+      const result = await registerMutation.mutateAsync({
         fullName,
         phone,
         email,
@@ -117,13 +103,8 @@ export default function RegisterScreen() {
         setSuccessMessage('Tạo tài khoản thành công. Vui lòng nhập mã OTP.');
         setSuccessVisible(true);
       }
-    } catch (error) {
-      console.error('[Register error detail]:', error);
-      const msg = 'Có lỗi xảy ra. Vui lòng thử lại.';
-      setInlineError(msg);
-      showErrorToast('Đăng ký thất bại');
-    } finally {
-      setLoading(false);
+    } catch {
+      showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại');
     }
   };
 

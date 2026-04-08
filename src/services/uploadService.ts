@@ -56,7 +56,6 @@ export const uploadService = {
         message: 'Upload ảnh thành công',
       };
     } catch (error: any) {
-      console.error('Upload image to Cloudinary error:', error);
       return {
         success: false,
         url: null,

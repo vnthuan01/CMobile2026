@@ -1,8 +1,8 @@
 import '@/global.css';
 import { AppDialog } from '@/src/components/common/AppDialog';
 import { useTheme } from '@/src/context/ThemeContext';
-import { authService } from '@/src/services/authService';
-import { showErrorToast, showInfoToast } from '@/src/utils/toast';
+import { useLogin } from '@/src/hooks/useAuthActions';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -20,49 +20,38 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const palette = {
-  light: {
-    bg: '#FFFFFF',
-    card: '#FFFFFF',
-    border: '#E5E7EB',
-    textPrimary: '#111827',
-    textSecondary: '#6B7280',
-    textDisabled: '#9CA3AF',
-    primary: '#2563EB',
-    primaryPressed: '#1E3A8A',
-    emergency: '#DC2626',
-  },
-  dark: {
-    bg: '#0F172A',
-    card: '#1E293B',
-    border: '#334155',
-    textPrimary: '#F1F5F9',
-    textSecondary: '#94A3B8',
-    textDisabled: '#64748B',
-    primary: '#2563EB',
-    primaryPressed: '#1E3A8A',
-    emergency: '#DC2626',
-  },
-};
-
 export default function LoginScreen() {
   const router = useRouter();
-  const { isDark } = useTheme();
-  const colors = isDark ? palette.dark : palette.light;
+  const { colors } = useTheme();
+  const loginMutation = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [successDialogVisible, setSuccessDialogVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Đăng nhập thành công');
-  const { height, width } = useWindowDimensions();
-  const isShortScreen = height < 750;
-  const isLargeScreen = width >= 430;
-  const fieldHeight = isLargeScreen ? 56 : 48;
-  const fieldRadius = isLargeScreen ? 14 : 12;
-  const fieldFontSize = isLargeScreen ? 18 : 16;
-  const fieldIconSize = isLargeScreen ? 20 : 18;
+  const loading = loginMutation.isPending;
+
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.2,
+          duration: 500,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, []);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -72,11 +61,8 @@ export default function LoginScreen() {
       return;
     }
 
-    setInlineError(null);
-    setLoading(true);
-
     try {
-      const result = await authService.login({
+      const result = await loginMutation.mutateAsync({
         email: email.trim(),
         password: password.trim(),
       });
@@ -90,13 +76,8 @@ export default function LoginScreen() {
         setInlineError(msg);
         showErrorToast('Đăng nhập thất bại');
       }
-    } catch (error) {
-      console.error('[Login error detail]:', error);
-      const msg = 'Có lỗi xảy ra. Vui lòng thử lại sau.';
-      setInlineError(msg);
-      showErrorToast('Đăng nhập thất bại');
-    } finally {
-      setLoading(false);
+    } catch {
+      showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại sau');
     }
   };
 

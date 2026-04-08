@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { teamService } from '../services/teamService';
 import type { TeamTrackingHeartbeatRequest } from '../types/team';
+import { showApiErrorToast, showApiResultToast } from '../utils/apiToast';
 
 export const teamTrackingKeys = {
   all: ['teamTracking'] as const,
@@ -35,5 +36,20 @@ export function useSendTeamTrackingHeartbeat() {
       teamId: string;
       payload: TeamTrackingHeartbeatRequest;
     }) => teamService.sendTrackingHeartbeat(teamId, payload),
+    onSuccess: (result) => {
+      if (!result?.success) {
+        showApiResultToast(result, {
+          showSuccess: false,
+          errorTitle: 'Không thể đồng bộ vị trí',
+          errorMessage: 'Không thể đồng bộ vị trí đội cứu hộ.',
+        });
+      }
+    },
+    onError: (error) => {
+      showApiErrorToast(error, {
+        errorTitle: 'Không thể đồng bộ vị trí',
+        errorMessage: 'Không thể đồng bộ vị trí đội cứu hộ.',
+      });
+    },
   });
 }

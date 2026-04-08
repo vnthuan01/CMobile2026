@@ -1,5 +1,5 @@
 import '@/global.css';
-import { authService } from '@/src/services/authService';
+import { useConfirmEmail } from '@/src/hooks/useAuthActions';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -11,6 +11,7 @@ type VerifyStatus = 'loading' | 'success' | 'error';
 export default function ConfirmEmailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const confirmEmailMutation = useConfirmEmail();
   const params = useLocalSearchParams<{ email?: string; token?: string }>();
 
   const [status, setStatus] = useState<VerifyStatus>('loading');
@@ -31,7 +32,7 @@ export default function ConfirmEmailScreen() {
         return;
       }
 
-      const result = await authService.confirmEmail({
+      const result = await confirmEmailMutation.mutateAsync({
         email: emailParam,
         token: tokenParam,
       });

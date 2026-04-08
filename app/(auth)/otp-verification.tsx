@@ -1,6 +1,11 @@
 import '@/global.css';
 import AppDialog from '@/src/components/common/AppDialog';
-import { authService } from '@/src/services/authService';
+import {
+  useResendEmailOtp,
+  useSendForgotPasswordOtp,
+  useVerifyEmailOtp,
+  useVerifyForgotPasswordOtp,
+} from '@/src/hooks/useAuthActions';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -23,15 +28,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function OTPScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const verifyForgotPasswordOtpMutation = useVerifyForgotPasswordOtp();
+  const verifyEmailOtpMutation = useVerifyEmailOtp();
+  const sendForgotPasswordOtpMutation = useSendForgotPasswordOtp();
+  const resendEmailOtpMutation = useResendEmailOtp();
   const params = useLocalSearchParams<{ email?: string; mode?: string }>();
 
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const [counter, setCounter] = useState(30);
-  const [verifying, setVerifying] = useState(false);
-  const [resending, setResending] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Xác thực OTP thành công.');
   const inputsRef = useRef<TextInput[]>([]);
+  const verifying =
+    verifyForgotPasswordOtpMutation.isPending || verifyEmailOtpMutation.isPending;
+  const resending =
+    sendForgotPasswordOtpMutation.isPending || resendEmailOtpMutation.isPending;
 
   const email = Array.isArray(params.email) ? params.email[0] : params.email;
   const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
@@ -78,10 +89,9 @@ export default function OTPScreen() {
       return;
     }
 
-    setVerifying(true);
     try {
       if (isForgotPasswordMode) {
-        const forgotResult = await authService.verifyForgotPasswordOtp({
+        const forgotResult = await verifyForgotPasswordOtpMutation.mutateAsync({
           email,
           otpCode: code,
         });
@@ -102,7 +112,7 @@ export default function OTPScreen() {
         return;
       }
 
-      const result = await authService.verifyEmailOtp({ email, code });
+      const result = await verifyEmailOtpMutation.mutateAsync({ email, code });
       if (!result.success) {
         showErrorToast('Xác thực OTP thất bại', result.message || 'Xác thực OTP thất bại.');
         return;
@@ -112,18 +122,17 @@ export default function OTPScreen() {
       setSuccessMessage(message);
       showSuccessToast('Xác thực OTP thành công', message);
       setSuccessVisible(true);
-    } finally {
-      setVerifying(false);
+    } catch {
+      // toast được xử lý ở mutation onError hoặc các nhánh result.success = false
     }
   };
 
   const handleResend = async () => {
     if (!email || counter > 0 || resending) return;
 
-    setResending(true);
     try {
       if (isForgotPasswordMode) {
-        const forgotResend = await authService.sendForgotPasswordOtp({ email });
+        const forgotResend = await sendForgotPasswordOtpMutation.mutateAsync({ email });
         if (!forgotResend.success) {
           showErrorToast('Không thể gửi lại OTP', forgotResend.message || 'Không thể gửi lại OTP.');
           return;
@@ -136,7 +145,7 @@ export default function OTPScreen() {
         return;
       }
 
-      const result = await authService.resendEmailOtp(email);
+      const result = await resendEmailOtpMutation.mutateAsync(email);
       if (!result.success) {
         showErrorToast('Không thể gửi lại OTP', result.message || 'Không thể gửi lại OTP.');
         return;
@@ -146,8 +155,8 @@ export default function OTPScreen() {
       setOtp(Array(6).fill(''));
       inputsRef.current[0]?.focus();
       showSuccessToast('Đã gửi lại OTP', result.message || 'Đã gửi lại mã OTP.');
-    } finally {
-      setResending(false);
+    } catch {
+      // toast được xử lý ở mutation onError hoặc các nhánh result.success = false
     }
   };
 

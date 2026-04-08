@@ -6,9 +6,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { appToastConfig } from '../src/components/common/AppToast';
+import { useAuthBootstrap } from '../src/hooks/useAuthBootstrap';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { useTheme } from '../src/context/ThemeContext';
-import { authService } from '../src/services/authService';
 import type { AuthState } from '../src/store/authStore';
 import { useAuthStore } from '../src/store/authStore';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ function RootLayoutContent() {
   const router = useRouter();
   const segments = useSegments();
   const { isDark, colors } = useTheme();
+  useAuthBootstrap();
 
   const isAuthenticated = useAuthStore(
     (state: AuthState) => state.isAuthenticated,
@@ -26,11 +27,6 @@ function RootLayoutContent() {
 
   //check theo group
   const inAuthRoute = segments[0] === '(auth)';
-
-  //Restore token khi app start
-  useEffect(() => {
-    authService.restoreToken();
-  }, []);
 
   useEffect(() => {
     if (isLoading) return;

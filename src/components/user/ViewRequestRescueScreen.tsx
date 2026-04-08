@@ -1,16 +1,11 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
-import {
-  fetchRescueRequestDetail,
-  fetchRescueTeamLocation,
-  RescueRequestDetailResponse,
-  TeamLocationResponse,
-} from '@/src/services/rescueService';
+import { useRequestTrackingDetail } from '@/src/hooks/useRequestTracking';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -34,49 +29,10 @@ export default function ViewRequestRescueScreen({
 }: ViewRequestRescueScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const [detail, setDetail] = useState<RescueRequestDetailResponse | null>(
-    null,
-  );
-  const [teamLocation, setTeamLocation] = useState<TeamLocationResponse | null>(
-    null,
-  );
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    const load = async () => {
-      try {
-        const detailData = await fetchRescueRequestDetail(requestId);
-        setDetail(detailData);
-
-        if (
-          ['Assigned', 'InProgress'].includes(detailData.rescueRequestStatus) &&
-          detailData.assignedRescueTeam
-        ) {
-          const locationData = await fetchRescueTeamLocation(requestId);
-          setTeamLocation(locationData);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-
-    intervalId = setInterval(async () => {
-      try {
-        const locationData = await fetchRescueTeamLocation(requestId);
-        setTeamLocation(locationData);
-      } catch {
-        // ignore polling errors for now
-      }
-    }, 15000);
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [requestId]);
+  const trackingQuery = useRequestTrackingDetail(requestId);
+  const detail = trackingQuery.data?.detail ?? null;
+  const teamLocation = trackingQuery.data?.teamLocation ?? null;
+  const loading = trackingQuery.isLoading;
 
   const headline = useMemo(() => {
     switch (detail?.rescueRequestStatus) {
