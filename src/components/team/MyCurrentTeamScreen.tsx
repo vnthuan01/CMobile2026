@@ -1,15 +1,13 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
-import {
-  TeamDetailResponse,
-  teamService,
-  TeamSkillResponse,
-} from '@/src/services/teamService';
+import { useCurrentTeam } from '@/src/hooks/useTeamOverview';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
+import { TeamDetailResponse, TeamSkillResponse } from '@/src/services/teamService';
 import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -32,55 +30,35 @@ export default function MyCurrentTeamScreen({
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
+  const currentTeamQuery = useCurrentTeam();
 
-  const [team, setTeam] = useState<TeamDetailResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [emptyState, setEmptyState] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const team = (currentTeamQuery.data?.team as TeamDetailResponse | null) ?? null;
+  const loading = currentTeamQuery.isLoading && !refreshing;
+  const errorMessage = currentTeamQuery.data?.errorMessage ?? null;
+  const emptyState = currentTeamQuery.data?.isEmpty ?? false;
 
   const isLeader = useMemo(() => {
     if (!user?.id || !team?.leader?.userId) return false;
     return user.id === team.leader.userId;
   }, [team?.leader?.userId, user?.id]);
 
-  const loadTeam = useCallback(async (isRefresh?: boolean) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    setErrorMessage(null);
-    setEmptyState(false);
-
-    try {
-      const result = await teamService.getMyTeam();
-      if (!result.success || !result.data) {
-        if (
-          result.status === 404 ||
-          /chưa|not found|không thuộc team/i.test(result.message || '')
-        ) {
-          setEmptyState(true);
-          setTeam(null);
-          return;
-        }
-
-        setErrorMessage(result.message || 'Không tải được thông tin nhóm.');
-        setTeam(null);
-        return;
-      }
-
-      setTeam(result.data);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!currentTeamQuery.isLoading && !currentTeamQuery.isFetching) {
       setRefreshing(false);
     }
-  }, []);
 
-  useEffect(() => {
-    loadTeam();
-  }, [loadTeam]);
+    if (team) {
+      setHasLoadedOnce(true);
+    }
+
+    if (emptyState && refreshing) {
+      showInfoToast('Chưa có nhóm', 'Bạn hiện chưa tham gia nhóm nào.');
+    } else if (errorMessage && (hasLoadedOnce || refreshing)) {
+      showErrorToast('Không tải được thông tin nhóm', errorMessage || 'Vui lòng thử lại.');
+    }
+  }, [currentTeamQuery.isFetching, currentTeamQuery.isLoading, emptyState, errorMessage, hasLoadedOnce, refreshing, team]);
 
   const formatDate = (value?: string | null) => {
     if (!value) return 'Chưa rõ';
@@ -172,7 +150,10 @@ export default function MyCurrentTeamScreen({
         onBack={onBack}
         rightAction={
           <TouchableOpacity
-            onPress={() => loadTeam(true)}
+            onPress={() => {
+              setRefreshing(true);
+              currentTeamQuery.refetch();
+            }}
             className="h-10 w-10 items-center justify-center rounded-full"
           >
             <Ionicons name="refresh" size={20} color={colors.text} />
@@ -209,7 +190,7 @@ export default function MyCurrentTeamScreen({
             {errorMessage}
           </Text>
           <TouchableOpacity
-            onPress={() => loadTeam()}
+            onPress={() => currentTeamQuery.refetch()}
             className="mt-6 rounded-xl px-5 py-3"
             style={{ backgroundColor: colors.primary }}
           >
@@ -223,7 +204,10 @@ export default function MyCurrentTeamScreen({
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => loadTeam(true)}
+              onRefresh={() => {
+                setRefreshing(true);
+                currentTeamQuery.refetch();
+              }}
             />
           }
           showsVerticalScrollIndicator={false}

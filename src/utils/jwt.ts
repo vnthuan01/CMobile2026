@@ -32,8 +32,7 @@ function parseJwtPayload(token: string): JwtPayload | null {
     );
 
     return JSON.parse(jsonPayload) as JwtPayload;
-  } catch (error) {
-    console.error('Error decoding JWT:', error);
+  } catch {
     return null;
   }
 }

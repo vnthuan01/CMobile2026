@@ -151,50 +151,6 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle transport/network errors (no response from server)
-    if (!error.response) {
-      const errorCode = error?.code;
-      const errorMessage = String(error?.message || '');
-      const normalizedMessage = errorMessage.toLowerCase();
-
-      if (errorCode === 'ECONNABORTED') {
-        console.error('[API] Timeout error:', {
-          code: errorCode,
-          message: errorMessage,
-          url: originalRequest?.url,
-          method: originalRequest?.method,
-          timeout: originalRequest?.timeout,
-        });
-      } else if (
-        errorCode === 'ERR_NETWORK' ||
-        normalizedMessage.includes('network error')
-      ) {
-        console.error('[API] Network/DNS unreachable error:', {
-          code: errorCode,
-          message: errorMessage,
-          url: originalRequest?.url,
-          method: originalRequest?.method,
-        });
-      } else {
-        console.error('[API] Transport/Security error (no response):', {
-          code: errorCode,
-          message: errorMessage,
-          url: originalRequest?.url,
-          method: originalRequest?.method,
-        });
-      }
-    }
-
-    // Handle server errors
-    if (error.response?.status >= 500) {
-      console.error(
-        'Server error:',
-        error.response.status,
-        error.response.data,
-      );
-    }
-
-    console.error('API error:', error);
     return Promise.reject(error);
   },
 );

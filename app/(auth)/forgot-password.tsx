@@ -1,6 +1,6 @@
 import '@/global.css';
 import AppDialog from '@/src/components/common/AppDialog';
-import { authService } from '@/src/services/authService';
+import { useSendForgotPasswordOtp } from '@/src/hooks/useAuthActions';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -21,10 +21,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const sendForgotPasswordOtpMutation = useSendForgotPasswordOtp();
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Mã xác thực đã được gửi');
+  const loading = sendForgotPasswordOtpMutation.isPending;
 
   const handleSendCode = async () => {
     if (!email.trim()) {
@@ -32,9 +33,8 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    setLoading(true);
     try {
-      const result = await authService.sendForgotPasswordOtp({
+      const result = await sendForgotPasswordOtpMutation.mutateAsync({
         email: email.trim(),
       });
 
@@ -49,8 +49,6 @@ export default function ForgotPasswordScreen() {
       setSuccessVisible(true);
     } catch {
       showErrorToast('Không thể gửi mã', 'Không thể gửi mã, vui lòng thử lại');
-    } finally {
-      setLoading(false);
     }
   };
 

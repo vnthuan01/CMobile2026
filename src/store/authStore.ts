@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import create from 'zustand';
+import { create } from 'zustand';
 import type { AuthTokens, StoredAuthTokens, User } from '../types/auth';
 
 export interface AuthState {
@@ -92,8 +92,8 @@ export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>
         refreshToken,
         isAuthenticated: Boolean(accessToken),
       });
-    } catch (error) {
-      console.error('Error saving tokens:', error);
+    } catch {
+      set({ isAuthenticated: Boolean(accessToken) });
     }
   },
 
@@ -101,8 +101,8 @@ export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>
     try {
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
       set({ user });
-    } catch (error) {
-      console.error('Error saving user:', error);
+    } catch {
+      set({ user });
     }
   },
 
@@ -124,8 +124,14 @@ export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>
         isAuthenticated: false,
         isLoading: false,
       });
-    } catch (error) {
-      console.error('Error logging out:', error);
+    } catch {
+      set({
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
     }
   },
 
@@ -146,8 +152,13 @@ export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>
         const user = JSON.parse(userData) as User;
         set({ user });
       }
-    } catch (error) {
-      console.error('Error restoring token:', error);
+    } catch {
+      set({
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+        isAuthenticated: false,
+      });
     } finally {
       set({ isLoading: false });
     }

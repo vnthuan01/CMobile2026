@@ -1,8 +1,16 @@
 import { useTheme } from '@/src/context/ThemeContext';
-import { useUserProfile } from '@/src/hooks/useUserProfile';
-import { useAuthStore } from '@/src/store/authStore';
+import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import { showErrorToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CitizenProfileProps {
@@ -25,12 +33,52 @@ export default function CitizenProfile({
 }: CitizenProfileProps) {
   const { top, bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
-  const authRole = useAuthStore((state) => state.user?.role ?? '');
-  const { data } = useUserProfile(true);
-  const profile = data?.profile;
+  const profileQuery = useCitizenProfile();
+  const profile = profileQuery.data?.profile ?? null;
+  const loading = profileQuery.isLoading;
 
-  const roleLabel =
-    authRole.toLowerCase() === 'volunteer' ? 'Tình nguyện viên' : 'Người dân';
+  useEffect(() => {
+    if (profileQuery.data?.errorMessage) {
+      showErrorToast('Không tải được hồ sơ', profileQuery.data.errorMessage);
+    }
+  }, [profileQuery.data?.errorMessage]);
+
+  const formatDate = (date?: string | null) => {
+    if (!date) return 'Chưa cập nhật';
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return date;
+    return d.toLocaleDateString('vi-VN');
+  };
+
+  const mapGender = (gender?: string | null) => {
+    if (!gender) return 'Chưa cập nhật';
+    const g = gender.toLowerCase();
+    if (g === 'male') return 'Nam';
+    if (g === 'female') return 'Nữ';
+    return gender;
+  };
+
+  const InfoRow = ({
+    icon,
+    label,
+    value,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    value?: string | null;
+  }) => (
+    <View className="flex-row items-center gap-3 border-b px-4 py-4" style={{ borderBottomColor: colors.border }}>
+      <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
+        <Ionicons name={icon} size={18} color={colors.primary} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-xs" style={{ color: colors.textSecondary }}>{label}</Text>
+        <Text className="mt-1 text-base font-semibold" style={{ color: colors.text }}>
+          {value || 'Chưa cập nhật'}
+        </Text>
+      </View>
+    </View>
+  );
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -49,10 +97,13 @@ export default function CitizenProfile({
               </TouchableOpacity>
             ) : null}
           </View>
-          <Text className="text-lg font-bold" style={{ color: colors.white }}>
-            Hồ sơ người dùng
-          </Text>
-          <View className="w-10" />
+          <Text className="text-lg font-bold" style={{ color: colors.white }}>Hồ sơ người dùng</Text>
+          <TouchableOpacity
+            onPress={() => profileQuery.refetch()}
+            className="h-10 w-10 items-center justify-center rounded-full bg-white/20"
+          >
+            <Ionicons name="refresh" size={18} color={colors.white} />
+          </TouchableOpacity>
         </View>
 
         <View className="items-center">

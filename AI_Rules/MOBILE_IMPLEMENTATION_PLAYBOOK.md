@@ -90,10 +90,10 @@ const { colors, isDark } = useTheme();
 Dùng:
 
 ```ts
-showSuccessToast(title, message)
-showErrorToast(title, message)
-showInfoToast(title, message)
-showWarningToast(title, message)
+showSuccessToast(title, message);
+showErrorToast(title, message);
+showInfoToast(title, message);
+showWarningToast(title, message);
 ```
 
 ### API toast presenter chung
@@ -220,6 +220,7 @@ export const exampleService = {
 Tạo file:
 
 - `src/hooks/use<Thing>.ts`
+- Thường thì 1 endpoint /Auth/.../ gộp chung thành 1 services sẽ gộp chung thành 1 hook cho dễ quản lý/dễ call
 
 ### Query pattern
 
@@ -244,7 +245,8 @@ export function useUpdateExample() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: UpdateExamplePayload) => exampleService.update(payload),
+    mutationFn: (payload: UpdateExamplePayload) =>
+      exampleService.update(payload),
     onSuccess: (result) => {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: ['examples'] });
@@ -355,7 +357,10 @@ Hiện project đã có:
 Nếu là màn auth hoặc màn tràn full chiều dọc, bọc:
 
 ```tsx
-<SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+<SafeAreaView
+  edges={['top']}
+  style={{ flex: 1, backgroundColor: colors.background }}
+>
   ...
 </SafeAreaView>
 ```
@@ -495,10 +500,10 @@ app/... route file nếu cần
 
 ### Sai
 
-- dùng `Alert.alert`
+- dùng `Alert.alert` nên dùng `Toast` hoặc `AppDialog`
 - screen tự gọi `api.post()`
 - mutation thành công nhưng không invalidate query
-- bắt lỗi bằng `error.message || ...` ở mọi nơi, không qua helper
+- bắt lỗi bằng `error.message || ...` ở mọi nơi, không qua helper (Không được console.log error)
 - hard-code màu đỏ/xanh thay vì `colors.error`, `colors.success`
 - quên safe area top ở auth screen
 - quên `paddingBottom` cho footer/sticky button
@@ -508,8 +513,9 @@ app/... route file nếu cần
 - dùng `showErrorToast`, `showWarningToast`, `showSuccessToast`
 - dùng `showApiErrorToast`, `showApiResultToast` ở hook/service flow
 - dùng `AppDialog` cho confirm/success-step
-- bám `useTheme()`
+- bám sát `useTheme()`
 - bám `ScreenHeader` / component chung nếu có
+- Retry / Network - RN đôi khi network fail weird (Android emulator)
 
 ---
 
