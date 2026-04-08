@@ -1,5 +1,5 @@
 {
-  "name": "capstone_mobile_sp_26_-_reliefcare",
+  "name": "mobile-reliefcare-26",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -47,7 +47,7 @@
     "expo-web-browser": "~15.0.9",
     "nativewind": "^4.2.1",
     "prettier-plugin-tailwindcss": "^0.5.14",
-    "react": "19.1.0",
+    "react": "19.1.4",
     "react-aria": "^3.44.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
