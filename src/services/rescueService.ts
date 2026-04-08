@@ -1,40 +1,23 @@
-import api from './api';
 import type {
-  RescueType,
-  DisasterType,
-  PriorityCriteria,
-  RescueAttachment,
-  NormalRescuePayload,
-  EmergencyRescuePayload,
-  LocationResult,
-  MyRescueRequestItem,
-  MyRescueRequestsResponse,
-  RescueRequestDetailResponse,
-  TeamLocationResponse,
-  UpdateRescueOperationStatusPayload,
-  CompleteRescueOperationPayload,
-  CancelRescueRequestPayload,
+    CancelRescueRequestPayload,
+    CompleteRescueOperationPayload,
+    DisasterType,
+    EmergencyRescuePayload,
+    MyRescueRequestsResponse,
+    NormalRescuePayload,
+    PriorityCriteria,
+    RescueRequestDetailResponse,
+    TeamLocationResponse,
+    UpdateRescueOperationStatusPayload
 } from '../types/rescue';
+import api from './api';
 
 export type {
-  RescueType,
-  DisasterType,
-  PriorityCriteria,
-  RescueAttachment,
-  RescueVerification,
-  AssignedRescueTeamInfo,
-  MyRescueRequestItem,
-  MyRescueRequestsResponse,
-  RescueRequestDetailResponse,
-  RescueAttachmentDetail,
-  RescueOperationInfo,
-  UpdateRescueOperationStatusPayload,
-  CompleteRescueOperationPayload,
-  CancelRescueRequestPayload,
-  TeamLocationResponse,
-  NormalRescuePayload,
-  EmergencyRescuePayload,
-  LocationResult,
+    AssignedRescueTeamInfo, CancelRescueRequestPayload, CompleteRescueOperationPayload, DisasterType, EmergencyRescuePayload,
+    LocationResult, MyRescueRequestItem,
+    MyRescueRequestsResponse, NormalRescuePayload, PriorityCriteria,
+    RescueAttachment, RescueAttachmentDetail,
+    RescueOperationInfo, RescueRequestDetailResponse, RescueType, RescueVerification, TeamLocationResponse, UpdateRescueOperationStatusPayload
 } from '../types/rescue';
 
 export { getCurrentLocation } from '../utils/location';
@@ -99,11 +82,36 @@ export async function cancelRescueRequest(
   requestId: string,
   payload: CancelRescueRequestPayload,
 ): Promise<RescueRequestDetailResponse> {
-  const res = await api.patch<RescueRequestDetailResponse>(
+  const routes = [
     `/RescueRequest/${requestId}/cancel`,
-    payload,
-  );
-  return res.data;
+    `/api/RescueRequest/${requestId}/cancel`,
+  ];
+  const payloadCandidates = [
+    { reason: payload.reason },
+    { Reason: payload.reason },
+  ];
+
+  let lastError: unknown = null;
+
+  for (const route of routes) {
+    for (const body of payloadCandidates) {
+      try {
+        const res = await api.patch<RescueRequestDetailResponse>(route, body);
+        return res.data;
+      } catch (error) {
+        lastError = error;
+      }
+
+      try {
+        const res = await api.post<RescueRequestDetailResponse>(route, body);
+        return res.data;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 export async function updateRescueOperationStatus(

@@ -1,5 +1,5 @@
 import '@/global.css';
-import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
+import { AppDialog, useDialog } from '@/src/components/common/AppDialog';
 import Header from '@/src/components/header/header';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
@@ -11,14 +11,12 @@ import {
   RescueAttachment,
   RescueType,
 } from '@/src/services/rescueService';
-import { rescueTeamService } from '@/src/services/rescueTeamService';
 import {
   showErrorToast,
   showSuccessToast,
   showWarningToast,
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
@@ -77,8 +75,6 @@ const getCriteriaCategory = (code?: string): CriteriaCategory | null => {
   return null;
 };
 
-const supportsNativeMap = Constants.appOwnership !== 'expo';
-
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function RequestRescueScreen({
   onBack,
@@ -112,14 +108,12 @@ export default function RequestRescueScreen({
     longitude,
     accuracy,
     address: detectedAddress,
-    setAddress: setDetectedAddress,
     locationLabel,
     locating,
   } = useCurrentRescueLocation();
 
   // ── Remote data state ────────────────────────────────────────────────────
   const [uploadingImages, setUploadingImages] = useState(false);
-  const mapStyle = rescueTeamService.getMapStyleUrl();
   const priorityCriteriaQuery = usePriorityCriteria(
     disasterType,
     rescueType === 0,
@@ -509,14 +503,8 @@ export default function RequestRescueScreen({
             className="mt-3 h-44 overflow-hidden rounded-xl border"
             style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
-            {mapStyle &&
-            supportsNativeMap &&
-            latitude != null &&
-            longitude != null ? (
-              <RequestRescueMiniMap
-                coordinate={[longitude, latitude]}
-                mapStyle={mapStyle}
-              />
+            {latitude != null && longitude != null ? (
+              <RequestRescueMiniMap coordinate={[longitude, latitude]} />
             ) : (
               <View
                 className="flex-1 items-center justify-center"

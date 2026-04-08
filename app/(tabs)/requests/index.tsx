@@ -22,7 +22,7 @@ interface RequestsScreenProps {
   onBack?: () => void;
 }
 
-const FILTERS: Array<{ label: string; value: RequestFilter }> = [
+const FILTERS: { label: string; value: RequestFilter }[] = [
   { label: 'Tất cả', value: 'all' },
   { label: 'Đang xử lý', value: 'processing' },
   { label: 'Hoàn thành', value: 'completed' },
@@ -221,6 +221,11 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
                             : 'gray'
                       }
                       type={getTypeLabel(item.rescueRequestType)}
+                      isEmergency={
+                        String(item.rescueRequestType) === '1' ||
+                        String(item.rescueRequestType).toLowerCase() ===
+                          'emergency'
+                      }
                       date={new Date(item.createdAt).toLocaleDateString(
                         'vi-VN',
                       )}
@@ -245,6 +250,7 @@ function RequestHistoryItem({
   status,
   statusColor,
   type,
+  isEmergency,
   date,
   onPress,
 }: {
@@ -252,17 +258,24 @@ function RequestHistoryItem({
   status: string;
   statusColor: 'green' | 'gray' | 'red';
   type: string;
+  isEmergency: boolean;
   date: string;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
 
   const badgeColors =
-    statusColor === 'green'
-      ? { bg: `${colors.status.completed}18`, text: colors.status.completed }
-      : statusColor === 'red'
+    status === 'Chờ xác minh'
+      ? isEmergency
         ? { bg: `${colors.status.error}18`, text: colors.status.error }
-        : { bg: colors.surface, text: colors.textSecondary };
+        : { bg: `${colors.status.pending}18`, text: colors.status.pending }
+      : statusColor === 'green'
+        ? { bg: `${colors.status.completed}18`, text: colors.status.completed }
+        : statusColor === 'red'
+          ? { bg: `${colors.status.error}18`, text: colors.status.error }
+          : { bg: colors.surface, text: colors.textSecondary };
+
+  const typeColor = isEmergency ? colors.status.error : colors.status.pending;
 
   return (
     <TouchableOpacity
@@ -287,12 +300,15 @@ function RequestHistoryItem({
         <Text className="font-bold" style={{ color: colors.text }}>
           {id}
         </Text>
-        <Text
-          className="mt-0.5 text-sm"
-          style={{ color: colors.textSecondary }}
-        >
-          {type} • {date}
-        </Text>
+        <View className="mt-0.5 flex-row items-center">
+          <Text className="text-sm" style={{ color: typeColor }}>
+            {type}
+          </Text>
+          <Text className="text-sm" style={{ color: colors.textSecondary }}>
+            {' '}
+            • {date}
+          </Text>
+        </View>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
     </TouchableOpacity>

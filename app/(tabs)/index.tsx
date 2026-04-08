@@ -35,7 +35,7 @@ export default function IndexScreen() {
 
   const { colors, isDark } = useTheme();
   const iconWrapperBg = isDark ? colors.border : colors.surface;
-  const mapSize = Math.max(220, width - 32);
+  const mapHeight = Math.max(220, Math.round((width - 32) * 0.78));
   const [mapReloadKey, setMapReloadKey] = useState(0);
   const previousLocationRef = useRef<string>('');
 
@@ -140,9 +140,9 @@ export default function IndexScreen() {
         {/* Map */}
         <View className="mb-4 px-4">
           <View
-            className="items-center justify-center overflow-hidden rounded-xl"
+            className="overflow-hidden rounded-xl"
             style={{
-              height: mapSize,
+              height: mapHeight,
               backgroundColor: colors.surface,
             }}
           >
@@ -159,8 +159,8 @@ export default function IndexScreen() {
                     size: 18,
                   },
                 ]}
-                height={mapSize}
-                style={{ width: '100%', height: mapSize, borderWidth: 0 }}
+                height={mapHeight}
+                style={{ width: '100%', borderWidth: 0 }}
               />
             ) : (
               <View className="items-center px-5">

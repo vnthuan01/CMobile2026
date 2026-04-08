@@ -1,22 +1,20 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
+import { useRescueRequestDetail } from '@/src/hooks/useRescueRequestDetail';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import Constants from 'expo-constants';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UserRescueTrackingMap from '../user/UserRescueTrackingMap';
 
-const supportsNativeMap = Constants.appOwnership !== 'expo';
-
 export default function UserHomeContent() {
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   const queryClient = useQueryClient();
   const { data: requests = [], isLoading: loadingRequests } =
@@ -48,13 +46,10 @@ export default function UserHomeContent() {
     [requests],
   );
 
-  const shouldShowTrackingMap =
-    ((activeRequest?.assignedRescueTeam?.operationStatus === 'EnRoute' ||
-      activeRequest?.rescueRequestStatus === 'InProgress') &&
-      activeRequest?.assignedRescueTeam) ||
-    null;
-
-  const mapStyle = rescueTeamService.getMapStyleUrl();
+  const activeRequestDetailQuery = useRescueRequestDetail(
+    activeRequest?.requestId ?? null,
+  );
+  const activeRequestDetail = activeRequestDetailQuery.data ?? null;
 
   const teamCoordinate = useMemo(() => {
     if (
@@ -69,11 +64,23 @@ export default function UserHomeContent() {
       activeRequest.assignedRescueTeam.currentLongitude,
       activeRequest.assignedRescueTeam.currentLatitude,
     ] as [number, number];
-  }, [
-    activeRequest?.assignedRescueTeam,
-    activeRequest?.assignedRescueTeam?.currentLatitude,
-    activeRequest?.assignedRescueTeam?.currentLongitude,
-  ]);
+  }, [activeRequest?.assignedRescueTeam]);
+
+  const victimCoordinate = useMemo(() => {
+    if (
+      activeRequestDetail?.longitude == null ||
+      activeRequestDetail?.latitude == null
+    ) {
+      return null;
+    }
+
+    return [activeRequestDetail.longitude, activeRequestDetail.latitude] as [
+      number,
+      number,
+    ];
+  }, [activeRequestDetail?.latitude, activeRequestDetail?.longitude]);
+
+  const canRenderRequestMap = !!(teamCoordinate || victimCoordinate);
 
   const routeCoordinates = useMemo(() => {
     const polyline = activeRequest?.assignedRescueTeam?.routePolyline;
@@ -136,6 +143,12 @@ export default function UserHomeContent() {
 
   const formatRequestId = (id: string) => `#${id.slice(0, 8)}`;
   const openRequestsScreen = () => router.push('/requests');
+  const openRequestDetail = (requestId: string) => {
+    router.push({
+      pathname: '/(tabs)/requests/[requestId]',
+      params: { requestId },
+    });
+  };
 
   return (
     <View style={{ paddingBottom: bottom + 20 }}>
@@ -169,7 +182,7 @@ export default function UserHomeContent() {
       </View>
       <View className="mt-6 px-4">
         <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>
-          Yêu cầu đang xử lý
+          Yêu cầu gần đây
         </Text>
 
         {loadingRequests ? (
@@ -187,7 +200,7 @@ export default function UserHomeContent() {
           </View>
         ) : activeRequest ? (
           <TouchableOpacity
-            onPress={openRequestsScreen}
+            onPress={() => openRequestDetail(activeRequest.requestId)}
             className="overflow-hidden rounded-xl shadow-sm"
             style={{
               backgroundColor: colors.card,
@@ -199,12 +212,12 @@ export default function UserHomeContent() {
               className="h-32 overflow-hidden"
               style={{ backgroundColor: colors.surface }}
             >
-              {shouldShowTrackingMap && mapStyle && supportsNativeMap ? (
+              {canRenderRequestMap ? (
                 <UserRescueTrackingMap
-                  victimCoordinate={null}
+                  victimCoordinate={victimCoordinate}
                   teamCoordinate={teamCoordinate}
                   routeCoordinates={routeCoordinates}
-                  mapStyle={mapStyle}
+                  mapStyle={rescueTeamService.getMapStyleUrl() ?? ''}
                 />
               ) : (
                 <View className="h-full items-center justify-center">
@@ -320,7 +333,7 @@ export default function UserHomeContent() {
                 }
                 type={getTypeLabel(item.rescueRequestType)}
                 date={new Date(item.createdAt).toLocaleDateString('vi-VN')}
-                onPress={openRequestsScreen}
+                onPress={() => openRequestDetail(item.requestId)}
               />
             ))}
           </View>
@@ -347,7 +360,7 @@ function QuickActionCard({
 
   const toneColor =
     variant === 'request'
-      ? colors.status.pending
+      ? colors.status.error
       : variant === 'tracking'
         ? colors.status.incoming
         : colors.status.completed;

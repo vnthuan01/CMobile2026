@@ -5,7 +5,6 @@ import WebViewMap from '@/src/components/common/WebViewMap';
 
 interface RequestRescueMiniMapProps {
   coordinate: [number, number];
-  mapStyle: string;
 }
 
 export default function RequestRescueMiniMap({

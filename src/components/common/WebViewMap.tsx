@@ -186,7 +186,10 @@ function buildMapHtml(
 //  Component
 // ─────────────────────────────────────────────
 
-const GOONG_KEY = process.env.EXPO_PUBLIC_GOONG_MAP_KEY ?? '';
+const GOONG_KEY =
+  process.env.EXPO_PUBLIC_GOONG_MAP_KEY ??
+  process.env.EXPO_PUBLIC_GOONG_API_KEY ??
+  '';
 
 export default function WebViewMap({
   center,
