@@ -1,164 +1,153 @@
-# Design System - WDP Mobile
+# Design System - ReliefCare UI Color Rules
 
-## 🎨 Color Palette
+> Muc tieu: dam bao nhat quan mau sac cho toan bo thiet ke va trien khai UI ReliefCare.
+>
+> Nguyen tac san pham: Calm in crisis - Clear in chaos.
 
-### Primary Colors
-- **Primary**: `#007AFF` - Xanh dương tươi (nút chính, links, highlights)
-  - `primary-light`: `#5AC8FA`
-  - `primary-dark`: `#005FCC`
-  - Shades: 50-900
+---
 
-### Secondary Colors
-- **Secondary**: `#5AC8FA` - Xanh dương nhạt (secondary actions)
-  - `secondary-light`: `#8DDBFC`
-  - `secondary-dark`: `#27B5F8`
-  - Shades: 50-900
+## 1) Nguyen tac bat buoc (Non-negotiable)
 
-### Background & Surface
-- **Background**: `#FFFFFF` - Trắng (màu nền chính)
-  - `background-light`: `#FAFAFA`
-- **Surface**: `#F2F4F7` - Xám nhạt (cards, inputs)
-  - `surface-light`: `#F9FAFB`
-  - `surface-dark`: `#E5E7EB`
+1. Khong dung gradient o bat ky man nao.
+2. Mau do chi dung cho tinh huong khan cap/critical (SOS, Emergency Alert, muc do nghiem trong cao).
+3. Dung mau theo semantic (y nghia) thay vi trang tri.
+4. Uu tien nen trung tinh (trang/toi) + phan cap bang khoang cach, typography, icon.
+5. Light mode la mac dinh. Dark mode phai giu semantic colors khong doi.
 
-### Text Colors
-- **Text Primary**: `#1C1C1E` - Xám đậm (text chính)
-- **Text Secondary**: `#6B7280` - Xám vừa (text phụ)
-- **Text Light**: `#9CA3AF` - Xám nhạt (placeholders)
-- **Text Muted**: `#D1D5DB` - Xám rất nhạt (disabled)
+---
 
-### Accent
-- **Accent**: `#FFB84D` - Vàng cam sáng (highlights, badges)
-  - `accent-light`: `#FFCB7A`
-  - `accent-dark`: `#FF9F1A`
-  - Shades: 50-900
+## 2) Color Tokens Chuan
 
-## 📝 Typography
+## 2.1 Light Theme (Default)
 
-### Font Family
-- **Primary**: Inter (sans-serif)
-- **Alternative**: Poppins (sans-serif)
+### Background
 
-### Font Weights
-- Light: 300
-- Normal: 400
-- Medium: 500
-- Semibold: 600
-- Bold: 700
-- Extrabold: 800
+- --bg-app: #FFFFFF
+- --bg-secondary: #F9FAFB
+- --bg-card: #FFFFFF
+- --border: #E5E7EB
 
-### Font Sizes
-- `2xs`: 10px
-- `xs`: 12px
-- `sm`: 14px
-- `base`: 16px
-- `lg`: 18px
-- `xl`: 20px
-- `2xl`: 24px
-- `3xl`: 30px
-- `4xl`: 36px
+### Text
 
-## 🎯 Usage Examples
+- --text-primary: #111827
+- --text-secondary: #6B7280
+- --text-disabled: #9CA3AF
 
-### Buttons
-```tsx
-// Primary Button
-<TouchableOpacity className="bg-primary rounded-lg py-4 px-6 shadow-button">
-  <Text className="text-white font-inter font-semibold">Đăng nhập</Text>
-</TouchableOpacity>
+---
 
-// Secondary Button
-<TouchableOpacity className="bg-secondary rounded-lg py-4 px-6 shadow-card">
-  <Text className="text-white font-inter font-semibold">Hủy</Text>
-</TouchableOpacity>
+## 2.2 Semantic Colors
 
-// Accent Button
-<TouchableOpacity className="bg-accent rounded-lg py-3 px-5">
-  <Text className="text-white font-inter font-medium">Đăng xuất</Text>
-</TouchableOpacity>
-```
+### Primary (Normal actions)
 
-### Cards
-```tsx
-<View className="bg-white rounded-xl p-6 shadow-card">
-  <Text className="text-text-primary font-inter font-bold text-2xl">
-    Tiêu đề
-  </Text>
-  <Text className="text-text-secondary font-inter mt-2">
-    Nội dung card
-  </Text>
-</View>
-```
+- --primary: #2563EB
+- --primary-dark: #1E3A8A
 
-### Inputs
-```tsx
-<TextInput
-  className="bg-surface border border-surface-dark rounded-lg px-4 py-3.5 font-inter text-text-primary"
-  placeholder="Nhập email"
-  placeholderTextColor="#9CA3AF"
-/>
-```
+### Emergency (Critical only)
 
-### Text Styles
-```tsx
-// Heading
-<Text className="text-text-primary font-inter font-bold text-2xl">
-  Tiêu đề
-</Text>
+- --emergency: #DC2626
+- --emergency-light: #EF4444
 
-// Body
-<Text className="text-text-secondary font-inter">
-  Nội dung
-</Text>
+### Warning
 
-// Caption
-<Text className="text-text-light font-inter text-sm">
-  Ghi chú
-</Text>
-```
+- --warning: #F59E0B
 
-## 🔲 Spacing & Layout
+### Success
 
-### Border Radius
-- `sm`: 8px
-- Default: 12px
-- `lg`: 16px
-- `xl`: 20px
-- `2xl`: 24px
-- `full`: 9999px
+- --success: #16A34A
 
-### Shadows
-- `shadow-sm`: Subtle shadow
-- `shadow`: Default card shadow
-- `shadow-md`: Medium shadow
-- `shadow-lg`: Large shadow
-- `shadow-card`: Card shadow (0 2px 6px rgba(0,0,0,0.08))
-- `shadow-button`: Button shadow (0 2px 4px rgba(0,122,255,0.2))
+---
 
-### Spacing
-- Standard: 4, 8, 12, 16, 20, 24, 32, 40, 48, 64
-- Custom: 18 (4.5rem), 22 (5.5rem)
+## 2.3 Dark Theme
 
-## 🎨 Design Principles
+### Background
 
-1. **Sáng sủa**: Sử dụng background trắng, màu sắc tươi sáng
-2. **Hiện đại**: Border radius lớn (12-20px), shadows nhẹ nhàng
-3. **Dễ đọc**: Text contrast cao, font Inter rõ ràng
-4. **Nhất quán**: Sử dụng color palette và spacing system thống nhất
-5. **Accessible**: Đảm bảo contrast ratio đạt chuẩn WCAG
+- --bg-app: #0F172A
+- --bg-card: #1E293B
+- --border: #334155
 
-## 🚀 Quick Start
+### Text
 
-```tsx
-import '@/global.css';
+- --text-primary: #F1F5F9
+- --text-secondary: #94A3B8
+- --text-disabled: #64748B
 
-// Sử dụng theme colors
-<View className="bg-primary">...</View>
-<Text className="text-text-primary font-inter">...</Text>
+### Rule quan trong
 
-// Sử dụng shadows
-<View className="shadow-card">...</View>
+- Giu nguyen semantic colors giua Light/Dark:
+  - --primary: #2563EB
+  - --emergency: #DC2626
+  - --warning: #F59E0B
+  - --success: #16A34A
 
-// Sử dụng spacing
-<View className="p-6 gap-4">...</View>
-```
+---
+
+## 3) Functional Color Mapping (Bat buoc)
+
+| Feature / Trang thai            | Mau bat buoc    |
+| ------------------------------- | --------------- |
+| SOS                             | Red (#DC2626)   |
+| Emergency                       | Red (#DC2626)   |
+| Relief Request                  | Amber (#F59E0B) |
+| Volunteer Task / Normal Actions | Blue (#2563EB)  |
+| Completed                       | Green (#16A34A) |
+| Safe Area                       | Green (#16A34A) |
+
+Khong doi mapping theo man hinh. Cung y nghia = cung mau.
+
+---
+
+## 4) Component Color Rules
+
+## Buttons
+
+- Border radius: 12px
+- Primary button: nen --primary, chu trang
+- SOS button: nen --emergency, kich thuoc lon, luon de thay
+
+## Cards
+
+- Light: nen --bg-card
+- Dark: nen #1E293B
+- Border: --border
+- Shadow nhe, khong dung mau ruc de trang tri card
+
+## Status/Badge
+
+- Dung dung semantic:
+  - Critical/Emergency: do
+  - Warning/Pending: amber
+  - Success/Done/Safe: xanh la
+  - Neutral/Info: text-secondary hoac border neutral
+
+---
+
+## 5) Cac dieu cam
+
+- Khong dung gradient (LinearGradient, gradient tokens, background blend).
+- Khong dung mau ngoai token (hardcoded hex) cho UI chinh.
+- Khong dung do cho hanh dong thuong.
+- Khong doi mau semantic giua Light va Dark mode.
+
+---
+
+## 6) Quy trinh kiem tra truoc merge
+
+1. Doi chieu tat ca mau moi voi token trong file nay.
+2. Kiem tra man SOS va canh bao co dung do.
+3. Kiem tra dark mode van giu semantic colors.
+4. Tim va loai bo hardcoded hex khong nam trong token.
+5. Xac nhan khong co gradient.
+
+---
+
+## 7) Ghi chu trien khai cho Design/Dev
+
+- Design team: chi dung palette trong file nay khi tao Figma/components.
+- Dev team: map token 1-1 vao theme constants + tailwind config.
+- Neu can them mau moi: phai them vao tai lieu nay truoc, co ly do semantic ro rang.
+
+---
+
+Owner: Product/UI Lead
+Applies to: toan bo man hinh ReliefCare Mobile
+Priority: Bat buoc tuan thu
