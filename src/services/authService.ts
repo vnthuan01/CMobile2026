@@ -66,7 +66,6 @@ export const authService = {
         message: response.data.message,
       };
     } catch (error: any) {
-      console.error('Register error:', error);
       return {
         success: false,
         message:
@@ -91,7 +90,6 @@ export const authService = {
           'Xác thực email thành công. Vui lòng đăng nhập.',
       };
     } catch (error: any) {
-      console.error('Confirm email error:', error);
       return {
         success: false,
         message:
@@ -116,7 +114,6 @@ export const authService = {
           'Xác thực OTP thành công. Vui lòng đăng nhập.',
       };
     } catch (error: any) {
-      console.error('Verify email OTP error:', error);
       return {
         success: false,
         message:
@@ -133,12 +130,11 @@ export const authService = {
         email,
       });
 
-      return {
-        success: response.status === 200,
-        message: response.data?.message || 'Đã gửi lại mã OTP.',
-      };
+        return {
+          success: response.status === 200,
+          message: response.data?.message || 'Đã gửi lại mã OTP.',
+        };
     } catch (error: any) {
-      console.error('Resend email OTP error:', error);
       return {
         success: false,
         message:
@@ -155,12 +151,11 @@ export const authService = {
         email: data.email,
       });
 
-      return {
-        success: response.status >= 200 && response.status < 300,
-        message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
-      };
+        return {
+          success: response.status >= 200 && response.status < 300,
+          message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
+        };
     } catch (error: any) {
-      console.error('Send forgot password OTP error:', error);
       return {
         success: false,
         message:
@@ -182,13 +177,12 @@ export const authService = {
         },
       );
 
-      return {
-        success: response.status === 200,
-        resetToken: response.data?.resetToken,
-        message: response.data?.message || 'Xác minh OTP thành công.',
-      };
+        return {
+          success: response.status === 200,
+          resetToken: response.data?.resetToken,
+          message: response.data?.message || 'Xác minh OTP thành công.',
+        };
     } catch (error: any) {
-      console.error('Verify forgot password OTP error:', error);
       return {
         success: false,
         resetToken: null,
@@ -209,12 +203,11 @@ export const authService = {
         newPassword: data.newPassword,
       });
 
-      return {
-        success: response.status === 204,
-        message: response.data?.message || 'Đặt lại mật khẩu thành công.',
-      };
+        return {
+          success: response.status === 204,
+          message: response.data?.message || 'Đặt lại mật khẩu thành công.',
+        };
     } catch (error: any) {
-      console.error('Reset forgot password error:', error);
       return {
         success: false,
         message:
@@ -241,7 +234,6 @@ export const authService = {
         };
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('Get profile error:', error);
           return {
             success: false,
             data: null,
@@ -299,8 +291,6 @@ export const authService = {
         user,
       };
     } catch (error: any) {
-      console.error('Login error:', error);
-
       return {
         success: false,
         message:
@@ -353,9 +343,8 @@ export const authService = {
         return;
       }
 
-      await authService.refreshSession(refreshToken);
-    } catch (error) {
-      console.error('Restore token error:', error);
+       await authService.refreshSession(refreshToken);
+    } catch {
       await authStore.logout();
     } finally {
       useAuthStore.getState().setLoading(false);

@@ -1,6 +1,6 @@
 import '@/global.css';
 import AppDialog from '@/src/components/common/AppDialog';
-import { authService } from '@/src/services/authService';
+import { useRegister } from '@/src/hooks/useAuthActions';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function RegisterScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const registerMutation = useRegister();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -30,9 +31,9 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Đăng ký thành công. Vui lòng xác thực OTP.');
+  const loading = registerMutation.isPending;
 
   const handleRegister = async () => {
     if (
@@ -52,11 +53,8 @@ export default function RegisterScreen() {
       return;
     }
 
-    setLoading(true);
-
     try {
-      // TODO: gọi API register
-      const result = await authService.register({
+      const result = await registerMutation.mutateAsync({
         fullName,
         phone,
         email,
@@ -77,8 +75,6 @@ export default function RegisterScreen() {
       }
     } catch {
       showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại');
-    } finally {
-      setLoading(false);
     }
   };
 
