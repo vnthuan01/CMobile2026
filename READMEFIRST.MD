@@ -127,6 +127,7 @@
 - ❌ Không dùng màu ngoài token (hardcoded hex) cho UI chính.
 - ❌ Không dùng đỏ cho hành động thường.
 - ❌ Không đổi màu semantic giữa Light và Dark mode.
+- ❌ Không dùng icon inline bằng emoji/ký tự unicode (ví dụ: `⚠️`, `👁️`, `🙈`, `🌊`).
 
 ---
 
@@ -137,10 +138,27 @@
 3. Kiểm tra dark mode vẫn giữ semantic colors.
 4. Tìm và loại bỏ hardcoded hex không nằm trong token.
 5. Xác nhận không có gradient.
+6. Xác nhận toàn bộ icon dùng thư viện icon thống nhất (ưu tiên `@expo/vector-icons/Ionicons`), không dùng emoji/ký tự icon inline.
 
 ---
 
-## 7) Ghi chú triển khai cho Design/Dev
+## 7) Icon Rules (Bắt buộc)
+
+- Dùng icon từ thư viện, thống nhất toàn project:
+  - Ưu tiên: `@expo/vector-icons` → `Ionicons`
+- Không render icon bằng `Text` chứa emoji/unicode.
+- Nếu cần biểu tượng mới, chọn từ thư viện trước; không tạo icon text tạm.
+- Mapping khuyến nghị:
+  - Cảnh báo: `warning-outline`
+  - Hiện/ẩn mật khẩu: `eye-outline` / `eye-off-outline`
+  - Email: `mail-outline`
+  - Mật khẩu: `lock-closed-outline`
+  - Người dùng: `person-outline`
+  - Điện thoại: `call-outline`
+
+---
+
+## 8) Ghi chú triển khai cho Design/Dev
 
 - Design team: chỉ dùng palette trong file này khi tạo Figma/components.
 - Dev team: map token 1-1 vào theme constants + tailwind config.
