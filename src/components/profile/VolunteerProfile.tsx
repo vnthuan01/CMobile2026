@@ -1,7 +1,19 @@
 import { useTheme } from '@/src/context/ThemeContext';
+import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import {
+    resolveAvatarUrl,
+    resolveDisplayName,
+} from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import {
+    Image,
+    ScrollView,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 
@@ -34,6 +46,8 @@ export default function VolunteerProfile({
   const { top, bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
+  const profileQuery = useCitizenProfile(Boolean(user));
+  const profile = profileQuery.data?.profile ?? null;
   const [isAvailable, setIsAvailable] = useState(true);
   const headerBg = colors.secondary;
   const cardBg = colors.card;
@@ -41,6 +55,15 @@ export default function VolunteerProfile({
   const iconAccent = colors.secondary;
   const neutralBorder = colors.border;
   const dangerSoft = `${colors.status.error}14`;
+  const displayName = resolveDisplayName({
+    profileDisplayName: profile?.displayName,
+    authUserName: user?.user_name,
+    email: user?.email,
+  });
+  const avatarUrl = resolveAvatarUrl({
+    profilePictureUrl: profile?.pictureUrl,
+    authPictureUrl: null,
+  });
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -90,13 +113,20 @@ export default function VolunteerProfile({
               className="h-24 w-24 rounded-full border-4 border-white/20 shadow-lg"
               style={{ backgroundColor: subtleBg }}
             >
-              {/* Placeholder for actual image */}
-              <View
-                className="flex-1 items-center justify-center rounded-full"
-                style={{ backgroundColor: `${colors.black}40` }}
-              >
-                <Ionicons name="person" size={40} color={colors.white} />
-              </View>
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  className="h-full w-full rounded-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  className="flex-1 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${colors.black}40` }}
+                >
+                  <Ionicons name="person" size={40} color={colors.white} />
+                </View>
+              )}
             </View>
             <View
               className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow-sm transition-transform hover:scale-110"
@@ -113,7 +143,7 @@ export default function VolunteerProfile({
             className="mb-1 text-xl font-bold"
             style={{ color: colors.white }}
           >
-            {user?.user_name || user?.email}
+            {displayName}
           </Text>
           <View className="rounded-full bg-white/20 px-2.5 py-0.5">
             <Text

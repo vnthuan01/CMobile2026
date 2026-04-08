@@ -2,6 +2,8 @@ import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useUserProfile } from '@/src/hooks/useUserProfile';
+import { useAuthStore } from '@/src/store/authStore';
+import { resolveDisplayName } from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,9 +19,15 @@ export default function UserProfileViewScreen({
 }: UserProfileViewScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const authUser = useAuthStore((state) => state.user);
   const { data, isLoading } = useUserProfile(true);
 
   const profile = data?.profile;
+  const displayName = resolveDisplayName({
+    profileDisplayName: profile?.displayName,
+    authUserName: authUser?.user_name,
+    email: profile?.email ?? authUser?.email,
+  });
 
   const formatDate = (date?: string | null) => {
     if (!date) return 'Chưa cập nhật';
@@ -46,19 +54,32 @@ export default function UserProfileViewScreen({
         showsVerticalScrollIndicator={false}
       >
         <View className="px-4 pt-4">
-          <View
-            className="overflow-hidden rounded-2xl border"
-            style={{ borderColor: colors.border, backgroundColor: colors.card }}
-          >
-            <InfoRow icon="mail" value={profile?.email} />
-            <InfoRow icon="call" value={profile?.phoneNumber} />
-            <InfoRow icon="calendar" value={formatDate(profile?.dateOfBirth)} />
-            <InfoRow
-              icon="male-female"
-              value={mapGender(profile?.gender)}
-              isLast
-            />
-          </View>
+          <ProfileInfoCard
+            icon="person"
+            label="Họ và tên"
+            value={displayName}
+          />
+          <ProfileInfoCard icon="mail" label="Email" value={profile?.email} />
+          <ProfileInfoCard
+            icon="call"
+            label="Số điện thoại"
+            value={profile?.phoneNumber}
+          />
+          <ProfileInfoCard
+            icon="calendar"
+            label="Ngày sinh"
+            value={formatDate(profile?.dateOfBirth)}
+          />
+          <ProfileInfoCard
+            icon="male-female"
+            label="Giới tính"
+            value={mapGender(profile?.gender)}
+          />
+          <ProfileInfoCard
+            icon="location"
+            label="Địa chỉ"
+            value={profile?.address}
+          />
 
           <TouchableOpacity
             onPress={onEdit}
@@ -78,24 +99,21 @@ export default function UserProfileViewScreen({
   );
 }
 
-function InfoRow({
+function ProfileInfoCard({
   icon,
+  label,
   value,
-  isLast = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
+  label: string;
   value?: string | null;
-  isLast?: boolean;
 }) {
   const { colors } = useTheme();
 
   return (
     <View
-      className="flex-row items-center gap-3 px-4 py-4"
-      style={{
-        borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: colors.border,
-      }}
+      className="mb-3 flex-row items-center gap-3 rounded-2xl border px-4 py-4"
+      style={{ borderColor: colors.border, backgroundColor: colors.card }}
     >
       <View
         className="h-9 w-9 items-center justify-center rounded-full"
@@ -103,12 +121,17 @@ function InfoRow({
       >
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
-      <Text
-        className="flex-1 text-base font-semibold"
-        style={{ color: colors.text }}
-      >
-        {value || 'Chưa cập nhật'}
-      </Text>
+      <View className="flex-1">
+        <Text className="text-xs" style={{ color: colors.textSecondary }}>
+          {label}
+        </Text>
+        <Text
+          className="mt-1 text-base font-semibold"
+          style={{ color: colors.text }}
+        >
+          {value || 'Chưa cập nhật'}
+        </Text>
+      </View>
     </View>
   );
 }

@@ -3,7 +3,7 @@ import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Animated, Platform, View } from 'react-native';
+import { Animated, Platform, Text, View } from 'react-native';
 
 const TAB_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
 const ICON_SIZE = 24;
@@ -14,8 +14,9 @@ export default function TabsLayout() {
   /* ================= THEME ================= */
   const { colors, isDark } = useTheme();
 
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0.6)).current;
+  const ringOne = useRef(new Animated.Value(0)).current;
+  const ringTwo = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(1)).current;
 
   // Theme Colors from Context
   const activeColor = colors.primary;
@@ -55,24 +56,62 @@ export default function TabsLayout() {
   } as const;
 
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.parallel([
-        Animated.timing(scale, {
-          toValue: 1.6,
-          duration: 1600,
+    const ringOneLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ringOne, {
+          toValue: 1,
+          duration: 1800,
           useNativeDriver: true,
         }),
-        Animated.timing(opacity, {
+        Animated.timing(ringOne, {
           toValue: 0,
-          duration: 1600,
+          duration: 0,
           useNativeDriver: true,
         }),
       ]),
     );
 
-    loop.start();
-    return () => loop.stop();
-  }, [opacity, scale]);
+    const ringTwoLoop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(900),
+        Animated.timing(ringTwo, {
+          toValue: 1,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ringTwo, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.06,
+          duration: 850,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 850,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    ringOneLoop.start();
+    ringTwoLoop.start();
+    pulseLoop.start();
+
+    return () => {
+      ringOneLoop.stop();
+      ringTwoLoop.stop();
+      pulseLoop.stop();
+    };
+  }, [pulse, ringOne, ringTwo]);
 
   /* ================= VOLUNTEER ================= */
   if (role === 'volunteer') {
@@ -141,41 +180,85 @@ export default function TabsLayout() {
               style={{
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: -24,
+                marginTop: -28,
               }}
             >
               <Animated.View
                 style={{
                   position: 'absolute',
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
+                  width: 62,
+                  height: 62,
+                  borderRadius: 31,
                   borderWidth: 2,
-                  borderColor: colors.primary,
-                  transform: [{ scale }],
-                  opacity,
+                  borderColor: colors.status.error,
+                  transform: [
+                    {
+                      scale: ringOne.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.85],
+                      }),
+                    },
+                  ],
+                  opacity: ringOne.interpolate({
+                    inputRange: [0, 0.7, 1],
+                    outputRange: [0.35, 0.18, 0],
+                  }),
                 }}
               />
 
-              <View
+              <Animated.View
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: colors.primary,
+                  position: 'absolute',
+                  width: 62,
+                  height: 62,
+                  borderRadius: 31,
+                  borderWidth: 2,
+                  borderColor: colors.status.error,
+                  transform: [
+                    {
+                      scale: ringTwo.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.85],
+                      }),
+                    },
+                  ],
+                  opacity: ringTwo.interpolate({
+                    inputRange: [0, 0.7, 1],
+                    outputRange: [0.28, 0.12, 0],
+                  }),
+                }}
+              />
+
+              <Animated.View
+                style={{
+                  width: 62,
+                  height: 62,
+                  borderRadius: 31,
+                  backgroundColor: colors.status.error,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  shadowColor: colors.primary,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 8,
-                  elevation: 10,
+                  shadowColor: colors.status.error,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
+                  elevation: 11,
                   borderWidth: 4,
                   borderColor: isDark ? colors.card : colors.white,
+                  transform: [{ scale: pulse }],
                 }}
               >
-                <Ionicons name="add" size={32} color={colors.white} />
-              </View>
+                <Ionicons name="warning" size={23} color={colors.white} />
+                <Text
+                  style={{
+                    marginTop: -1,
+                    color: colors.white,
+                    fontSize: 10,
+                    fontWeight: '900',
+                  }}
+                >
+                  SOS
+                </Text>
+              </Animated.View>
             </View>
           ),
         }}

@@ -6,14 +6,17 @@ import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
 import { usePriorityCriteria } from '@/src/hooks/useRescueMeta';
 import { useSubmitRescueRequest } from '@/src/hooks/useSubmitRescueRequest';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
-import { showErrorToast, showSuccessToast, showWarningToast } from '@/src/utils/toast';
 import {
   DisasterType,
   RescueAttachment,
   RescueType,
 } from '@/src/services/rescueService';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
-import { uploadService } from '@/src/services/uploadService';
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
@@ -44,11 +47,11 @@ interface RequestRescueScreenProps {
 
 type CriteriaCategory = 'HUMAN' | 'ENV' | 'SCALE';
 
-const CRITERIA_CATEGORIES: Array<{
+const CRITERIA_CATEGORIES: {
   key: CriteriaCategory;
   label: string;
   subtitle: string;
-}> = [
+}[] = [
   {
     key: 'HUMAN',
     label: 'Nhóm con người (HUMAN)',
@@ -117,7 +120,10 @@ export default function RequestRescueScreen({
   // ── Remote data state ────────────────────────────────────────────────────
   const [uploadingImages, setUploadingImages] = useState(false);
   const mapStyle = rescueTeamService.getMapStyleUrl();
-  const priorityCriteriaQuery = usePriorityCriteria(disasterType, rescueType === 0);
+  const priorityCriteriaQuery = usePriorityCriteria(
+    disasterType,
+    rescueType === 0,
+  );
   const criteria = priorityCriteriaQuery.data ?? [];
   const loadingCriteria = priorityCriteriaQuery.isLoading;
   const submitting = submitRescueRequestMutation.isPending;
@@ -135,7 +141,10 @@ export default function RequestRescueScreen({
 
   useEffect(() => {
     if (priorityCriteriaQuery.error) {
-      showErrorToast('Không thể tải dữ liệu', 'Không thể tải danh sách tiêu chí ưu tiên.');
+      showErrorToast(
+        'Không thể tải dữ liệu',
+        'Không thể tải danh sách tiêu chí ưu tiên.',
+      );
     }
   }, [priorityCriteriaQuery.error]);
 
@@ -278,7 +287,10 @@ export default function RequestRescueScreen({
         onConfirm: () => onBack?.(),
       });
     } catch {
-      showErrorToast('Không thể gửi yêu cầu', 'Không thể gửi yêu cầu. Vui lòng thử lại.');
+      showErrorToast(
+        'Không thể gửi yêu cầu',
+        'Không thể gửi yêu cầu. Vui lòng thử lại.',
+      );
     }
   };
 
@@ -824,7 +836,7 @@ export default function RequestRescueScreen({
               className="text-center text-xs"
               style={{ color: colors.textSecondary }}
             >
-              Hệ thống sẽ ưu tiên xử lý dựa trên tiêu chí đã chọn
+              Hệ thống sẽ ghi nhận yêu cầu của bạn
             </Text>
           </View>
         )}

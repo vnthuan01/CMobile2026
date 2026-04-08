@@ -1,5 +1,6 @@
 import '@/global.css';
 import { AppDialog } from '@/src/components/common/AppDialog';
+import { SosFloatingButton } from '@/src/components/common/SosFloatingButton';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useLogin } from '@/src/hooks/useAuthActions';
 import { showErrorToast, showInfoToast } from '@/src/utils/toast';
@@ -18,11 +19,15 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { bottom } = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const loginMutation = useLogin();
   const [email, setEmail] = useState('');
@@ -317,6 +322,13 @@ export default function LoginScreen() {
           setSuccessDialogVisible(false);
           router.replace('/(tabs)');
         }}
+      />
+
+      <SosFloatingButton
+        align="center"
+        size={78}
+        bottom={bottom + 28}
+        onPress={() => router.push('/sos-request')}
       />
     </SafeAreaView>
   );
