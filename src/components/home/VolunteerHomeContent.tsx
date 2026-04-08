@@ -536,7 +536,7 @@ export default function VolunteerHomeContent() {
                   <QuickAction
                     icon="heart"
                     label="Ủng hộ cứu trợ"
-                    onPress={() => router.push('/donate')}
+                    onPress={() => router.push('/fundraising')}
                   />
                   <QuickAction
                     icon="refresh"

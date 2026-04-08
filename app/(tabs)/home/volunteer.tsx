@@ -106,7 +106,7 @@ export default function VolunteerHome() {
             icon="heart"
             label="Ủng hộ cứu trợ"
             colors={colors}
-            onPress={() => router.push('/donate')}
+            onPress={() => router.push('/fundraising')}
           />
         </View>
       </View>

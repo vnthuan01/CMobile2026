@@ -402,7 +402,7 @@ export default function CitizenHome() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.push('/donate')}
+          onPress={() => router.push('/fundraising')}
           className="mt-4 h-16 flex-row items-center justify-center gap-3 rounded-xl border"
           style={{ borderColor: colors.primary, backgroundColor: colors.card }}
         >

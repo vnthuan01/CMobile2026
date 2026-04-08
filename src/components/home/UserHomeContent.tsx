@@ -176,7 +176,7 @@ export default function UserHomeContent() {
             label="Ủng hộ"
             description="Đóng góp cứu trợ"
             variant="donate"
-            onPress={() => router.push('/donate')}
+            onPress={() => router.push('/fundraising')}
           />
         </View>
       </View>
