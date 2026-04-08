@@ -1,8 +1,14 @@
-import api from './api';
+import type {
+  UpdateUserProfilePayload,
+  UserProfileResponse,
+} from '../types/user';
 import { extractApiErrorMessage } from '../utils/apiError';
-import type { UpdateUserProfilePayload, UserProfileResponse } from '../types/user';
+import api from './api';
 
-export type { UpdateUserProfilePayload, UserProfileResponse } from '../types/user';
+export type {
+  UpdateUserProfilePayload,
+  UserProfileResponse
+} from '../types/user';
 
 function normalizeUserProfile(raw: any): UserProfileResponse {
   return {
@@ -24,13 +30,43 @@ function normalizeUserProfile(raw: any): UserProfileResponse {
 
 function toProfileFormData(payload: UpdateUserProfilePayload) {
   const formData = new FormData();
+  const fieldMap: Record<string, string> = {
+    displayName: 'DisplayName',
+    phoneNumber: 'PhoneNumber',
+    address: 'Address',
+    dateOfBirth: 'DateOfBirth',
+    gender: 'Gender',
+    pictureUrl: 'PictureUrl',
+    picturePublicId: 'PicturePublicId',
+  };
 
   Object.entries(payload).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
-    formData.append(key, String(value));
+    formData.append(fieldMap[key] ?? key, String(value));
   });
 
   return formData;
+}
+
+function toProfileRequestBody(payload: UpdateUserProfilePayload) {
+  const fieldMap: Record<string, string> = {
+    displayName: 'DisplayName',
+    phoneNumber: 'PhoneNumber',
+    address: 'Address',
+    dateOfBirth: 'DateOfBirth',
+    gender: 'Gender',
+    pictureUrl: 'PictureUrl',
+    picturePublicId: 'PicturePublicId',
+  };
+
+  return Object.entries(payload).reduce<Record<string, string>>(
+    (acc, [key, value]) => {
+      if (value === undefined || value === null) return acc;
+      acc[fieldMap[key] ?? key] = String(value);
+      return acc;
+    },
+    {},
+  );
 }
 
 export const userService = {
@@ -71,6 +107,7 @@ export const userService = {
   updateProfile: async (payload: UpdateUserProfilePayload) => {
     const routes = ['/User/profile', '/api/User/profile'];
     const formData = toProfileFormData(payload);
+    const jsonBody = toProfileRequestBody(payload);
 
     for (const route of routes) {
       try {
@@ -86,6 +123,40 @@ export const userService = {
           message: 'Cập nhật hồ sơ thành công',
         };
       } catch (error: any) {
+        // Some mobile environments can fail multipart PUT with network error.
+        // Retry with JSON body while preserving backend PascalCase field names.
+        if (!error?.response) {
+          try {
+            const retryResponse = await api.put<UserProfileResponse>(
+              route,
+              jsonBody,
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              },
+            );
+
+            return {
+              success: retryResponse.status === 200,
+              data: normalizeUserProfile(retryResponse.data),
+              message: 'Cập nhật hồ sơ thành công',
+            };
+          } catch (retryError: any) {
+            if (retryError?.response?.status !== 404) {
+              return {
+                success: false,
+                data: null,
+                status: retryError?.response?.status,
+                message: extractApiErrorMessage(
+                  retryError,
+                  'Không thể cập nhật hồ sơ người dùng.',
+                ),
+              };
+            }
+          }
+        }
+
         if (error?.response?.status !== 404) {
           return {
             success: false,

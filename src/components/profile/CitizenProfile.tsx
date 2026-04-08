@@ -1,16 +1,14 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import { useAuthStore } from '@/src/store/authStore';
 import { showErrorToast } from '@/src/utils/toast';
+import {
+    resolveAvatarUrl,
+    resolveDisplayName,
+} from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CitizenProfileProps {
@@ -33,9 +31,20 @@ export default function CitizenProfile({
 }: CitizenProfileProps) {
   const { top, bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
   const profileQuery = useCitizenProfile();
   const profile = profileQuery.data?.profile ?? null;
   const loading = profileQuery.isLoading;
+  const roleLabel = 'Người dùng';
+  const displayName = resolveDisplayName({
+    profileDisplayName: profile?.displayName,
+    authUserName: user?.user_name,
+    email: user?.email,
+  });
+  const avatarUrl = resolveAvatarUrl({
+    profilePictureUrl: profile?.pictureUrl,
+    authPictureUrl: null,
+  });
 
   useEffect(() => {
     if (profileQuery.data?.errorMessage) {
@@ -67,13 +76,24 @@ export default function CitizenProfile({
     label: string;
     value?: string | null;
   }) => (
-    <View className="flex-row items-center gap-3 border-b px-4 py-4" style={{ borderBottomColor: colors.border }}>
-      <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
+    <View
+      className="flex-row items-center gap-3 border-b px-4 py-4"
+      style={{ borderBottomColor: colors.border }}
+    >
+      <View
+        className="h-9 w-9 items-center justify-center rounded-full"
+        style={{ backgroundColor: colors.surface }}
+      >
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <View className="flex-1">
-        <Text className="text-xs" style={{ color: colors.textSecondary }}>{label}</Text>
-        <Text className="mt-1 text-base font-semibold" style={{ color: colors.text }}>
+        <Text className="text-xs" style={{ color: colors.textSecondary }}>
+          {label}
+        </Text>
+        <Text
+          className="mt-1 text-base font-semibold"
+          style={{ color: colors.text }}
+        >
           {value || 'Chưa cập nhật'}
         </Text>
       </View>
@@ -97,19 +117,16 @@ export default function CitizenProfile({
               </TouchableOpacity>
             ) : null}
           </View>
-          <Text className="text-lg font-bold" style={{ color: colors.white }}>Hồ sơ người dùng</Text>
-          <TouchableOpacity
-            onPress={() => profileQuery.refetch()}
-            className="h-10 w-10 items-center justify-center rounded-full bg-white/20"
-          >
-            <Ionicons name="refresh" size={18} color={colors.white} />
-          </TouchableOpacity>
+          <Text className="text-lg font-bold" style={{ color: colors.white }}>
+            Hồ sơ người dùng
+          </Text>
+          <View className="w-10" />
         </View>
 
         <View className="items-center">
-          {profile?.pictureUrl ? (
+          {avatarUrl ? (
             <Image
-              source={{ uri: profile.pictureUrl }}
+              source={{ uri: avatarUrl }}
               className="h-24 w-24 rounded-full"
             />
           ) : (
@@ -121,7 +138,7 @@ export default function CitizenProfile({
             className="mt-3 text-xl font-bold"
             style={{ color: colors.white }}
           >
-            {profile?.displayName || 'Người dùng'}
+            {displayName}
           </Text>
 
           <View className="mt-3 flex-row flex-wrap items-center justify-center gap-2">

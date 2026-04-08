@@ -2,18 +2,22 @@ import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
-    useUpdateUserProfile,
-    useUserProfile,
+  useUpdateUserProfile,
+  useUserProfile,
 } from '@/src/hooks/useUserProfile';
 import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
 import {
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,8 +44,38 @@ export default function UpdateProfileCitizenScreen({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState('');
+  const [dateOfBirthValue, setDateOfBirthValue] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [gender, setGender] = useState<'Nam' | 'Nữ' | 'Khác'>('Khác');
   const [address, setAddress] = useState('');
+
+  const formatBirthDateDisplay = (date: Date) => {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  };
+
+  const parseDateFromApi = (raw?: string | null): Date | null => {
+    if (!raw) return null;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+  };
+
+  const mapGenderFromApi = (raw?: string | null): 'Nam' | 'Nữ' | 'Khác' => {
+    const normalized = (raw ?? '').toLowerCase();
+    if (normalized === 'male' || normalized === 'nam') return 'Nam';
+    if (normalized === 'female' || normalized === 'nữ' || normalized === 'nu')
+      return 'Nữ';
+    return 'Khác';
+  };
+
+  const mapGenderToApi = (value: 'Nam' | 'Nữ' | 'Khác'): string => {
+    if (value === 'Nam') return 'Male';
+    if (value === 'Nữ') return 'Female';
+    return 'Other';
+  };
 
   useEffect(() => {
     const profile = data?.profile;
@@ -54,17 +88,35 @@ export default function UpdateProfileCitizenScreen({
     setFullName(profile.displayName ?? authUser?.user_name ?? '');
     setEmail(profile.email ?? authUser?.email ?? '');
     setPhone(profile.phoneNumber ?? '');
-    setDateOfBirth(profile.dateOfBirth ?? '');
-    setGender(profile.gender ?? '');
+    const parsedDate = parseDateFromApi(profile.dateOfBirth);
+    setDateOfBirthValue(parsedDate);
+    setDateOfBirth(parsedDate ? formatBirthDateDisplay(parsedDate) : '');
+    setGender(mapGenderFromApi(profile.gender));
     setAddress(profile.address ?? '');
   }, [authUser?.email, authUser?.user_name, data?.profile]);
+
+  const handleChangeBirthDate = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (event.type === 'dismissed' || !selectedDate) return;
+
+    setDateOfBirthValue(selectedDate);
+    setDateOfBirth(formatBirthDateDisplay(selectedDate));
+  };
 
   const handleSave = async () => {
     const result = await updateProfile.mutateAsync({
       displayName: fullName.trim() || undefined,
       phoneNumber: phone.trim() || undefined,
-      dateOfBirth: dateOfBirth.trim() || undefined,
-      gender: gender.trim() || undefined,
+      // Backend is currently unstable for DateOfBirth updates.
+      // Keep other fields updatable by omitting DateOfBirth from payload for now.
+      dateOfBirth: undefined,
+      gender: mapGenderToApi(gender),
       address: address.trim() || undefined,
     });
 
@@ -195,8 +247,84 @@ export default function UpdateProfileCitizenScreen({
             editable: false,
           })}
           {renderInput('Số điện thoại', phone, setPhone, { type: 'tel' })}
-          {renderInput('Ngày sinh', dateOfBirth, setDateOfBirth)}
-          {renderInput('Giới tính', gender, setGender)}
+
+          <View className="gap-1.5">
+            <Text
+              className="ml-1 text-sm font-semibold"
+              style={{ color: colors.textSecondary }}
+            >
+              Ngày sinh
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              className="h-12 w-full flex-row items-center justify-between rounded-lg border px-4"
+              style={{
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              }}
+            >
+              <Text
+                className="text-base"
+                style={{
+                  color: dateOfBirth ? colors.text : colors.textSecondary,
+                }}
+              >
+                {dateOfBirth || 'dd-mm-yyyy'}
+              </Text>
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={dateOfBirthValue ?? new Date(2000, 0, 1)}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleChangeBirthDate}
+              maximumDate={new Date()}
+            />
+          )}
+
+          <View className="gap-1.5">
+            <Text
+              className="ml-1 text-sm font-semibold"
+              style={{ color: colors.textSecondary }}
+            >
+              Giới tính
+            </Text>
+            <View className="flex-row gap-2">
+              {(['Nam', 'Nữ', 'Khác'] as const).map((option) => {
+                const selected = gender === option;
+                return (
+                  <TouchableOpacity
+                    key={option}
+                    onPress={() => setGender(option)}
+                    className="flex-1 items-center rounded-lg border py-3"
+                    style={{
+                      backgroundColor: selected
+                        ? `${colors.primary}18`
+                        : colors.card,
+                      borderColor: selected ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Text
+                      className="font-semibold"
+                      style={{
+                        color: selected ? colors.primary : colors.textSecondary,
+                      }}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
           {renderInput('Địa chỉ', address, setAddress, {
             multiline: true,
             rows: 3,

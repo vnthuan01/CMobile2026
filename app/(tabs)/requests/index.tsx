@@ -1,17 +1,17 @@
 import Header from '@/src/components/header/header';
-import ViewRequestRescueScreen from '@/src/features/rescue/screens/ViewRequestRescueScreen';
 import { useTheme } from '@/src/context/ThemeContext';
+import ViewRequestRescueScreen from '@/src/features/rescue/screens/ViewRequestRescueScreen';
 import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,7 +22,7 @@ interface RequestsScreenProps {
   onBack?: () => void;
 }
 
-const FILTERS: Array<{ label: string; value: RequestFilter }> = [
+const FILTERS: { label: string; value: RequestFilter }[] = [
   { label: 'Tất cả', value: 'all' },
   { label: 'Đang xử lý', value: 'processing' },
   { label: 'Hoàn thành', value: 'completed' },
@@ -41,7 +41,9 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
   const { colors } = useTheme();
 
   const queryClient = useQueryClient();
-  const { data: requests = [], isLoading: loading } = useMyRescueRequests({ pageSize: 20 });
+  const { data: requests = [], isLoading: loading } = useMyRescueRequests({
+    pageSize: 20,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -69,16 +71,6 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
     }
     return requests;
   }, [filter, requests]);
-
-  const activeRequest = useMemo(
-    () =>
-      requests.find((r) =>
-        ['Pending', 'Verified', 'Assigned', 'InProgress'].includes(
-          r.rescueRequestStatus,
-        ),
-      ) || null,
-    [requests],
-  );
 
   const getStatusUi = (status?: string) => {
     switch (status) {
@@ -113,7 +105,11 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
           text: colors.status.completed,
         };
       case 'Cancelled':
-        return { label: 'Đã hủy', bg: `${colors.status.error}22`, text: colors.status.error };
+        return {
+          label: 'Đã hủy',
+          bg: `${colors.status.error}22`,
+          text: colors.status.error,
+        };
       default:
         return {
           label: status || 'Khác',
@@ -165,7 +161,9 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
                   key={item.value}
                   onPress={() => setFilter(item.value)}
                   className="rounded-full px-4 py-2"
-                  style={{ backgroundColor: active ? colors.primary : colors.card }}
+                  style={{
+                    backgroundColor: active ? colors.primary : colors.card,
+                  }}
                 >
                   <Text
                     className="font-semibold"
@@ -188,104 +186,6 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
           </View>
         ) : (
           <>
-            {activeRequest ? (
-              <View className="mt-4 px-4">
-                <Text
-                  className="mb-3 text-base font-bold"
-                  style={{ color: colors.text }}
-                >
-                  Đang hoạt động
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedRequestId(activeRequest.requestId);
-                    setCurrentScreen('detail');
-                  }}
-                  className="overflow-hidden rounded-xl shadow-sm"
-                  style={{ backgroundColor: colors.card }}
-                >
-                  <View
-                    className="h-32 items-center justify-center"
-                    style={{ backgroundColor: colors.surface }}
-                  >
-                    <Ionicons name="map" size={40} color={colors.textSecondary} />
-                  </View>
-
-                  <View className="p-4">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1">
-                        <View className="mb-2 flex-row items-center gap-2">
-                          <View
-                            className="rounded-full px-2 py-0.5"
-                            style={{ backgroundColor: getStatusUi(activeRequest.rescueRequestStatus).bg }}
-                          >
-                            <Text
-                              className="text-xs font-bold"
-                              style={{ color: getStatusUi(activeRequest.rescueRequestStatus).text }}
-                            >
-                              {
-                                getStatusUi(activeRequest.rescueRequestStatus)
-                                  .label
-                              }
-                            </Text>
-                          </View>
-                          <View
-                            className="rounded-full px-2 py-0.5"
-                            style={{ backgroundColor: `${colors.status.pending}22` }}
-                          >
-                            <Text className="text-xs font-bold" style={{ color: colors.status.pending }}>
-                              {getTypeLabel(activeRequest.rescueRequestType)}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <Text
-                          className="text-lg font-bold"
-                          style={{ color: colors.text }}
-                        >
-                          Yêu cầu cứu trợ #{activeRequest.requestId.slice(0, 8)}
-                        </Text>
-                        <Text
-                          className="mt-1 text-sm"
-                          style={{ color: colors.textSecondary }}
-                          numberOfLines={2}
-                        >
-                          {activeRequest.description || activeRequest.address}
-                        </Text>
-                      </View>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={24}
-                        color={colors.textSecondary}
-                      />
-                    </View>
-
-                    {(activeRequest.assignedRescueTeam?.operationStatus ===
-                      'EnRoute' ||
-                      activeRequest.rescueRequestStatus === 'InProgress') &&
-                    activeRequest.assignedRescueTeam ? (
-                      <View
-                        className="mt-3 flex-row items-center gap-2 rounded-lg p-3"
-                        style={{ backgroundColor: `${colors.status.incoming}18` }}
-                      >
-                        <Ionicons name="car" size={20} color={colors.status.incoming} />
-                        <Text
-                          className="flex-1 text-sm font-medium"
-                          style={{ color: colors.status.incoming }}
-                        >
-                          {activeRequest.assignedRescueTeam.teamName} đang đến -
-                          Dự kiến{' '}
-                          {activeRequest.assignedRescueTeam
-                            .estimatedMinutesToArrival ?? '--'}{' '}
-                          phút
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
             <View className="mt-6 px-4">
               <Text
                 className="mb-3 text-base font-bold"
@@ -296,8 +196,14 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
 
               <View className="gap-3">
                 {filteredRequests.length === 0 ? (
-                  <View className="rounded-xl p-4 shadow-sm" style={{ backgroundColor: colors.card }}>
-                    <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                  <View
+                    className="rounded-xl p-4 shadow-sm"
+                    style={{ backgroundColor: colors.card }}
+                  >
+                    <Text
+                      className="text-sm"
+                      style={{ color: colors.textSecondary }}
+                    >
                       Không có đơn cứu hộ nào trong mục này.
                     </Text>
                   </View>
@@ -315,6 +221,11 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
                             : 'gray'
                       }
                       type={getTypeLabel(item.rescueRequestType)}
+                      isEmergency={
+                        String(item.rescueRequestType) === '1' ||
+                        String(item.rescueRequestType).toLowerCase() ===
+                          'emergency'
+                      }
                       date={new Date(item.createdAt).toLocaleDateString(
                         'vi-VN',
                       )}
@@ -339,6 +250,7 @@ function RequestHistoryItem({
   status,
   statusColor,
   type,
+  isEmergency,
   date,
   onPress,
 }: {
@@ -346,17 +258,24 @@ function RequestHistoryItem({
   status: string;
   statusColor: 'green' | 'gray' | 'red';
   type: string;
+  isEmergency: boolean;
   date: string;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
 
   const badgeColors =
-    statusColor === 'green'
-      ? { bg: `${colors.status.completed}18`, text: colors.status.completed }
-      : statusColor === 'red'
+    status === 'Chờ xác minh'
+      ? isEmergency
         ? { bg: `${colors.status.error}18`, text: colors.status.error }
-        : { bg: colors.surface, text: colors.textSecondary };
+        : { bg: `${colors.status.pending}18`, text: colors.status.pending }
+      : statusColor === 'green'
+        ? { bg: `${colors.status.completed}18`, text: colors.status.completed }
+        : statusColor === 'red'
+          ? { bg: `${colors.status.error}18`, text: colors.status.error }
+          : { bg: colors.surface, text: colors.textSecondary };
+
+  const typeColor = isEmergency ? colors.status.error : colors.status.pending;
 
   return (
     <TouchableOpacity
@@ -366,25 +285,32 @@ function RequestHistoryItem({
     >
       <View className="flex-1">
         <View className="mb-1 flex-row items-center gap-2">
-          <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: badgeColors.bg }}>
-            <Text className="text-xs font-bold" style={{ color: badgeColors.text }}>{status}</Text>
+          <View
+            className="rounded-full px-2 py-0.5"
+            style={{ backgroundColor: badgeColors.bg }}
+          >
+            <Text
+              className="text-xs font-bold"
+              style={{ color: badgeColors.text }}
+            >
+              {status}
+            </Text>
           </View>
         </View>
         <Text className="font-bold" style={{ color: colors.text }}>
           {id}
         </Text>
-        <Text
-          className="mt-0.5 text-sm"
-          style={{ color: colors.textSecondary }}
-        >
-          {type} • {date}
-        </Text>
+        <View className="mt-0.5 flex-row items-center">
+          <Text className="text-sm" style={{ color: typeColor }}>
+            {type}
+          </Text>
+          <Text className="text-sm" style={{ color: colors.textSecondary }}>
+            {' '}
+            • {date}
+          </Text>
+        </View>
       </View>
-      <Ionicons
-        name="chevron-forward"
-        size={20}
-        color={colors.textSecondary}
-      />
+      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
     </TouchableOpacity>
   );
 }

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../services/userService';
 import type { UpdateUserProfilePayload } from '../types/user';
 import { showApiErrorToast, showApiResultToast } from '../utils/apiToast';
+import { citizenProfileKeys } from './useCitizenProfile';
 
 export const userProfileKeys = {
   all: ['userProfile'] as const,
@@ -26,9 +27,17 @@ export function useUpdateUserProfile() {
   return useMutation({
     mutationFn: (payload: UpdateUserProfilePayload) =>
       userService.updateProfile(payload),
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       if (result?.success) {
-        queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: userProfileKeys.all }),
+          queryClient.invalidateQueries({ queryKey: citizenProfileKeys.all }),
+        ]);
+
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: userProfileKeys.all }),
+          queryClient.refetchQueries({ queryKey: citizenProfileKeys.all }),
+        ]);
       }
 
       showApiResultToast(result, {

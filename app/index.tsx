@@ -7,7 +7,7 @@ export default function HomeRouter() {
 
   if (isLoading) return null;
 
-  if (!user) return <Redirect href="/login" />;
+  if (!user) return <Redirect href="/welcome" />;
 
   return <Redirect href="/(tabs)" />;
 }

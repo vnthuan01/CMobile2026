@@ -1,4 +1,6 @@
-import React, { useCallback, useRef, useState } from 'react';
+import { useTheme } from '@/src/context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -7,8 +9,6 @@ import {
   View,
 } from 'react-native';
 import WebView, { WebViewMessageEvent } from 'react-native-webview';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/src/context/ThemeContext';
 
 // ─────────────────────────────────────────────
 //  Types
@@ -93,6 +93,16 @@ function buildMapHtml(
         zoom: ZOOM,
         attributionControl: false,
         logoPosition: 'bottom-left',
+        transformRequest: function (url) {
+          if (!url || !GOONG_KEY) return { url: url };
+
+          if (url.indexOf('tiles.goong.io') !== -1 && url.indexOf('api_key=') === -1) {
+            var sep = url.indexOf('?') === -1 ? '?' : '&';
+            return { url: url + sep + 'api_key=' + GOONG_KEY };
+          }
+
+          return { url: url };
+        },
       });
 
       // Remove Mapbox/MapLibre logo & attribution
@@ -176,7 +186,10 @@ function buildMapHtml(
 //  Component
 // ─────────────────────────────────────────────
 
-const GOONG_KEY = process.env.EXPO_PUBLIC_GOONG_MAP_KEY ?? '';
+const GOONG_KEY =
+  process.env.EXPO_PUBLIC_GOONG_MAP_KEY ??
+  process.env.EXPO_PUBLIC_GOONG_API_KEY ??
+  '';
 
 export default function WebViewMap({
   center,

@@ -29,7 +29,7 @@ export default function ProfileIndexScreen() {
   const logout = useAuthStore((state: AuthState) => state.logout);
 
   const role = (user?.role ?? '').toLowerCase();
-  const isVolunteer = role === 'volunteer';
+  const isVolunteer = role === 'volunteer' || role === 'leader';
 
   const handleLogout = async () => {
     await logout();

@@ -3,15 +3,9 @@ module.exports = function (api) {
   const isWeb = process.env.EXPO_OS === 'web';
 
   return {
-    presets: [
-      'babel-preset-expo',
-      'nativewind/babel',
-    ],
-
+    presets: ['babel-preset-expo', 'nativewind/babel'],
 
     plugins: [
-      'expo-router/babel',
-
       // alias path
       [
         'module-resolver',
@@ -31,7 +25,10 @@ module.exports = function (api) {
         return {
           visitor: {
             MetaProperty(path) {
-              if (path.node.meta.name === 'import' && path.node.property.name === 'meta') {
+              if (
+                path.node.meta.name === 'import' &&
+                path.node.property.name === 'meta'
+              ) {
                 path.replaceWith(t.objectExpression([]));
               }
             },
