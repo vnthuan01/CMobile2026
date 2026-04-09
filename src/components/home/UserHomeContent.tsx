@@ -1,61 +1,29 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
-import {
-  fetchMyRescueRequests,
-  MyRescueRequestItem,
-} from '@/src/services/rescueService';
+import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
+import { useRescueRequestDetail } from '@/src/hooks/useRescueRequestDetail';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
+import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Easing,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const supportsNativeMap = Constants.appOwnership !== 'expo';
-
-let UserRescueTrackingMapNative: any = null;
-
-if (supportsNativeMap) {
-  try {
-    UserRescueTrackingMapNative =
-      require('../user/UserRescueTrackingMapNative').default;
-  } catch {
-    UserRescueTrackingMapNative = null;
-  }
-}
+import UserRescueTrackingMap from '../user/UserRescueTrackingMap';
 
 export default function UserHomeContent() {
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
-  const { colors, isDark } = useTheme();
-  const [requests, setRequests] = useState<MyRescueRequestItem[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(true);
+  const { colors } = useTheme();
 
-  const loadRequests = useCallback(async () => {
-    try {
-      setLoadingRequests(true);
-      const response = await fetchMyRescueRequests({
-        pageNumber: 1,
-        pageSize: 10,
-      });
-      setRequests(response.data || []);
-    } finally {
-      setLoadingRequests(false);
-    }
-  }, []);
+  const queryClient = useQueryClient();
+  const { data: requests = [], isLoading: loadingRequests } =
+    useMyRescueRequests({ pageSize: 10 });
 
   useFocusEffect(
     useCallback(() => {
-      loadRequests();
-    }, [loadRequests]),
+      queryClient.invalidateQueries({ queryKey: ['rescueRequests'] });
+    }, [queryClient]),
   );
 
   const activeRequest = useMemo(
@@ -78,13 +46,10 @@ export default function UserHomeContent() {
     [requests],
   );
 
-  const shouldShowTrackingMap =
-    ((activeRequest?.assignedRescueTeam?.operationStatus === 'EnRoute' ||
-      activeRequest?.rescueRequestStatus === 'InProgress') &&
-      activeRequest?.assignedRescueTeam) ||
-    null;
-
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const activeRequestDetailQuery = useRescueRequestDetail(
+    activeRequest?.requestId ?? null,
+  );
+  const activeRequestDetail = activeRequestDetailQuery.data ?? null;
 
   const teamCoordinate = useMemo(() => {
     if (
@@ -99,11 +64,23 @@ export default function UserHomeContent() {
       activeRequest.assignedRescueTeam.currentLongitude,
       activeRequest.assignedRescueTeam.currentLatitude,
     ] as [number, number];
-  }, [
-    activeRequest?.assignedRescueTeam,
-    activeRequest?.assignedRescueTeam?.currentLatitude,
-    activeRequest?.assignedRescueTeam?.currentLongitude,
-  ]);
+  }, [activeRequest?.assignedRescueTeam]);
+
+  const victimCoordinate = useMemo(() => {
+    if (
+      activeRequestDetail?.longitude == null ||
+      activeRequestDetail?.latitude == null
+    ) {
+      return null;
+    }
+
+    return [activeRequestDetail.longitude, activeRequestDetail.latitude] as [
+      number,
+      number,
+    ];
+  }, [activeRequestDetail?.latitude, activeRequestDetail?.longitude]);
+
+  const canRenderRequestMap = !!(teamCoordinate || victimCoordinate);
 
   const routeCoordinates = useMemo(() => {
     const polyline = activeRequest?.assignedRescueTeam?.routePolyline;
@@ -117,40 +94,44 @@ export default function UserHomeContent() {
       case 'Pending':
         return {
           label: 'Chờ xác minh',
-          bg: 'bg-amber-100',
-          text: 'text-amber-700',
+          bgColor: `${colors.status.pending}22`,
+          textColor: colors.status.pending,
         };
       case 'Verified':
         return {
           label: 'Đã xác minh',
-          bg: 'bg-blue-100',
-          text: 'text-blue-700',
+          bgColor: `${colors.status.incoming}22`,
+          textColor: colors.status.incoming,
         };
       case 'Assigned':
         return {
           label: 'Đã điều phối đội',
-          bg: 'bg-violet-100',
-          text: 'text-violet-700',
+          bgColor: `${colors.status.inProgress}22`,
+          textColor: colors.status.inProgress,
         };
       case 'InProgress':
         return {
           label: 'Đội đang tiếp cận / xử lý',
-          bg: 'bg-green-100',
-          text: 'text-green-700',
+          bgColor: `${colors.status.completed}22`,
+          textColor: colors.status.completed,
         };
       case 'Completed':
         return {
           label: 'Hoàn thành',
-          bg: 'bg-green-100',
-          text: 'text-green-700',
+          bgColor: `${colors.status.completed}22`,
+          textColor: colors.status.completed,
         };
       case 'Cancelled':
-        return { label: 'Đã hủy', bg: 'bg-red-100', text: 'text-red-700' };
+        return {
+          label: 'Đã hủy',
+          bgColor: `${colors.status.cancelled}22`,
+          textColor: colors.status.cancelled,
+        };
       default:
         return {
           label: status || 'Khác',
-          bg: 'bg-gray-100',
-          text: 'text-gray-700',
+          bgColor: colors.surface,
+          textColor: colors.textSecondary,
         };
     }
   };
@@ -162,6 +143,12 @@ export default function UserHomeContent() {
 
   const formatRequestId = (id: string) => `#${id.slice(0, 8)}`;
   const openRequestsScreen = () => router.push('/requests');
+  const openRequestDetail = (requestId: string) => {
+    router.push({
+      pathname: '/(tabs)/requests/[requestId]',
+      params: { requestId },
+    });
+  };
 
   return (
     <View style={{ paddingBottom: bottom + 20 }}>
@@ -171,33 +158,38 @@ export default function UserHomeContent() {
         </Text>
         <View className="flex-row gap-3">
           <QuickActionCard
-            icon="add-circle"
+            icon="alert-circle"
             label="Gửi yêu cầu"
-            color="primary"
+            description="Tạo yêu cầu cứu hộ"
+            variant="request"
             onPress={() => router.push('/create-request')}
           />
           <QuickActionCard
             icon="location"
             label="Theo dõi"
-            color="green"
+            description="Xem tiến độ cứu hộ"
+            variant="tracking"
             onPress={openRequestsScreen}
           />
           <QuickActionCard
             icon="heart"
             label="Ủng hộ"
-            color="orange"
-            onPress={() => router.push('/donate')}
+            description="Đóng góp cứu trợ"
+            variant="donate"
+            onPress={() => router.push('/fundraising')}
           />
         </View>
       </View>
-
       <View className="mt-6 px-4">
         <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>
-          Yêu cầu đang xử lý
+          Yêu cầu gần đây
         </Text>
 
         {loadingRequests ? (
-          <View className="items-center justify-center rounded-xl bg-white py-10 shadow-sm">
+          <View
+            className="items-center justify-center rounded-xl py-10 shadow-sm"
+            style={{ backgroundColor: colors.card }}
+          >
             <ActivityIndicator color={colors.primary} />
             <Text
               className="mt-3 text-sm"
@@ -208,7 +200,7 @@ export default function UserHomeContent() {
           </View>
         ) : activeRequest ? (
           <TouchableOpacity
-            onPress={openRequestsScreen}
+            onPress={() => openRequestDetail(activeRequest.requestId)}
             className="overflow-hidden rounded-xl shadow-sm"
             style={{
               backgroundColor: colors.card,
@@ -218,17 +210,14 @@ export default function UserHomeContent() {
           >
             <View
               className="h-32 overflow-hidden"
-              style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}
+              style={{ backgroundColor: colors.surface }}
             >
-              {shouldShowTrackingMap &&
-              mapStyle &&
-              supportsNativeMap &&
-              UserRescueTrackingMapNative ? (
-                <UserRescueTrackingMapNative
-                  victimCoordinate={null}
+              {canRenderRequestMap ? (
+                <UserRescueTrackingMap
+                  victimCoordinate={victimCoordinate}
                   teamCoordinate={teamCoordinate}
                   routeCoordinates={routeCoordinates}
-                  mapStyle={mapStyle}
+                  mapStyle={rescueTeamService.getMapStyleUrl() ?? ''}
                 />
               ) : (
                 <View className="h-full items-center justify-center">
@@ -239,16 +228,31 @@ export default function UserHomeContent() {
             <View className="p-4">
               <View className="mb-2 flex-row items-center gap-2">
                 <View
-                  className={`rounded-full px-2 py-0.5 ${getStatusUi(activeRequest.rescueRequestStatus).bg}`}
+                  className="rounded-full px-2 py-0.5"
+                  style={{
+                    backgroundColor: getStatusUi(
+                      activeRequest.rescueRequestStatus,
+                    ).bgColor,
+                  }}
                 >
                   <Text
-                    className={`text-xs font-bold ${getStatusUi(activeRequest.rescueRequestStatus).text}`}
+                    className="text-xs font-bold"
+                    style={{
+                      color: getStatusUi(activeRequest.rescueRequestStatus)
+                        .textColor,
+                    }}
                   >
                     {getStatusUi(activeRequest.rescueRequestStatus).label}
                   </Text>
                 </View>
-                <View className="rounded-full bg-amber-100 px-2 py-0.5">
-                  <Text className="text-xs font-bold text-amber-700">
+                <View
+                  className="rounded-full px-2 py-0.5"
+                  style={{ backgroundColor: `${colors.status.pending}22` }}
+                >
+                  <Text
+                    className="text-xs font-bold"
+                    style={{ color: colors.status.pending }}
+                  >
                     {getTypeLabel(activeRequest.rescueRequestType)}
                   </Text>
                 </View>
@@ -273,15 +277,17 @@ export default function UserHomeContent() {
                 <View
                   className="mt-3 flex-row items-center gap-2 rounded-lg p-2"
                   style={{
-                    backgroundColor: isDark
-                      ? 'rgba(59, 130, 246, 0.15)'
-                      : '#eff6ff',
+                    backgroundColor: `${colors.status.incoming}18`,
                   }}
                 >
-                  <Ionicons name="car" size={18} color={colors.primary} />
+                  <Ionicons
+                    name="car"
+                    size={18}
+                    color={colors.status.incoming}
+                  />
                   <Text
                     className="text-sm font-medium"
-                    style={{ color: isDark ? '#93c5fd' : colors.primary }}
+                    style={{ color: colors.status.incoming }}
                   >
                     {activeRequest.assignedRescueTeam.teamName} đang đến -{' '}
                     {activeRequest.assignedRescueTeam
@@ -293,7 +299,10 @@ export default function UserHomeContent() {
             </View>
           </TouchableOpacity>
         ) : (
-          <View className="rounded-xl bg-white p-4 shadow-sm">
+          <View
+            className="rounded-xl p-4 shadow-sm"
+            style={{ backgroundColor: colors.card }}
+          >
             <Text style={{ color: colors.textSecondary }}>
               Bạn hiện chưa có yêu cầu cứu hộ nào đang xử lý.
             </Text>
@@ -324,7 +333,7 @@ export default function UserHomeContent() {
                 }
                 type={getTypeLabel(item.rescueRequestType)}
                 date={new Date(item.createdAt).toLocaleDateString('vi-VN')}
-                onPress={openRequestsScreen}
+                onPress={() => openRequestDetail(item.requestId)}
               />
             ))}
           </View>
@@ -337,120 +346,69 @@ export default function UserHomeContent() {
 function QuickActionCard({
   icon,
   label,
-  color,
+  description,
+  variant,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  color: 'primary' | 'green' | 'orange';
+  description: string;
+  variant: 'request' | 'tracking' | 'donate';
   onPress: () => void;
 }) {
-  const bgColor =
-    color === 'primary'
-      ? 'bg-primary'
-      : color === 'green'
-        ? 'bg-green-600'
-        : 'bg-orange-500';
+  const { colors } = useTheme();
 
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const jumpAnim = useRef(new Animated.Value(0)).current;
-  const outlineAnim = useRef(new Animated.Value(0)).current;
-  const outlineScale = outlineAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.8],
-  });
-
-  const outlineOpacity = outlineAnim.interpolate({
-    inputRange: [0, 0.7, 1],
-    outputRange: [0.5, 0.3, 0],
-  });
-
-  useEffect(() => {
-    if (icon === 'add-circle') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.15,
-            duration: 800,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            easing: Easing.in(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-      ).start();
-
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(outlineAnim, {
-            toValue: 1,
-            duration: 1600,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(outlineAnim, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ]),
-      ).start();
-    } else if (icon === 'location') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(jumpAnim, {
-            toValue: -4,
-            duration: 600,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(jumpAnim, {
-            toValue: 0,
-            duration: 600,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]),
-      ).start();
-    }
-  }, [icon, jumpAnim, outlineAnim, pulseAnim]);
+  const toneColor =
+    variant === 'request'
+      ? colors.status.error
+      : variant === 'tracking'
+        ? colors.status.incoming
+        : colors.status.completed;
 
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
-      className={`flex-1 items-center justify-center gap-2 rounded-xl ${bgColor} p-6 shadow-lg shadow-black/10`}
+      className="flex-1 items-center rounded-2xl border p-3"
+      style={{
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 2,
+      }}
     >
-      <View className="relative items-center justify-center">
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            borderWidth: 2,
-            borderColor: 'rgba(255,255,255,0.9)',
-            opacity: outlineOpacity,
-            transform: [{ scale: outlineScale }],
-          }}
-        />
-
-        <Animated.View
-          style={
-            icon === 'location'
-              ? { transform: [{ translateY: jumpAnim }] }
-              : { transform: [{ scale: pulseAnim }] }
-          }
-        >
-          <Ionicons name={icon} size={32} color="#fff" />
-        </Animated.View>
+      <View
+        className="h-11 w-11 items-center justify-center rounded-full"
+        style={{ backgroundColor: `${toneColor}1A` }}
+      >
+        <Ionicons name={icon} size={22} color={toneColor} />
       </View>
-      <Text className="text-center font-bold text-white">{label}</Text>
+
+      <View className="mt-3 items-center">
+        <Text
+          className="text-base font-extrabold"
+          style={{ color: colors.text }}
+        >
+          {label}
+        </Text>
+        <Text
+          className="mt-0.5 text-center text-xs"
+          style={{ color: colors.textSecondary }}
+        >
+          {description}
+        </Text>
+      </View>
+
+      <View className="mt-2 flex-row justify-end">
+        <Ionicons
+          name="arrow-forward-circle"
+          size={18}
+          color={toneColor}
+        ></Ionicons>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -470,36 +428,48 @@ function RequestHistoryItem({
   date: string;
   onPress: () => void;
 }) {
-  const bgColor =
+  const { colors } = useTheme();
+  const badgeBg =
     statusColor === 'green'
-      ? 'bg-green-50'
+      ? `${colors.status.completed}22`
       : statusColor === 'red'
-        ? 'bg-red-50'
-        : 'bg-gray-50';
-  const textColor =
+        ? `${colors.status.error}22`
+        : colors.surface;
+  const badgeText =
     statusColor === 'green'
-      ? 'text-green-700'
+      ? colors.status.completed
       : statusColor === 'red'
-        ? 'text-red-700'
-        : 'text-gray-700';
+        ? colors.status.error
+        : colors.textSecondary;
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center justify-between rounded-xl bg-white p-4 shadow-sm"
+      className="flex-row items-center justify-between rounded-xl p-4 shadow-sm"
+      style={{ backgroundColor: colors.card }}
     >
       <View className="flex-1">
         <View className="mb-1 flex-row items-center gap-2">
-          <View className={`rounded-full ${bgColor} px-2 py-0.5`}>
-            <Text className={`text-xs font-bold ${textColor}`}>{status}</Text>
+          <View
+            className="rounded-full px-2 py-0.5"
+            style={{ backgroundColor: badgeBg }}
+          >
+            <Text className="text-xs font-bold" style={{ color: badgeText }}>
+              {status}
+            </Text>
           </View>
         </View>
-        <Text className="font-bold">{id}</Text>
-        <Text className="mt-0.5 text-sm text-text-secondary">
+        <Text className="font-bold" style={{ color: colors.text }}>
+          {id}
+        </Text>
+        <Text
+          className="mt-0.5 text-sm"
+          style={{ color: colors.textSecondary }}
+        >
           {type} • {date}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
     </TouchableOpacity>
   );
 }

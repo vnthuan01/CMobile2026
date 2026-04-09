@@ -1,42 +1,80 @@
-export const Colors = {
+const common = {
+  white: '#FFFFFF',
+  black: '#000000',
+  transparent: 'transparent',
+};
+
+export const COLORS = {
   light: {
-    primary: '#DA251D', // 🔴 Brand Red
-    secondary: '#1565C0', // 🔵 Trust Blue
-    accent: '#FFCC00', // 🟡 Yellow Accent
-    background: '#F9FAFB',
-    surface: '#FFFFFF',
+    ...common,
+    primary: '#2563EB',
+    secondary: '#1E3A8A',
+    background: '#FFFFFF',
+    surface: '#F9FAFB',
     card: '#FFFFFF',
-    text: '#1F2933',
-    textSecondary: '#616161',
-    border: '#E0E0E0',
-    divider: '#EEEEEE',
-    icon: '#424242',
-    notification: '#D32F2F',
-    success: '#2E7D32',
-    warning: '#F9A825',
-    error: '#D32F2F',
-    info: '#0288D1',
-    overlay: 'rgba(0,0,0,0.55)',
+    text: {
+      main: '#111827',
+      sub: '#6B7280',
+      disabled: '#9CA3AF',
+    },
+    status: {
+      incoming: '#2563EB',
+      pending: '#F59E0B',
+      inProgress: '#2563EB',
+      completed: '#16A34A',
+      cancelled: '#6B7280',
+      error: '#DC2626',
+      onHold: '#64748B',
+    },
+    border: '#E5E7EB',
   },
   dark: {
-    primary: '#FF6F61', // 🔴 Softer red for dark
-    secondary: '#64B5F6', // 🔵 Lighter blue for dark
-    accent: '#FFD54F', // 🟡 Softer yellow for dark
-    background: '#121212',
-    surface: '#1E1E1E',
-    card: '#1E1E1E',
-    text: '#FFFFFF',
-    textSecondary: '#BDBDBD',
-    border: '#333333',
-    divider: '#2A2A2A',
-    icon: '#E0E0E0',
-    notification: '#EF5350',
-    success: '#66BB6A',
-    warning: '#FBC02D',
-    error: '#EF5350',
-    info: '#4FC3F7',
-    overlay: 'rgba(0,0,0,0.65)',
+    ...common,
+    primary: '#2563EB',
+    secondary: '#1E3A8A',
+    background: '#0F172A',
+    surface: '#0F172A',
+    card: '#1E293B',
+    text: {
+      main: '#F1F5F9',
+      sub: '#94A3B8',
+      disabled: '#64748B',
+    },
+    status: {
+      incoming: '#2563EB',
+      pending: '#F59E0B',
+      inProgress: '#2563EB',
+      completed: '#16A34A',
+      cancelled: '#94A3B8',
+      error: '#DC2626',
+      onHold: '#64748B',
+    },
+    border: '#334155',
   },
+};
+
+const withAliases = <T extends typeof COLORS.light>(
+  theme: T,
+  isDark: boolean,
+) => ({
+  ...theme,
+  card: theme.card,
+  text: theme.text.main,
+  textSecondary: theme.text.sub,
+  divider: theme.border,
+  icon: theme.text.sub,
+  success: theme.status.completed,
+  warning: theme.status.pending,
+  error: theme.status.error,
+  info: theme.status.incoming,
+  notification: theme.status.error,
+  accent: theme.secondary,
+  overlay: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0.55)',
+});
+
+export const Colors = {
+  light: withAliases(COLORS.light, false),
+  dark: withAliases(COLORS.dark, true),
 };
 
 export type ThemeColors = typeof Colors.light;

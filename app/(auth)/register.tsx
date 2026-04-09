@@ -1,23 +1,29 @@
 import '@/global.css';
-import { authService } from '@/src/services/authService';
+import { AppDialog } from '@/src/components/common/AppDialog';
+import { useTheme } from '@/src/context/ThemeContext';
+import { useRegister } from '@/src/hooks/useAuthActions';
+import { showErrorToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const { height } = useWindowDimensions();
+  const registerMutation = useRegister();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -27,7 +33,17 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(
+    'Đăng ký thành công. Vui lòng xác thực OTP.',
+  );
+  const loading = registerMutation.isPending;
+  const isShortScreen = height < 700;
+  const fieldHeight = isShortScreen ? 46 : 52;
+  const fieldRadius = 12;
+  const fieldFontSize = isShortScreen ? 15 : 16;
+  const fieldIconSize = isShortScreen ? 18 : 20;
 
   const handleRegister = async () => {
     if (
@@ -38,28 +54,21 @@ export default function RegisterScreen() {
       !password ||
       !confirmPassword
     ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Vui lòng nhập đầy đủ thông tin',
-      });
+      const msg = 'Vui lòng nhập đầy đủ thông tin.';
+      setInlineError(msg);
+      showErrorToast('Thiếu thông tin', msg);
       return;
     }
 
     if (password !== confirmPassword) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu xác nhận không khớp',
-      });
+      const msg = 'Mật khẩu xác nhận không khớp.';
+      setInlineError(msg);
+      showErrorToast('Mật khẩu không khớp', msg);
       return;
     }
 
-    setLoading(true);
-
     try {
-      // TODO: gọi API register
-      const result = await authService.register({
+      const result = await registerMutation.mutateAsync({
         fullName,
         phone,
         email,
@@ -68,210 +77,386 @@ export default function RegisterScreen() {
       });
 
       if (!result.success) {
-        Toast.show({ type: 'error', text1: 'Lỗi', text2: result.message });
+        console.error('[Register failed detail]:', result.message);
+        const msg = 'Đăng ký thất bại. Vui lòng thử lại.';
+        setInlineError(msg);
+        showErrorToast('Đăng ký thất bại');
         return;
       }
 
-      if (result.status == 201 || result.status == 200) {
-        router.replace({
-          pathname: '/otp-verification',
-          params: { email: email.trim() },
-        });
+      if (result.status === 201 || result.status === 200) {
+        setSuccessMessage('Tạo tài khoản thành công. Vui lòng nhập mã OTP.');
+        setSuccessVisible(true);
       }
     } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Có lỗi xảy ra, vui lòng thử lại',
-      });
-    } finally {
-      setLoading(false);
+      showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại');
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background-light"
+    <SafeAreaView
+      edges={['top']}
+      style={{ flex: 1, backgroundColor: colors.bg }}
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+        className="flex-1"
       >
-        <View className="w-full max-w-[420px] flex-1 self-center px-5 pb-8 pt-6">
-          {/* Header */}
-          <View className="mb-6 flex-row items-center justify-between">
-            <TouchableOpacity
-              className="h-12 w-12 items-center justify-center rounded-full"
-              onPress={() => router.back()}
-            >
-              <Ionicons name="chevron-back" size={22} color="#0f172a" />
-            </TouchableOpacity>
-            <Text className="flex-1 pr-12 text-center text-lg font-bold text-text-primary">
-              Đăng kí tài khoản{' '}
-            </Text>
-            <TouchableOpacity className="flex-row items-center gap-1 rounded-full bg-red-50 px-3 py-1.5">
-              <Ionicons name="alert-circle" size={18} color="#dc2626" />
-              <Text className="text-sm font-bold text-red-600">SOS</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Headline */}
-          <View className="mb-8">
-            <Text className="mb-2 text-[32px] font-bold text-text-primary">
-              Tạo tài khoản để trải nghiệm ứng dụng.
-            </Text>
-            <Text className="text-base text-text-secondary">
-              Nhập thông tin để kết nối với cứu trợ.
-            </Text>
-          </View>
-
-          {/* Form */}
-          <View className="space-y-5">
-            {/* Full Name */}
-            <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
-                Họ và tên
-              </Text>
-              <TextInput
-                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
-                placeholder="Nguyễn Văn A"
-                placeholderTextColor="#9CA3AF"
-                value={fullName}
-                onChangeText={setFullName}
-                editable={!loading}
-              />
-            </View>
-
-            {/* UserName */}
-            <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
-                Tên tài khoản
-              </Text>
-              <TextInput
-                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
-                placeholder="Nhâp tên tài khoản"
-                placeholderTextColor="#9CA3AF"
-                value={username}
-                onChangeText={setUsername}
-                editable={!loading}
-              />
-            </View>
-
-            {/* Phone */}
-            <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
-                Số điện thoại
-              </Text>
-              <TextInput
-                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
-                placeholder="09xx xxx xxx"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-                editable={!loading}
-              />
-            </View>
-
-            {/* Email */}
-            <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
-                Email
-              </Text>
-              <TextInput
-                className="h-14 rounded-lg border border-surface-dark bg-white px-4 text-base text-text-primary"
-                placeholder="example@email.com"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                editable={!loading}
-              />
-            </View>
-
-            {/* Password */}
-            <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
-                Mật khẩu
-              </Text>
-              <View className="relative">
-                <TextInput
-                  className="h-14 rounded-lg border border-surface-dark bg-white px-4 pr-12 text-base text-text-primary"
-                  placeholder="••••••••"
-                  placeholderTextColor="#9CA3AF"
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={setPassword}
-                  editable={!loading}
-                />
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: isShortScreen ? 28 : 40,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View
+            className="w-full self-center px-5"
+            style={{
+              paddingTop: isShortScreen ? 16 : 24,
+              paddingBottom: isShortScreen ? 8 : 16,
+            }}
+          >
+            <View className="mb-6">
+              <View className="flex-row items-center">
                 <TouchableOpacity
-                  className="absolute right-4 top-[18px]"
-                  onPress={() => setShowPassword(!showPassword)}
+                  className="h-10 w-10 items-center justify-center rounded-full"
+                  onPress={() => router.back()}
                 >
-                  <Text>{showPassword ? '🙈' : '👁️'}</Text>
+                  <Ionicons
+                    name="chevron-back"
+                    size={20}
+                    color={colors.textPrimary}
+                  />
                 </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Confirm Password */}
-            <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
-                Xác nhận mật khẩu
-              </Text>
-              <View className="relative">
-                <TextInput
-                  className="h-14 rounded-lg border border-surface-dark bg-white px-4 pr-12 text-base text-text-primary"
-                  placeholder="••••••••"
-                  placeholderTextColor="#9CA3AF"
-                  secureTextEntry={!showConfirmPassword}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  editable={!loading}
-                />
-                <TouchableOpacity
-                  className="absolute right-4 top-[18px]"
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                <Text
+                  className="ml-2 text-2xl font-bold"
+                  style={{ color: colors.textPrimary }}
                 >
-                  <Text>{showConfirmPassword ? '🙈' : '👁️'}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Submit */}
-            <TouchableOpacity
-              className={`mt-4 h-14 items-center justify-center rounded-lg ${
-                loading ? 'bg-primary/50' : 'bg-primary'
-              }`}
-              onPress={handleRegister}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-[17px] font-bold text-white">
                   Đăng ký
                 </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Footer */}
-          <View className="mt-10 items-center">
-            <Text className="text-base text-text-secondary">
-              Đã có tài khoản?
+              </View>
               <Text
-                className="font-bold text-primary"
+                className="ml-12 mt-1 text-sm"
+                style={{ color: colors.textSecondary }}
+              >
+                Tạo tài khoản để sử dụng ứng dụng.
+              </Text>
+            </View>
+
+            <View className="rounded-xl" style={{ backgroundColor: colors.bg }}>
+              <View className="mb-3">
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Họ và tên
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={fieldIconSize}
+                    color={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="ml-2 flex-1"
+                    style={{
+                      color: colors.textPrimary,
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="Nguyễn Văn A"
+                    placeholderTextColor={colors.textDisabled}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              <View className="mb-3">
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Tên tài khoản
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={fieldIconSize}
+                    color={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="ml-2 flex-1"
+                    style={{
+                      color: colors.textPrimary,
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="Nhập tên tài khoản"
+                    placeholderTextColor={colors.textDisabled}
+                    value={username}
+                    onChangeText={setUsername}
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              <View className="mb-3">
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Số điện thoại
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Ionicons
+                    name="call-outline"
+                    size={fieldIconSize}
+                    color={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="ml-2 flex-1"
+                    style={{
+                      color: colors.textPrimary,
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="09xx xxx xxx"
+                    placeholderTextColor={colors.textDisabled}
+                    keyboardType="phone-pad"
+                    value={phone}
+                    onChangeText={setPhone}
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              <View className="mb-3">
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Email
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Ionicons
+                    name="mail-outline"
+                    size={fieldIconSize}
+                    color={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="ml-2 flex-1"
+                    style={{
+                      color: colors.textPrimary,
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="example@email.com"
+                    placeholderTextColor={colors.textDisabled}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              <View className="mb-3">
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Mật khẩu
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={fieldIconSize}
+                    color={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="ml-2 flex-1"
+                    style={{
+                      color: colors.textPrimary,
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="Nhập mật khẩu"
+                    placeholderTextColor={colors.textDisabled}
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((prev) => !prev)}
+                    disabled={loading}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={fieldIconSize}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View>
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Xác nhận mật khẩu
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={fieldIconSize}
+                    color={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="ml-2 flex-1"
+                    style={{
+                      color: colors.textPrimary,
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="Nhập lại mật khẩu"
+                    placeholderTextColor={colors.textDisabled}
+                    secureTextEntry={!showConfirmPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword((prev) => !prev)}
+                    disabled={loading}
+                  >
+                    <Ionicons
+                      name={
+                        showConfirmPassword ? 'eye-off-outline' : 'eye-outline'
+                      }
+                      size={fieldIconSize}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {!!inlineError && (
+                <View className="mt-3 flex-row items-center">
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={16}
+                    color={colors.emergency}
+                  />
+                  <Text
+                    className="ml-1 flex-1 text-sm"
+                    style={{ color: colors.emergency }}
+                  >
+                    {inlineError}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                className="mt-5 h-12 items-center justify-center rounded-xl"
+                onPress={handleRegister}
+                disabled={loading}
+                activeOpacity={0.85}
+                style={{
+                  backgroundColor: loading
+                    ? colors.textDisabled
+                    : colors.primary,
+                }}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-base font-bold text-white">
+                    Đăng ký
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View className="mt-8 items-center">
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                Đã có tài khoản?
+              </Text>
+              <Text
+                className="mt-1 font-bold"
+                style={{ color: colors.primary }}
                 onPress={() => router.replace('/login')}
               >
-                {' '}
                 Đăng nhập
               </Text>
-            </Text>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <AppDialog
+        visible={successVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        confirmLabel="Nhập OTP"
+        showCancel={false}
+        onCancel={() => setSuccessVisible(false)}
+        onConfirm={() => {
+          setSuccessVisible(false);
+          router.replace({
+            pathname: '/otp-verification',
+            params: { email: email.trim() },
+          });
+        }}
+      />
+    </SafeAreaView>
   );
 }

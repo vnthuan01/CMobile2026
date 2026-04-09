@@ -13,7 +13,7 @@ export default function ImageUploader({
     onAddImage,
     onRemoveImage,
 }: ImageUploaderProps) {
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
 
     return (
         <ScrollView
@@ -45,7 +45,7 @@ export default function ImageUploader({
                     key={index}
                     className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl"
                     style={{
-                        backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                        backgroundColor: colors.surface,
                     }}
                 >
                     {uri ? (
@@ -56,13 +56,13 @@ export default function ImageUploader({
                         />
                     ) : (
                         <View className="h-full w-full items-center justify-center">
-                            <Ionicons name="image" size={40} color="#6b7280" />
+                            <Ionicons name="image" size={40} color={colors.icon} />
                         </View>
                     )}
                     <TouchableOpacity
                         onPress={() => onRemoveImage?.(index)}
                         className="absolute right-1 top-1 rounded-full p-1"
-                        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+                        style={{ backgroundColor: colors.overlay }}
                     >
                         <Ionicons name="close" size={12} color="#fff" />
                     </TouchableOpacity>

@@ -1,55 +1,85 @@
 import '@/global.css';
-import { Slot, useFocusEffect, useRouter, useSegments } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+    Slot,
+    useRootNavigationState,
+    useRouter,
+    useSegments,
+} from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-import { ThemeProvider } from '../src/context/ThemeContext';
-import { authService } from '../src/services/authService';
+import { appToastConfig } from '../src/components/common/AppToast';
+import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
+import { useAuthBootstrap } from '../src/hooks/useAuthBootstrap';
+import { queryClient } from '../src/lib/queryClient';
+import type { AuthState } from '../src/store/authStore';
 import { useAuthStore } from '../src/store/authStore';
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const router = useRouter();
   const segments = useSegments();
+  const rootNavigationState = useRootNavigationState();
+  const { isDark, colors } = useTheme();
+  useAuthBootstrap();
 
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isLoading = useAuthStore((state) => state.isLoading);
+  const isAuthenticated = useAuthStore(
+    (state: AuthState) => state.isAuthenticated,
+  );
+  const isLoading = useAuthStore((state: AuthState) => state.isLoading);
 
   //check theo group
   const inAuthRoute = segments[0] === '(auth)';
 
-  //Restore token khi app start
   useEffect(() => {
-    authService.restoreToken();
-  }, []);
+    if (!rootNavigationState?.key || isLoading || segments.length === 0) return;
 
-  useFocusEffect(
-    useCallback(() => {
-      if (isLoading) return;
+    if (!isAuthenticated && !inAuthRoute) {
+      router.replace('/welcome');
+      return;
+    }
 
-      //Chưa login → ép về login
-      //   if (!isAuthenticated && !inAuthRoute) {
-      //     router.replace('/login');
-      //     return;
-      //   }
-
-      //Đã login mà còn ở auth → đá ra home
-      //   if (isAuthenticated && inAuthRoute) {
-      //     router.replace('/home/user'); // hoặc theo role
-      //   }
-    }, [isAuthenticated, isLoading, segments]),
-  );
+    if (isAuthenticated && inAuthRoute) {
+      router.replace('/(tabs)');
+    }
+  }, [
+    inAuthRoute,
+    isAuthenticated,
+    isLoading,
+    rootNavigationState?.key,
+    router,
+    segments,
+  ]);
 
   return (
+    <>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        edges={['left', 'right']}
+      >
+        <Slot />
+      </SafeAreaView>
+      <Toast config={appToastConfig} />
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <StatusBar barStyle="light-content" backgroundColor="#161616" />
-          <Slot />
-          <Toast />
-        </ThemeProvider>
-      </SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <RootLayoutContent />
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }

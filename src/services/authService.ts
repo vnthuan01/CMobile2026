@@ -1,14 +1,11 @@
 import { useAuthStore } from '../store/authStore';
+import type { RefreshTokenResponse } from '../types/auth';
 import { decodeJWT } from '../utils/jwt';
+import { isTokenExpired } from '../utils/jwt';
 import api from './api';
+import type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
 
-export interface RegisterRequest {
-  fullName: string;
-  phone: string;
-  email: string;
-  username: string;
-  password: string;
-}
+export type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
 
 interface LoginCredentials {
   email: string;
@@ -58,16 +55,20 @@ interface ForgotPasswordResetRequest {
   newPassword: string;
 }
 
-export interface UserProfileResponse {
-  id: string;
-  displayName: string | null;
-  email: string;
-  phoneNumber: string | null;
-  dateOfBirth: string | null;
-  gender: string | null;
-  pictureUrl: string | null;
-  roles: string[];
-}
+const getNoResponseErrorMessage = (error: any) => {
+  const code = error?.code;
+  const message = String(error?.message || '').toLowerCase();
+
+  if (code === 'ECONNABORTED') {
+    return 'Yêu cầu đến máy chủ bị quá thời gian. Vui lòng thử lại.';
+  }
+
+  if (code === 'ERR_NETWORK' || message.includes('network error')) {
+    return 'Không thể kết nối máy chủ. Vui lòng kiểm tra Internet hoặc địa chỉ API.';
+  }
+
+  return 'Không thể kết nối đến máy chủ (lỗi mạng/bảo mật). Vui lòng thử lại sau.';
+};
 
 export const authService = {
   register: async (data: RegisterRequest) => {
@@ -80,43 +81,6 @@ export const authService = {
         message: response.data.message,
       };
     } catch (error: any) {
-      const responseData = error?.response?.data;
-      const responseStatus = error?.response?.status;
-      const requestUrl = error?.config?.url || '/Auth/register';
-      const requestMethod = String(
-        error?.config?.method || 'post',
-      ).toUpperCase();
-      const requestPayload = error?.config?.data
-        ? (() => {
-            try {
-              const parsed = JSON.parse(error.config.data);
-              if (parsed?.password) parsed.password = '***';
-              return parsed;
-            } catch {
-              return error.config.data;
-            }
-          })()
-        : null;
-
-      console.error('Register error:', error);
-      console.error('Register request info:', {
-        method: requestMethod,
-        url: requestUrl,
-        status: responseStatus,
-        payload: requestPayload,
-      });
-      console.error('Register response data:', responseData);
-
-      if (responseData?.errors && typeof responseData.errors === 'object') {
-        const flattenedErrors = Object.entries(responseData.errors).flatMap(
-          ([field, msgs]) =>
-            Array.isArray(msgs)
-              ? msgs.map((msg) => ({ field, message: msg }))
-              : [{ field, message: String(msgs) }],
-        );
-        console.error('Register validation errors:', flattenedErrors);
-      }
-
       return {
         success: false,
         message:
@@ -141,7 +105,6 @@ export const authService = {
           'Xác thực email thành công. Vui lòng đăng nhập.',
       };
     } catch (error: any) {
-      console.error('Confirm email error:', error);
       return {
         success: false,
         message:
@@ -166,7 +129,6 @@ export const authService = {
           'Xác thực OTP thành công. Vui lòng đăng nhập.',
       };
     } catch (error: any) {
-      console.error('Verify email OTP error:', error);
       return {
         success: false,
         message:
@@ -183,12 +145,11 @@ export const authService = {
         email,
       });
 
-      return {
-        success: response.status === 200,
-        message: response.data?.message || 'Đã gửi lại mã OTP.',
-      };
+        return {
+          success: response.status === 200,
+          message: response.data?.message || 'Đã gửi lại mã OTP.',
+        };
     } catch (error: any) {
-      console.error('Resend email OTP error:', error);
       return {
         success: false,
         message:
@@ -205,12 +166,11 @@ export const authService = {
         email: data.email,
       });
 
-      return {
-        success: response.status >= 200 && response.status < 300,
-        message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
-      };
+        return {
+          success: response.status >= 200 && response.status < 300,
+          message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
+        };
     } catch (error: any) {
-      console.error('Send forgot password OTP error:', error);
       return {
         success: false,
         message:
@@ -232,13 +192,12 @@ export const authService = {
         },
       );
 
-      return {
-        success: response.status === 200,
-        resetToken: response.data?.resetToken,
-        message: response.data?.message || 'Xác minh OTP thành công.',
-      };
+        return {
+          success: response.status === 200,
+          resetToken: response.data?.resetToken,
+          message: response.data?.message || 'Xác minh OTP thành công.',
+        };
     } catch (error: any) {
-      console.error('Verify forgot password OTP error:', error);
       return {
         success: false,
         resetToken: null,
@@ -259,12 +218,11 @@ export const authService = {
         newPassword: data.newPassword,
       });
 
-      return {
-        success: response.status === 204,
-        message: response.data?.message || 'Đặt lại mật khẩu thành công.',
-      };
+        return {
+          success: response.status === 204,
+          message: response.data?.message || 'Đặt lại mật khẩu thành công.',
+        };
     } catch (error: any) {
-      console.error('Reset forgot password error:', error);
       return {
         success: false,
         message:
@@ -291,7 +249,6 @@ export const authService = {
         };
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('Get profile error:', error);
           return {
             success: false,
             data: null,
@@ -349,8 +306,6 @@ export const authService = {
         user,
       };
     } catch (error: any) {
-      console.error('Login error:', error);
-
       return {
         success: false,
         message:
@@ -379,7 +334,102 @@ export const authService = {
    * Restore token from AsyncStorage on app start
    */
   restoreToken: async () => {
-    await useAuthStore.getState().restoreToken();
+    const authStore = useAuthStore.getState();
+
+    authStore.setLoading(true);
+
+    try {
+      await authStore.hydrateAuth();
+
+      const { accessToken, refreshToken } = useAuthStore.getState();
+
+      if (!accessToken) {
+        await authStore.logout();
+        return;
+      }
+
+      if (!isTokenExpired(accessToken)) {
+        authStore.setLoading(false);
+        return;
+      }
+
+      if (!refreshToken) {
+        await authStore.logout();
+        return;
+      }
+
+       await authService.refreshSession(refreshToken);
+    } catch {
+      await authStore.logout();
+    } finally {
+      useAuthStore.getState().setLoading(false);
+    }
+  },
+
+  refreshSession: async (refreshToken?: string | null) => {
+    const currentRefreshToken =
+      refreshToken ?? useAuthStore.getState().refreshToken;
+
+    if (!currentRefreshToken) {
+      throw new Error('Missing refresh token');
+    }
+
+    const refreshRoutes = ['/Auth/refresh-token', '/Auth/refresh'];
+    let lastError: unknown;
+
+    for (const route of refreshRoutes) {
+      try {
+        const requestConfig = {
+          headers: {
+            Authorization: undefined,
+          },
+          skipAuthRefresh: true,
+        } as any;
+
+        const response = await api.post<RefreshTokenResponse>(
+          route,
+          { refreshToken: currentRefreshToken },
+          requestConfig,
+        );
+
+        const responseData = response.data as RefreshTokenResponse;
+        const nextAccessToken = responseData.accessToken;
+        const nextRefreshToken =
+          responseData.refreshToken ?? currentRefreshToken;
+
+        if (!nextAccessToken) {
+          throw new Error('Missing access token in refresh response');
+        }
+
+        const user = decodeJWT(nextAccessToken);
+
+        if (!user) {
+          throw new Error('Invalid refreshed token');
+        }
+
+        await useAuthStore
+          .getState()
+          .setTokens(nextAccessToken, nextRefreshToken);
+        await useAuthStore.getState().setUser(user);
+
+        return {
+          success: true,
+          accessToken: nextAccessToken,
+          refreshToken: nextRefreshToken,
+          user,
+        };
+      } catch (error: any) {
+        if (error?.response?.status === 404) {
+          lastError = error;
+          continue;
+        }
+
+        lastError = error;
+        break;
+      }
+    }
+
+    throw lastError ?? new Error('Token refresh failed');
   },
 
   mapToRegisterDto: async (data: RegisterRequest) => ({

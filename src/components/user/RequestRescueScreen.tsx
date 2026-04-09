@@ -1,24 +1,26 @@
 import '@/global.css';
+import { AppDialog, useDialog } from '@/src/components/common/AppDialog';
 import Header from '@/src/components/header/header';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
+import { usePriorityCriteria } from '@/src/hooks/useRescueMeta';
+import { useSubmitRescueRequest } from '@/src/hooks/useSubmitRescueRequest';
+import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
   DisasterType,
-  PriorityCriteria,
   RescueAttachment,
   RescueType,
-  fetchPriorityCriteria,
-  getCurrentLocation,
-  submitRescueRequest,
 } from '@/src/services/rescueService';
-import { rescueTeamService } from '@/src/services/rescueTeamService';
-import { uploadService } from '@/src/services/uploadService';
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   Text,
@@ -27,11 +29,14 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
+import RequestRescueMiniMap from './RequestRescueMiniMap';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DISASTER_OPTIONS: { label: string; value: DisasterType; icon: string }[] =
-  [{ label: 'Bão lũ', value: 0, icon: '🌊' }];
+const DISASTER_OPTIONS: {
+  label: string;
+  value: DisasterType;
+  iconName: keyof typeof Ionicons.glyphMap;
+}[] = [{ label: 'Bão lũ', value: 0, iconName: 'rainy-outline' }];
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface RequestRescueScreenProps {
@@ -40,11 +45,11 @@ interface RequestRescueScreenProps {
 
 type CriteriaCategory = 'HUMAN' | 'ENV' | 'SCALE';
 
-const CRITERIA_CATEGORIES: Array<{
+const CRITERIA_CATEGORIES: {
   key: CriteriaCategory;
   label: string;
   subtitle: string;
-}> = [
+}[] = [
   {
     key: 'HUMAN',
     label: 'Nhóm con người (HUMAN)',
@@ -70,25 +75,15 @@ const getCriteriaCategory = (code?: string): CriteriaCategory | null => {
   return null;
 };
 
-const supportsNativeMap = Constants.appOwnership !== 'expo';
-
-let RequestRescueMiniMapNative: any = null;
-
-if (supportsNativeMap) {
-  try {
-    RequestRescueMiniMapNative =
-      require('./RequestRescueMiniMapNative').default;
-  } catch {
-    RequestRescueMiniMapNative = null;
-  }
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function RequestRescueScreen({
   onBack,
 }: RequestRescueScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { dialogProps, showDialog } = useDialog();
+  const uploadImageMutation = useUploadImage();
+  const submitRescueRequestMutation = useSubmitRescueRequest();
 
   // ── Form state ───────────────────────────────────────────────────────────
   const [rescueType, setRescueType] = useState<RescueType>(0);
@@ -108,64 +103,53 @@ export default function RequestRescueScreen({
   });
 
   // ── Location state ───────────────────────────────────────────────────────
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
-  const [accuracy, setAccuracy] = useState<number | null>(null);
-  const [locationLabel, setLocationLabel] = useState('Đang lấy vị trí…');
-  const [locating, setLocating] = useState(true);
+  const {
+    latitude,
+    longitude,
+    accuracy,
+    address: detectedAddress,
+    locationLabel,
+    locating,
+  } = useCurrentRescueLocation();
 
   // ── Remote data state ────────────────────────────────────────────────────
-  const [criteria, setCriteria] = useState<PriorityCriteria[]>([]);
-  const [loadingCriteria, setLoadingCriteria] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const priorityCriteriaQuery = usePriorityCriteria(
+    disasterType,
+    rescueType === 0,
+  );
+  const criteria = priorityCriteriaQuery.data ?? [];
+  const loadingCriteria = priorityCriteriaQuery.isLoading;
+  const submitting = submitRescueRequestMutation.isPending;
 
-  // ── Auto locate on mount ──────────────────────────────────────────────────
   useEffect(() => {
-    (async () => {
-      try {
-        const loc = await getCurrentLocation();
-        setLatitude(loc.latitude);
-        setLongitude(loc.longitude);
-        setAccuracy(loc.accuracy);
-        setAddress(loc.address);
-        setLocationLabel(loc.displayLabel);
-      } catch (err: any) {
-        setLocationLabel(err?.message ?? 'Không thể lấy vị trí.');
-      } finally {
-        setLocating(false);
-      }
-    })();
-  }, []);
+    if (detectedAddress && !address) {
+      setAddress(detectedAddress);
+    }
+  }, [address, detectedAddress]);
 
   // ── Fetch priority criteria when disaster type changes ────────────────────
   useEffect(() => {
-    // Only needed for Normal rescue type
-    if (rescueType !== 0) return;
-    setLoadingCriteria(true);
     setSelectedCriteriaByCategory({ HUMAN: null, ENV: null, SCALE: null });
-    fetchPriorityCriteria(disasterType)
-      .then(setCriteria)
-      .catch(() =>
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi',
-          text2: 'Không thể tải danh sách tiêu chí ưu tiên.',
-        }),
-      )
-      .finally(() => setLoadingCriteria(false));
   }, [disasterType, rescueType]);
+
+  useEffect(() => {
+    if (priorityCriteriaQuery.error) {
+      showErrorToast(
+        'Không thể tải dữ liệu',
+        'Không thể tải danh sách tiêu chí ưu tiên.',
+      );
+    }
+  }, [priorityCriteriaQuery.error]);
 
   // ── Image picker ──────────────────────────────────────────────────────────
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Toast.show({
-        type: 'error',
-        text1: 'Cần quyền',
-        text2: 'Cho phép truy cập thư viện ảnh để đính kèm hình ảnh.',
-      });
+      showWarningToast(
+        'Cần quyền truy cập',
+        'Cho phép truy cập thư viện ảnh để đính kèm hình ảnh.',
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -179,19 +163,17 @@ export default function RequestRescueScreen({
         const uploaded: RescueAttachment[] = [];
 
         for (const asset of result.assets.slice(0, 5 - attachments.length)) {
-          const uploadResult = await uploadService.uploadImageToCloudinary(
-            asset.uri,
-            asset.fileName || `rescue_${Date.now()}.jpg`,
-            asset.mimeType ?? 'image/jpeg',
-          );
+          const uploadResult = await uploadImageMutation.mutateAsync({
+            localUri: asset.uri,
+            fileName: asset.fileName || `rescue_${Date.now()}.jpg`,
+            mimeType: asset.mimeType ?? 'image/jpeg',
+          });
 
           if (!uploadResult.success || !uploadResult.url) {
-            Toast.show({
-              type: 'error',
-              text1: 'Lỗi',
-              text2:
-                uploadResult.message || 'Không thể upload ảnh lên Cloudinary.',
-            });
+            showErrorToast(
+              'Upload ảnh thất bại',
+              uploadResult.message || 'Không thể upload ảnh lên Cloudinary.',
+            );
             continue;
           }
 
@@ -224,11 +206,14 @@ export default function RequestRescueScreen({
   // ── Validation ────────────────────────────────────────────────────────────
   const validate = (): boolean => {
     if (!reporterPhone.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập số điện thoại liên hệ.');
+      showWarningToast(
+        'Thiếu thông tin',
+        'Vui lòng nhập số điện thoại liên hệ.',
+      );
       return false;
     }
     if (latitude === null || longitude === null) {
-      Alert.alert(
+      showWarningToast(
         'Chưa có vị trí',
         'Vui lòng chờ ứng dụng xác định vị trí của bạn.',
       );
@@ -236,11 +221,14 @@ export default function RequestRescueScreen({
     }
     if (rescueType === 0) {
       if (!reporterFullName.trim()) {
-        Alert.alert('Thiếu thông tin', 'Vui lòng nhập họ tên người báo cáo.');
+        showWarningToast(
+          'Thiếu thông tin',
+          'Vui lòng nhập họ tên người báo cáo.',
+        );
         return false;
       }
       if (!description.trim()) {
-        Alert.alert('Thiếu thông tin', 'Vui lòng mô tả tình trạng.');
+        showWarningToast('Thiếu thông tin', 'Vui lòng mô tả tình trạng.');
         return false;
       }
     }
@@ -250,7 +238,6 @@ export default function RequestRescueScreen({
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!validate()) return;
-    setSubmitting(true);
     try {
       const base = {
         disasterType,
@@ -269,14 +256,14 @@ export default function RequestRescueScreen({
           selectedCriteriaByCategory,
         ).filter((x): x is string => !!x);
 
-        await submitRescueRequest({
+        await submitRescueRequestMutation.mutateAsync({
           ...base,
           rescueType: 0,
           description: description.trim(),
           selectedPriorityCriteriaIds,
         });
       } else {
-        await submitRescueRequest({
+        await submitRescueRequestMutation.mutateAsync({
           ...base,
           rescueType: 1,
           description: '',
@@ -284,17 +271,20 @@ export default function RequestRescueScreen({
         });
       }
 
-      Alert.alert('Thành công', 'Yêu cầu cứu hộ đã được gửi!', [
-        { text: 'OK', onPress: onBack },
-      ]);
-    } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể gửi yêu cầu. Vui lòng thử lại.',
+      showSuccessToast('Gửi yêu cầu thành công', 'Yêu cầu cứu hộ đã được gửi!');
+      showDialog({
+        title: 'Thành công',
+        message: 'Yêu cầu cứu hộ đã được gửi!',
+        type: 'success',
+        cancelLabel: 'Ở lại',
+        confirmLabel: 'Quay lại',
+        onConfirm: () => onBack?.(),
       });
-    } finally {
-      setSubmitting(false);
+    } catch {
+      showErrorToast(
+        'Không thể gửi yêu cầu',
+        'Không thể gửi yêu cầu. Vui lòng thử lại.',
+      );
     }
   };
 
@@ -322,7 +312,7 @@ export default function RequestRescueScreen({
             {(
               [
                 { label: 'Thông thường', value: 0 as RescueType },
-                { label: '⚠️ Khẩn cấp', value: 1 as RescueType },
+                { label: 'Khẩn cấp', value: 1 as RescueType },
               ] as const
             ).map((opt) => (
               <TouchableOpacity
@@ -333,16 +323,31 @@ export default function RequestRescueScreen({
                   rescueType === opt.value
                     ? {
                         backgroundColor:
-                          opt.value === 1 ? '#ef4444' : colors.primary,
+                          opt.value === 1
+                            ? colors.status.error
+                            : colors.primary,
                       }
                     : {}
                 }
               >
+                {opt.value === 1 && (
+                  <Ionicons
+                    name="warning-outline"
+                    size={14}
+                    color={
+                      rescueType === opt.value
+                        ? colors.white
+                        : colors.status.error
+                    }
+                  />
+                )}
                 <Text
                   className="font-semibold"
                   style={{
                     color:
-                      rescueType === opt.value ? '#fff' : colors.textSecondary,
+                      rescueType === opt.value
+                        ? colors.white
+                        : colors.textSecondary,
                   }}
                 >
                   {opt.label}
@@ -355,10 +360,16 @@ export default function RequestRescueScreen({
           {rescueType === 1 && (
             <View
               className="mt-3 flex-row items-start gap-2 rounded-xl border p-3"
-              style={{ backgroundColor: '#fef2f2', borderColor: '#fca5a5' }}
+              style={{
+                backgroundColor: `${colors.status.error}12`,
+                borderColor: `${colors.status.error}55`,
+              }}
             >
-              <Ionicons name="warning" size={16} color="#ef4444" />
-              <Text className="flex-1 text-xs" style={{ color: '#b91c1c' }}>
+              <Ionicons name="warning" size={16} color={colors.status.error} />
+              <Text
+                className="flex-1 text-xs"
+                style={{ color: colors.status.error }}
+              >
                 Chế độ khẩn cấp: chỉ cần cung cấp số điện thoại và vị trí. Đội
                 cứu hộ sẽ liên hệ ngay lập tức.
               </Text>
@@ -390,7 +401,15 @@ export default function RequestRescueScreen({
                       : colors.card,
                 }}
               >
-                <Text className="text-xl">{opt.icon}</Text>
+                <Ionicons
+                  name={opt.iconName}
+                  size={20}
+                  color={
+                    disasterType === opt.value
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                />
                 <Text
                   className="mt-1 text-xs font-semibold"
                   style={{
@@ -448,9 +467,19 @@ export default function RequestRescueScreen({
         <Section>
           <View className="flex-row items-center justify-between">
             <SectionTitle title="Vị trí hiện tại" colors={colors} noMargin />
-            <View className="flex-row items-center gap-1 rounded-full bg-green-50 px-2 py-1">
-              <Ionicons name="location" size={12} color="#16a34a" />
-              <Text className="text-xs font-medium text-green-600">
+            <View
+              className="flex-row items-center gap-1 rounded-full px-2 py-1"
+              style={{ backgroundColor: `${colors.status.completed}18` }}
+            >
+              <Ionicons
+                name="location"
+                size={12}
+                color={colors.status.completed}
+              />
+              <Text
+                className="text-xs font-medium"
+                style={{ color: colors.status.completed }}
+              >
                 Tự động
               </Text>
             </View>
@@ -474,19 +503,22 @@ export default function RequestRescueScreen({
             className="mt-3 h-44 overflow-hidden rounded-xl border"
             style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
-            {mapStyle &&
-            supportsNativeMap &&
-            RequestRescueMiniMapNative &&
-            latitude != null &&
-            longitude != null ? (
-              <RequestRescueMiniMapNative
-                coordinate={[longitude, latitude]}
-                mapStyle={mapStyle}
-              />
+            {latitude != null && longitude != null ? (
+              <RequestRescueMiniMap coordinate={[longitude, latitude]} />
             ) : (
-              <View className="flex-1 items-center justify-center bg-slate-100">
-                <Ionicons name="map-outline" size={32} color="#64748b" />
-                <Text className="mt-2 text-sm text-text-secondary">
+              <View
+                className="flex-1 items-center justify-center"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <Ionicons
+                  name="map-outline"
+                  size={32}
+                  color={colors.textSecondary}
+                />
+                <Text
+                  className="mt-2 text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
                   Bản đồ vị trí hiện tại sẽ hiển thị tại đây
                 </Text>
               </View>
@@ -653,7 +685,7 @@ export default function RequestRescueScreen({
                                       <Ionicons
                                         name="checkmark"
                                         size={14}
-                                        color="#fff"
+                                        color={colors.white}
                                       />
                                     )}
                                   </View>
@@ -705,9 +737,10 @@ export default function RequestRescueScreen({
                 />
                 <TouchableOpacity
                   onPress={() => removeAttachment(idx)}
-                  className="absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full bg-red-500"
+                  className="absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.status.error }}
                 >
-                  <Ionicons name="close" size={12} color="#fff" />
+                  <Ionicons name="close" size={12} color={colors.white} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -757,16 +790,20 @@ export default function RequestRescueScreen({
           className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl shadow-lg"
           style={[
             {
-              backgroundColor: rescueType === 1 ? '#ef4444' : colors.primary,
+              backgroundColor:
+                rescueType === 1 ? colors.status.error : colors.primary,
               opacity: submitting ? 0.7 : 1,
             },
           ]}
         >
           {submitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
-              <Text className="text-base font-bold leading-normal text-white">
+              <Text
+                className="text-base font-bold leading-normal"
+                style={{ color: colors.white }}
+              >
                 {rescueType === 1
                   ? 'GỬI NGAY — KHẨN CẤP'
                   : 'GỬI YÊU CẦU CỨU HỘ'}
@@ -774,7 +811,7 @@ export default function RequestRescueScreen({
               <Ionicons
                 name={rescueType === 1 ? 'warning' : 'send'}
                 size={18}
-                color="#fff"
+                color={colors.white}
               />
             </>
           )}
@@ -787,11 +824,12 @@ export default function RequestRescueScreen({
               className="text-center text-xs"
               style={{ color: colors.textSecondary }}
             >
-              AI sẽ ưu tiên xử lý dựa trên tiêu chí đã chọn
+              Hệ thống sẽ ghi nhận yêu cầu của bạn
             </Text>
           </View>
         )}
       </View>
+      <AppDialog {...dialogProps} />
     </View>
   );
 }

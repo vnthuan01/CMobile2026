@@ -1,77 +1,23 @@
 import api from './api';
+import { extractApiErrorMessage } from '../utils/apiError';
 import { uploadService } from './uploadService';
+import type {
+  CreateVolunteerRequest,
+  SkillResponse,
+  VolunteerProfileResponse,
+  ResubmitVolunteerProfileRequest,
+} from '../types/volunteer';
+import { TeamRolePreference } from '../types/volunteer';
 
-export interface CreateVolunteerCertificateRequest {
-  name: string;
-  issuedBy: string;
-  issuedDate: string;
-  expiryDate?: string | null;
-  fileUrl: string;
-}
+export type {
+  CreateVolunteerCertificateRequest,
+  CreateVolunteerRequest,
+  SkillResponse,
+  VolunteerProfileResponse,
+  ResubmitVolunteerProfileRequest,
+} from '../types/volunteer';
 
-export interface CreateVolunteerRequest {
-  skillIds: string[];
-  descriptions: string;
-  teamRolePreference: TeamRolePreference;
-  yearsOfExperience?: number | null;
-  certificates: CreateVolunteerCertificateRequest[];
-}
-
-export enum TeamRolePreference {
-  Member = 1,
-  Leader = 2,
-  Driver = 3,
-}
-
-export interface SkillResponse {
-  skillId: string;
-  code: string;
-  name: string;
-  description: string | null;
-}
-
-export interface VolunteerProfileResponse {
-  volunteerProfileId: string;
-  fullName: string | null;
-  email: string;
-  phoneNumber: string | null;
-  descriptions: string;
-  verificationStatus: string | number;
-  volunteerStatus?: string | null;
-  reason?: string | null;
-  yearsOfExperience?: number | null;
-  preferredTeamRole?: TeamRolePreference | number | null;
-  skills: Array<string | { skillId?: string; name?: string; code?: string }>;
-  certificates: CreateVolunteerCertificateRequest[];
-}
-
-export interface ResubmitVolunteerProfileRequest {
-  descriptions: string;
-  yearsOfExperience?: number | null;
-  preferredTeamRole: TeamRolePreference;
-  skillIds: string[];
-  certificates: CreateVolunteerCertificateRequest[];
-}
-
-const extractApiErrorMessage = (error: any, fallback: string) => {
-  const data = error?.response?.data;
-
-  if (!data) return error?.message || fallback;
-  if (typeof data === 'string') return data;
-
-  const detail = data.detail || data.title || data.message;
-  if (detail) return detail;
-
-  if (data.errors && typeof data.errors === 'object') {
-    const firstKey = Object.keys(data.errors)[0];
-    const firstValue = firstKey ? data.errors[firstKey] : null;
-    if (Array.isArray(firstValue) && firstValue.length > 0) {
-      return firstValue[0];
-    }
-  }
-
-  return error?.message || fallback;
-};
+export { TeamRolePreference } from '../types/volunteer';
 
 const normalizeVerificationStatus = (raw: any) => {
   const normalized = String(raw ?? '')
@@ -138,11 +84,6 @@ export const volunteerService = {
         };
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('Create volunteer profile error:', error);
-          console.error(
-            'Create volunteer profile response data:',
-            error?.response?.data,
-          );
           return {
             success: false,
             data: null,
@@ -185,7 +126,6 @@ export const volunteerService = {
         };
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('Get skills error:', error);
           return {
             success: false,
             data: [] as SkillResponse[],

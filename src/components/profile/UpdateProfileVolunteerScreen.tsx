@@ -15,10 +15,10 @@ interface UpdateProfileVolunteerScreenProps {
 
 const SKILLS = ['Y tế', 'Cứu hộ', 'Lái xe', 'Hậu cần', 'Giao tiếp'];
 
-const AVAILABILITY_OPTIONS: { id: AvailabilityStatus; label: string; color: string }[] = [
-    { id: 'ready', label: 'Sẵn sàng', color: '#22c55e' },
-    { id: 'busy', label: 'Đang bận', color: '#f59e0b' },
-    { id: 'rest', label: 'Nghỉ ngơi', color: '#9ca3af' },
+const getAvailabilityOptions = (colors: ReturnType<typeof useTheme>['colors']): { id: AvailabilityStatus; label: string; color: string }[] => [
+    { id: 'ready', label: 'Sẵn sàng', color: colors.status.completed },
+    { id: 'busy', label: 'Đang bận', color: colors.status.pending },
+    { id: 'rest', label: 'Nghỉ ngơi', color: colors.textSecondary },
 ];
 
 export default function UpdateProfileVolunteerScreen({
@@ -26,6 +26,7 @@ export default function UpdateProfileVolunteerScreen({
 }: UpdateProfileVolunteerScreenProps) {
     const { bottom } = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
+    const AVAILABILITY_OPTIONS = getAvailabilityOptions(colors);
 
     const [fullName, setFullName] = useState('Trần Thế Vinh');
     const [phone, setPhone] = useState('0908 123 456');
@@ -53,20 +54,20 @@ export default function UpdateProfileVolunteerScreen({
                         <View
                             className="h-28 w-28 rounded-full items-center justify-center border-4 shadow-md"
                             style={{
-                                backgroundColor: isDark ? '#374151' : '#e5e7eb',
-                                borderColor: isDark ? '#1f2937' : '#fff',
+                                backgroundColor: colors.surface,
+                                borderColor: colors.card,
                             }}
                         >
-                            <Ionicons name="person" size={48} color="#9ca3af" />
+                            <Ionicons name="person" size={48} color={colors.textSecondary} />
                         </View>
                         <TouchableOpacity
                             className="absolute bottom-0 right-0 p-2 rounded-full shadow-lg border-2"
                             style={{
                                 backgroundColor: colors.primary,
-                                borderColor: isDark ? '#1f2937' : '#fff',
+                                borderColor: colors.card,
                             }}
                         >
-                            <Ionicons name="create" size={14} color="#fff" />
+                            <Ionicons name="create" size={14} color={colors.white} />
                         </TouchableOpacity>
                     </View>
                     <View className="items-center mt-3">
@@ -138,7 +139,7 @@ export default function UpdateProfileVolunteerScreen({
                         </View>
                         <View
                             className="flex-row gap-2 rounded-xl p-1"
-                            style={{ backgroundColor: isDark ? '#1f2937' : '#f1f5f9' }}
+                            style={{ backgroundColor: colors.surface }}
                         >
                             {AVAILABILITY_OPTIONS.map((opt) => (
                                 <TouchableOpacity
@@ -147,10 +148,10 @@ export default function UpdateProfileVolunteerScreen({
                                     className="flex-1 flex-row items-center justify-center gap-1.5 py-2 px-1 rounded-lg"
                                     style={{
                                         backgroundColor: availability === opt.id
-                                            ? (isDark ? '#374151' : '#fff')
+                                            ? colors.card
                                             : 'transparent',
                                         ...(availability === opt.id ? {
-                                            shadowColor: '#000',
+                                            shadowColor: colors.black,
                                             shadowOffset: { width: 0, height: 1 },
                                             shadowOpacity: 0.1,
                                             shadowRadius: 2,
@@ -195,7 +196,7 @@ export default function UpdateProfileVolunteerScreen({
                                         onPress={() => toggleSkill(skill)}
                                         className="rounded-full px-4 py-2 shadow-sm"
                                         style={{
-                                            backgroundColor: isSelected ? colors.primary : (isDark ? '#1f2937' : '#f1f5f9'),
+                                            backgroundColor: isSelected ? colors.primary : colors.surface,
                                             borderWidth: isSelected ? 0 : 1,
                                             borderColor: colors.border,
                                         }}
@@ -203,7 +204,7 @@ export default function UpdateProfileVolunteerScreen({
                                         <Text
                                             className="text-sm font-medium"
                                             style={{
-                                                color: isSelected ? '#fff' : colors.textSecondary,
+                                                color: isSelected ? colors.white : colors.textSecondary,
                                             }}
                                         >
                                             {skill}
@@ -213,7 +214,7 @@ export default function UpdateProfileVolunteerScreen({
                             })}
                             <TouchableOpacity
                                 className="h-9 w-9 items-center justify-center rounded-full border-2 border-dashed"
-                                style={{ borderColor: isDark ? '#4b5563' : '#d1d5db' }}
+                                style={{ borderColor: colors.border }}
                             >
                                 <Ionicons name="add" size={18} color={colors.textSecondary} />
                             </TouchableOpacity>
@@ -235,14 +236,14 @@ export default function UpdateProfileVolunteerScreen({
                             <View
                                 className="flex-row items-center justify-between p-3 rounded-xl border"
                                 style={{
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                                    backgroundColor: colors.surface,
                                     borderColor: colors.border,
                                 }}
                             >
                                 <View className="flex-row items-center gap-3">
                                     <View
                                         className="h-10 w-10 items-center justify-center rounded-lg"
-                                        style={{ backgroundColor: isDark ? 'rgba(220,38,38,0.15)' : '#fee2e2' }}
+                                        style={{ backgroundColor: `${colors.status.error}15` }}
                                     >
                                         <Ionicons name="document-text" size={22} color={colors.primary} />
                                     </View>
@@ -264,8 +265,8 @@ export default function UpdateProfileVolunteerScreen({
                             <TouchableOpacity
                                 className="flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed"
                                 style={{
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc',
-                                    borderColor: isDark ? '#374151' : '#d1d5db',
+                                    backgroundColor: colors.surface,
+                                    borderColor: colors.border,
                                 }}
                             >
                                 <Ionicons name="cloud-upload-outline" size={32} color={colors.textSecondary} />

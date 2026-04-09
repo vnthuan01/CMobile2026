@@ -1,0 +1,132 @@
+// ── Team domain ───────────────────────────────────────────────────────────────
+
+export interface TeamSkillResponse {
+  skillId: string;
+  code: string;
+  name: string;
+  description: string | null;
+}
+
+export interface TeamUserSummary {
+  userId: string;
+  displayName: string;
+  email: string;
+}
+
+export interface TeamLeaderSummary extends TeamUserSummary {
+  skills: TeamSkillResponse[];
+}
+
+export interface TeamMemberSummary extends TeamUserSummary {
+  role: 'Leader' | 'Member' | string;
+  skills: TeamSkillResponse[];
+  joinedAt: string;
+}
+
+export interface TeamDetailResponse {
+  teamId: string;
+  name: string;
+  description: string | null;
+  contactPhone: string | null;
+  status: 'Draft' | 'Active' | 'Inactive' | string;
+  moderator: TeamUserSummary | null;
+  leader: TeamLeaderSummary | null;
+  members: TeamMemberSummary[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamTrackingHeartbeatRequest {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number | null;
+  speedKph?: number | null;
+  headingDegree?: number | null;
+  source?: number;
+  capturedAtUtc?: string;
+  rescueBatchId?: string | null;
+  rescueOperationId?: string | null;
+  note?: string | null;
+}
+
+export interface TeamTrackingHeartbeatResponse {
+  teamTrackingPointId: string;
+  teamId: string;
+  rescueBatchId: string | null;
+  rescueOperationId: string | null;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+  speedKph: number | null;
+  headingDegree: number | null;
+  source: number;
+  capturedAtUtc: string;
+  createdAtUtc: string;
+  note: string | null;
+}
+
+export type TeamTrackingPointResponse = TeamTrackingHeartbeatResponse;
+
+// ── Rescue team / batch ───────────────────────────────────────────────────────
+
+export interface RescueBatchItem {
+  rescueBatchItemId: string;
+  rescueRequestId: string;
+  disasterType: string;
+  rescueRequestType: 'Normal' | 'Emergency' | string;
+  rescueRequestStatus: string;
+  description: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  reporterFullName: string;
+  reporterPhone: string;
+  sequenceOrder: number;
+  isAutoAssigned: boolean;
+  distanceKm: number | null;
+  estimatedMinutes: number | null;
+  status: 'Pending' | 'InProgress' | 'Done' | 'Cancelled' | string;
+  createdAt: string;
+}
+
+export interface RescueActiveBatchResponse {
+  rescueBatchId: string;
+  teamId: string;
+  isActive: boolean;
+  status: string;
+  routePolyline: string | null;
+  totalDistanceKm: number | null;
+  estimatedMinutes: number | null;
+  createdAt: string;
+  closedAt: string | null;
+  items: RescueBatchItem[];
+}
+
+export interface RescueTeamHistoryRequestItem {
+  requestId: string;
+  address: string;
+  disasterType: string;
+  rescueRequestStatus: string;
+  reporterFullName: string;
+  reporterPhone: string;
+  createdAt: string;
+  updatedAt: string;
+  sequenceOrder: number;
+  batchItemStatus: string;
+}
+
+export interface RescueTeamHistoryBatch {
+  rescueBatchId: string;
+  createdAt: string;
+  closedAt: string | null;
+  totalRequests: number;
+  completedRequests: number;
+  requests: RescueTeamHistoryRequestItem[];
+}
+
+export interface RescueTeamHistoryResponse {
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  data: RescueTeamHistoryBatch[];
+}

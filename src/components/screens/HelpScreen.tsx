@@ -1,5 +1,6 @@
 import '@/global.css';
 import { useAuthStore } from '@/src/store/authStore';
+import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -124,6 +125,7 @@ const FAQ_ITEMS = [
 
 export default function HelpScreen({ onBack }: HelpScreenProps) {
   const { top, bottom } = useSafeAreaInsets();
+  const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const isVolunteer = user?.role === 'Volunteer';
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
@@ -131,21 +133,21 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
   const steps = isVolunteer ? VOLUNTEER_STEPS : USER_STEPS;
 
   return (
-    <View className="flex-1 bg-background-light">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       {/* Header */}
       <View
-        style={{ paddingTop: top }}
-        className="flex-row items-center gap-3 border-b border-gray-100 bg-white px-4 py-4"
+        className="flex-row items-center gap-3 border-b px-4 py-4"
+        style={{ paddingTop: top, borderColor: colors.border, backgroundColor: colors.card }}
       >
         {onBack && (
           <TouchableOpacity
             onPress={onBack}
             className="h-10 w-10 items-center justify-center rounded-full"
           >
-            <Ionicons name="arrow-back" size={24} color="#111418" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
         )}
-        <Text className="text-xl font-bold">Trợ giúp</Text>
+        <Text className="text-xl font-bold" style={{ color: colors.text }}>Trợ giúp</Text>
       </View>
 
       <ScrollView
@@ -154,13 +156,13 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         {/* Welcome Section */}
-        <View className="bg-gradient-to-br from-primary/10 to-primary/5 px-4 py-6">
+        <View className="px-4 py-6" style={{ backgroundColor: `${colors.primary}10` }}>
           <View className="mb-3 flex-row items-center gap-3">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-primary">
-              <Ionicons name="help-buoy" size={28} color="#fff" />
+              <Ionicons name="help-buoy" size={28} color={colors.white} />
             </View>
             <View>
-              <Text className="text-lg font-bold">
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
                 Xin chào, {user?.user_name}!
               </Text>
               <Text className="text-sm text-text-secondary">
@@ -170,15 +172,15 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
               </Text>
             </View>
           </View>
-          <Text className="text-sm text-gray-600">
+           <Text className="text-sm" style={{ color: colors.textSecondary }}>
             Dưới đây là các bước hướng dẫn giúp bạn sử dụng ứng dụng một cách
             hiệu quả nhất.
           </Text>
         </View>
 
         {/* Steps Section */}
-        <View className="mt-4 bg-white px-4 py-4">
-          <Text className="mb-4 text-base font-bold text-gray-800">
+        <View className="mt-4 px-4 py-4" style={{ backgroundColor: colors.card }}>
+          <Text className="mb-4 text-base font-bold" style={{ color: colors.text }}>
             Các bước sử dụng
           </Text>
 
@@ -199,10 +201,10 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
               {/* Step Content */}
               <View className="flex-1 pb-4">
                 <View className="mb-2 flex-row items-center gap-2">
-                  <Ionicons name={step.icon} size={18} color="#DA251D" />
-                  <Text className="text-base font-bold">{step.title}</Text>
+                  <Ionicons name={step.icon} size={18} color={colors.primary} />
+                  <Text className="text-base font-bold" style={{ color: colors.text }}>{step.title}</Text>
                 </View>
-                <Text className="text-sm leading-5 text-gray-600">
+                <Text className="text-sm leading-5" style={{ color: colors.textSecondary }}>
                   {step.description}
                 </Text>
               </View>
@@ -211,8 +213,8 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
         </View>
 
         {/* FAQ Section */}
-        <View className="mt-4 bg-white px-4 py-4">
-          <Text className="mb-4 text-base font-bold text-gray-800">
+        <View className="mt-4 px-4 py-4" style={{ backgroundColor: colors.card }}>
+          <Text className="mb-4 text-base font-bold" style={{ color: colors.text }}>
             Câu hỏi thường gặp
           </Text>
 
@@ -222,20 +224,21 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
               onPress={() =>
                 setExpandedFaq(expandedFaq === index ? null : index)
               }
-              className="border-b border-gray-100 py-4"
+              className="border-b py-4"
+              style={{ borderColor: colors.border }}
             >
               <View className="flex-row items-center justify-between">
-                <Text className="flex-1 text-base font-medium">
+                <Text className="flex-1 text-base font-medium" style={{ color: colors.text }}>
                   {item.question}
                 </Text>
                 <Ionicons
                   name={expandedFaq === index ? 'chevron-up' : 'chevron-down'}
                   size={20}
-                  color="#6b7280"
+                  color={colors.textSecondary}
                 />
               </View>
               {expandedFaq === index && (
-                <Text className="mt-2 text-sm leading-5 text-gray-600">
+                <Text className="mt-2 text-sm leading-5" style={{ color: colors.textSecondary }}>
                   {item.answer}
                 </Text>
               )}
@@ -244,31 +247,31 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
         </View>
 
         {/* Contact Support */}
-        <View className="mt-4 bg-white px-4 py-4">
-          <Text className="mb-4 text-base font-bold text-gray-800">
+        <View className="mt-4 px-4 py-4" style={{ backgroundColor: colors.card }}>
+          <Text className="mb-4 text-base font-bold" style={{ color: colors.text }}>
             Cần hỗ trợ thêm?
           </Text>
 
-          <TouchableOpacity className="mb-3 flex-row items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <TouchableOpacity className="mb-3 flex-row items-center gap-3 rounded-xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
             <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <Ionicons name="mail-outline" size={20} color="#DA251D" />
+              <Ionicons name="mail-outline" size={20} color={colors.primary} />
             </View>
             <View className="flex-1">
-              <Text className="text-base font-medium">Email hỗ trợ</Text>
+              <Text className="text-base font-medium" style={{ color: colors.text }}>Email hỗ trợ</Text>
               <Text className="text-sm text-primary">support@reliefapp.vn</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity className="flex-row items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <TouchableOpacity className="flex-row items-center gap-3 rounded-xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
             <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <Ionicons name="call-outline" size={20} color="#DA251D" />
+              <Ionicons name="call-outline" size={20} color={colors.primary} />
             </View>
             <View className="flex-1">
-              <Text className="text-base font-medium">Hotline</Text>
+              <Text className="text-base font-medium" style={{ color: colors.text }}>Hotline</Text>
               <Text className="text-sm text-primary">1900 1234 56</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 

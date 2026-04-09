@@ -1,153 +1,370 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import {
+  useUpdateUserProfile,
+  useUserProfile,
+} from '@/src/hooks/useUserProfile';
+import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
+import { useEffect, useState } from 'react';
+import {
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface UpdateProfileCitizenScreenProps {
-    onBack?: () => void;
+  onBack?: () => void;
+  onCancel?: () => void;
+  onSave?: () => void;
+  hideBackButton?: boolean;
 }
 
 export default function UpdateProfileCitizenScreen({
-    onBack,
+  onBack,
+  onCancel,
+  onSave,
+  hideBackButton = false,
 }: UpdateProfileCitizenScreenProps) {
-    const { bottom } = useSafeAreaInsets();
-    const { colors, isDark } = useTheme();
+  const { bottom } = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const authUser = useAuthStore((state) => state.user);
+  const { data } = useUserProfile(true);
+  const updateProfile = useUpdateUserProfile();
 
-    const [fullName, setFullName] = useState('Nguyễn Văn An');
-    const [email, setEmail] = useState('an.nguyen@example.com');
-    const [phone, setPhone] = useState('0901 234 567');
-    const [address, setAddress] = useState(
-        'Số 1, Đường Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
-    );
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dateOfBirthValue, setDateOfBirthValue] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [gender, setGender] = useState<'Nam' | 'Nữ' | 'Khác'>('Khác');
+  const [address, setAddress] = useState('');
 
-    const renderInput = (
-        label: string,
-        value: string,
-        onChange: (v: string) => void,
-        opts?: { type?: string; multiline?: boolean; rows?: number; verified?: boolean },
-    ) => (
-        <View className="gap-1.5">
-            <Text className="text-sm font-semibold ml-1" style={{ color: colors.textSecondary }}>
-                {label}
-            </Text>
-            <View className="relative">
-                {opts?.multiline ? (
-                    <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        multiline
-                        numberOfLines={opts?.rows ?? 3}
-                        textAlignVertical="top"
-                        className="w-full rounded-lg border p-4 text-base"
-                        style={{
-                            backgroundColor: colors.card,
-                            borderColor: colors.border,
-                            color: colors.text,
-                        }}
-                    />
-                ) : (
-                    <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        keyboardType={
-                            opts?.type === 'email' ? 'email-address' : opts?.type === 'tel' ? 'phone-pad' : 'default'
-                        }
-                        className="w-full rounded-lg border h-12 px-4 text-base"
-                        style={{
-                            backgroundColor: colors.card,
-                            borderColor: colors.border,
-                            color: colors.text,
-                            paddingRight: opts?.verified ? 40 : 16,
-                        }}
-                    />
-                )}
-                {opts?.verified && (
-                    <View className="absolute right-3 top-1/2" style={{ transform: [{ translateY: -10 }] }}>
-                        <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
-                    </View>
-                )}
-            </View>
-        </View>
-    );
+  const formatBirthDateDisplay = (date: Date) => {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  };
 
-    return (
-        <View className="flex-1" style={{ backgroundColor: colors.background }}>
-            <ScreenHeader title="Cập nhật hồ sơ" onBack={onBack} />
+  const parseDateFromApi = (raw?: string | null): Date | null => {
+    if (!raw) return null;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+  };
 
-            <ScrollView
-                contentContainerStyle={{ paddingBottom: bottom + 24 }}
-                className="flex-1"
-                showsVerticalScrollIndicator={false}
+  const mapGenderFromApi = (raw?: string | null): 'Nam' | 'Nữ' | 'Khác' => {
+    const normalized = (raw ?? '').toLowerCase();
+    if (normalized === 'male' || normalized === 'nam') return 'Nam';
+    if (normalized === 'female' || normalized === 'nữ' || normalized === 'nu')
+      return 'Nữ';
+    return 'Khác';
+  };
+
+  const mapGenderToApi = (value: 'Nam' | 'Nữ' | 'Khác'): string => {
+    if (value === 'Nam') return 'Male';
+    if (value === 'Nữ') return 'Female';
+    return 'Other';
+  };
+
+  useEffect(() => {
+    const profile = data?.profile;
+    if (!profile) {
+      setEmail(authUser?.email ?? '');
+      setFullName(authUser?.user_name ?? '');
+      return;
+    }
+
+    setFullName(profile.displayName ?? authUser?.user_name ?? '');
+    setEmail(profile.email ?? authUser?.email ?? '');
+    setPhone(profile.phoneNumber ?? '');
+    const parsedDate = parseDateFromApi(profile.dateOfBirth);
+    setDateOfBirthValue(parsedDate);
+    setDateOfBirth(parsedDate ? formatBirthDateDisplay(parsedDate) : '');
+    setGender(mapGenderFromApi(profile.gender));
+    setAddress(profile.address ?? '');
+  }, [authUser?.email, authUser?.user_name, data?.profile]);
+
+  const handleChangeBirthDate = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (event.type === 'dismissed' || !selectedDate) return;
+
+    setDateOfBirthValue(selectedDate);
+    setDateOfBirth(formatBirthDateDisplay(selectedDate));
+  };
+
+  const handleSave = async () => {
+    const result = await updateProfile.mutateAsync({
+      displayName: fullName.trim() || undefined,
+      phoneNumber: phone.trim() || undefined,
+      // Backend is currently unstable for DateOfBirth updates.
+      // Keep other fields updatable by omitting DateOfBirth from payload for now.
+      dateOfBirth: undefined,
+      gender: mapGenderToApi(gender),
+      address: address.trim() || undefined,
+    });
+
+    if (result?.success) {
+      onSave?.();
+    }
+  };
+
+  const renderInput = (
+    label: string,
+    value: string,
+    onChange: (v: string) => void,
+    opts?: {
+      type?: string;
+      multiline?: boolean;
+      rows?: number;
+      verified?: boolean;
+      editable?: boolean;
+    },
+  ) => (
+    <View className="gap-1.5">
+      <Text
+        className="ml-1 text-sm font-semibold"
+        style={{ color: colors.textSecondary }}
+      >
+        {label}
+      </Text>
+      <View className="relative">
+        {opts?.multiline ? (
+          <TextInput
+            value={value}
+            onChangeText={onChange}
+            editable={opts?.editable ?? true}
+            multiline
+            numberOfLines={opts?.rows ?? 3}
+            textAlignVertical="top"
+            className="w-full rounded-lg border p-4 text-base"
+            style={{
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              color: colors.text,
+              opacity: opts?.editable === false ? 0.75 : 1,
+            }}
+          />
+        ) : (
+          <TextInput
+            value={value}
+            onChangeText={onChange}
+            editable={opts?.editable ?? true}
+            keyboardType={
+              opts?.type === 'email'
+                ? 'email-address'
+                : opts?.type === 'tel'
+                  ? 'phone-pad'
+                  : 'default'
+            }
+            className="h-12 w-full rounded-lg border px-4 text-base"
+            style={{
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              color: colors.text,
+              paddingRight: opts?.verified ? 40 : 16,
+              opacity: opts?.editable === false ? 0.75 : 1,
+            }}
+          />
+        )}
+        {opts?.verified && (
+          <View
+            className="absolute right-3 top-1/2"
+            style={{ transform: [{ translateY: -10 }] }}
+          >
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.status.completed}
+            />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  return (
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <ScreenHeader
+        title="Cập nhật hồ sơ"
+        onBack={hideBackButton ? undefined : onBack}
+      />
+
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="items-center p-6">
+          <View className="relative">
+            <View
+              className="h-32 w-32 items-center justify-center overflow-hidden rounded-full border-4 shadow-lg"
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.card,
+              }}
             >
-                {/* Avatar */}
-                <View className="items-center p-6">
-                    <View className="relative">
-                        <View
-                            className="h-32 w-32 rounded-full items-center justify-center border-4 shadow-lg overflow-hidden"
-                            style={{
-                                backgroundColor: isDark ? '#374151' : '#e5e7eb',
-                                borderColor: isDark ? '#1f2937' : '#fff',
-                            }}
-                        >
-                            <Ionicons name="person" size={56} color="#9ca3af" />
-                        </View>
-                        <TouchableOpacity
-                            className="absolute bottom-1 right-1 p-2 rounded-full shadow-md border-2"
-                            style={{
-                                backgroundColor: colors.primary,
-                                borderColor: isDark ? '#1f2937' : '#fff',
-                            }}
-                        >
-                            <Ionicons name="camera" size={16} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-                    <View className="mt-4 items-center">
-                        <Text className="text-xl font-bold" style={{ color: colors.text }}>
-                            {fullName}
-                        </Text>
-                        <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                            Công dân Việt Nam
-                        </Text>
-                    </View>
-                </View>
-
-                {/* Form */}
-                <View className="px-6 gap-5">
-                    {renderInput('Họ và tên', fullName, setFullName, { verified: true })}
-                    {renderInput('Email', email, setEmail, { type: 'email', verified: true })}
-                    {renderInput('Số điện thoại', phone, setPhone, { type: 'tel' })}
-                    {renderInput('Địa chỉ', address, setAddress, { multiline: true, rows: 3 })}
-                </View>
-
-                {/* Buttons */}
-                <View className="p-6 gap-3">
-                    <TouchableOpacity
-                        className="w-full items-center justify-center h-14 rounded-xl shadow-lg"
-                        style={{
-                            backgroundColor: colors.primary,
-                            shadowColor: colors.primary,
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.2,
-                            shadowRadius: 8,
-                            elevation: 6,
-                        }}
-                    >
-                        <Text className="text-white font-bold text-base">Cập nhật</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={onBack}
-                        className="w-full items-center justify-center h-12 rounded-xl"
-                        style={{ backgroundColor: isDark ? '#1f2937' : '#f1f5f9' }}
-                    >
-                        <Text className="font-semibold text-base" style={{ color: colors.textSecondary }}>
-                            Hủy bỏ
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
+              <Ionicons name="person" size={56} color={colors.textSecondary} />
+            </View>
+            <TouchableOpacity
+              className="absolute bottom-1 right-1 rounded-full border-2 p-2 shadow-md"
+              style={{
+                backgroundColor: colors.primary,
+                borderColor: colors.card,
+              }}
+            >
+              <Ionicons name="camera" size={16} color={colors.white} />
+            </TouchableOpacity>
+          </View>
+          <View className="mt-4 items-center">
+            <Text className="text-xl font-bold" style={{ color: colors.text }}>
+              {fullName}
+            </Text>
+          </View>
         </View>
-    );
+
+        <View className="gap-5 px-6">
+          {renderInput('Họ và tên', fullName, setFullName, { verified: true })}
+          {renderInput('Email', email, setEmail, {
+            type: 'email',
+            verified: true,
+            editable: false,
+          })}
+          {renderInput('Số điện thoại', phone, setPhone, { type: 'tel' })}
+
+          <View className="gap-1.5">
+            <Text
+              className="ml-1 text-sm font-semibold"
+              style={{ color: colors.textSecondary }}
+            >
+              Ngày sinh
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              className="h-12 w-full flex-row items-center justify-between rounded-lg border px-4"
+              style={{
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              }}
+            >
+              <Text
+                className="text-base"
+                style={{
+                  color: dateOfBirth ? colors.text : colors.textSecondary,
+                }}
+              >
+                {dateOfBirth || 'dd-mm-yyyy'}
+              </Text>
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={dateOfBirthValue ?? new Date(2000, 0, 1)}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleChangeBirthDate}
+              maximumDate={new Date()}
+            />
+          )}
+
+          <View className="gap-1.5">
+            <Text
+              className="ml-1 text-sm font-semibold"
+              style={{ color: colors.textSecondary }}
+            >
+              Giới tính
+            </Text>
+            <View className="flex-row gap-2">
+              {(['Nam', 'Nữ', 'Khác'] as const).map((option) => {
+                const selected = gender === option;
+                return (
+                  <TouchableOpacity
+                    key={option}
+                    onPress={() => setGender(option)}
+                    className="flex-1 items-center rounded-lg border py-3"
+                    style={{
+                      backgroundColor: selected
+                        ? `${colors.primary}18`
+                        : colors.card,
+                      borderColor: selected ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Text
+                      className="font-semibold"
+                      style={{
+                        color: selected ? colors.primary : colors.textSecondary,
+                      }}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {renderInput('Địa chỉ', address, setAddress, {
+            multiline: true,
+            rows: 3,
+          })}
+        </View>
+
+        <View className="gap-3 p-6">
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={updateProfile.isPending}
+            className="h-14 w-full items-center justify-center rounded-xl shadow-lg"
+            style={{
+              backgroundColor: updateProfile.isPending
+                ? colors.textSecondary
+                : colors.primary,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 6,
+            }}
+          >
+            <Text className="text-base font-bold text-white">
+              {updateProfile.isPending ? 'Đang cập nhật...' : 'Cập nhật'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onCancel ?? onBack}
+            className="h-12 w-full items-center justify-center rounded-xl"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <Text
+              className="text-base font-semibold"
+              style={{ color: colors.textSecondary }}
+            >
+              Hủy bỏ
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
 }

@@ -17,16 +17,14 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
         set({ mode: newMode });
         try {
             await AsyncStorage.setItem('app_theme', newMode);
-        } catch (e) {
-            console.error('Failed to save theme', e);
+        } catch {
         }
     },
     setTheme: async (mode) => {
         set({ mode });
         try {
             await AsyncStorage.setItem('app_theme', mode);
-        } catch (e) {
-            console.error('Failed to save theme', e);
+        } catch {
         }
     },
     loadTheme: async () => {
@@ -35,8 +33,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
             if (saved === 'dark' || saved === 'light') {
                 set({ mode: saved });
             }
-        } catch (e) {
-            console.error('Failed to load theme', e);
+        } catch {
         }
     }
 }));

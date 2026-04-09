@@ -1,6 +1,19 @@
+import { useTheme } from '@/src/context/ThemeContext';
+import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import {
+    resolveAvatarUrl,
+    resolveDisplayName,
+} from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import {
+    Image,
+    ScrollView,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 
@@ -10,17 +23,17 @@ interface VolunteerProfileProps {
   onLogout?: () => void;
   onNavigate?: (
     screen:
-      | 'profile'
-      | 'requests'
-      | 'tasks'
-      | 'settings'
-      | 'help'
-      | 'change-password'
-      | 'progress-rescue'
-      | 'progress-relief'
-      | 'dashboard-leader'
-      | 'report-leader'
-      | 'my-team',
+      | '/profile/my-volunteer-profile'
+      | '/profile/requests'
+      | '/profile/tasks'
+      | '/profile/settings'
+      | '/profile/help'
+      | '/profile/change-password'
+      | '/profile/progress-rescue'
+      | '/profile/progress-relief'
+      | '/profile/dashboard-leader'
+      | '/profile/report-leader'
+      | '/profile/my-team',
   ) => void;
 }
 
@@ -31,13 +44,34 @@ export default function VolunteerProfile({
   onNavigate,
 }: VolunteerProfileProps) {
   const { top, bottom } = useSafeAreaInsets();
+  const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
+  const profileQuery = useCitizenProfile(Boolean(user));
+  const profile = profileQuery.data?.profile ?? null;
   const [isAvailable, setIsAvailable] = useState(true);
+  const headerBg = colors.secondary;
+  const cardBg = colors.card;
+  const subtleBg = colors.surface;
+  const iconAccent = colors.secondary;
+  const neutralBorder = colors.border;
+  const dangerSoft = `${colors.status.error}14`;
+  const displayName = resolveDisplayName({
+    profileDisplayName: profile?.displayName,
+    authUserName: user?.user_name,
+    email: user?.email,
+  });
+  const avatarUrl = resolveAvatarUrl({
+    profilePictureUrl: profile?.pictureUrl,
+    authPictureUrl: null,
+  });
 
   return (
-    <View className="flex-1 bg-background-light dark:bg-background-dark">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       {/* Header Section */}
-      <View className="relative bg-secondary pb-16 pt-4 dark:bg-[#1C252E]">
+      <View
+        className="relative pb-16 pt-4"
+        style={{ backgroundColor: headerBg }}
+      >
         <View
           style={{ paddingTop: top }}
           className="z-20 mb-4 flex-row items-center justify-between px-4"
@@ -48,18 +82,25 @@ export default function VolunteerProfile({
                 onPress={onBack}
                 className="rounded-full p-2 transition-colors hover:bg-white/10"
               >
-                <Ionicons name="chevron-back" size={24} color="#ffffff" />
+                <Ionicons name="chevron-back" size={24} color={colors.white} />
               </TouchableOpacity>
             )}
           </View>
-          <Text className="text-lg font-bold text-white">Hồ sơ cá nhân</Text>
+          <Text className="text-lg font-bold" style={{ color: colors.white }}>
+            Hồ sơ cá nhân
+          </Text>
           <View className="w-10 items-end justify-center">
             {onEdit && (
               <TouchableOpacity
                 onPress={onEdit}
                 className="rounded-full bg-white/20 px-3 py-1.5 transition-colors hover:bg-white/30"
               >
-                <Text className="text-xs font-semibold text-white">Sửa</Text>
+                <Text
+                  className="text-xs font-semibold"
+                  style={{ color: colors.white }}
+                >
+                  Sửa
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -68,32 +109,57 @@ export default function VolunteerProfile({
         {/* Profile Info */}
         <View className="z-20 mt-2 items-center">
           <View className="group relative mb-3 cursor-pointer">
-            <View className="h-24 w-24 rounded-full border-4 border-white/20 bg-gray-200 shadow-lg">
-              {/* Placeholder for actual image */}
-              <View className="flex-1 items-center justify-center rounded-full bg-blue-900/50">
-                <Ionicons name="person" size={40} color="#ffffff" />
-              </View>
+            <View
+              className="h-24 w-24 rounded-full border-4 border-white/20 shadow-lg"
+              style={{ backgroundColor: subtleBg }}
+            >
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  className="h-full w-full rounded-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  className="flex-1 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${colors.black}40` }}
+                >
+                  <Ionicons name="person" size={40} color={colors.white} />
+                </View>
+              )}
             </View>
             <View
-              className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-secondary bg-green-500 shadow-sm transition-transform hover:scale-110"
+              className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow-sm transition-transform hover:scale-110"
+              style={{
+                borderColor: colors.secondary,
+                backgroundColor: colors.status.completed,
+              }}
               accessibilityLabel="Đã xác minh"
             >
-              <Ionicons name="checkmark" size={14} color="#ffffff" />
+              <Ionicons name="checkmark" size={14} color={colors.white} />
             </View>
           </View>
-          <Text className="mb-1 text-xl font-bold text-white">
-            {user?.user_name || user?.email}
+          <Text
+            className="mb-1 text-xl font-bold"
+            style={{ color: colors.white }}
+          >
+            {displayName}
           </Text>
-          <Text className="mb-1 text-sm text-blue-100">ID: VN-8821</Text>
           <View className="rounded-full bg-white/20 px-2.5 py-0.5">
-            <Text className="text-xs font-medium text-white">
-              Tình nguyện viên cấp 2
+            <Text
+              className="text-xs font-medium"
+              style={{ color: colors.white }}
+            >
+              Tình nguyện viên
             </Text>
           </View>
         </View>
 
         {/* Bottom Curve */}
-        <View className="absolute bottom-[-1px] left-0 h-10 w-full rounded-tl-3xl rounded-tr-3xl bg-background-light dark:bg-background-dark" />
+        <View
+          className="absolute bottom-[-1px] left-0 h-10 w-full rounded-tl-3xl rounded-tr-3xl"
+          style={{ backgroundColor: colors.background }}
+        />
       </View>
 
       {/* Scrollable Content */}
@@ -104,43 +170,71 @@ export default function VolunteerProfile({
       >
         <View className="flex-col gap-4">
           {/* Availability Toggle */}
-          <View className="flex-row items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
+          <View
+            className="flex-row items-center justify-between gap-4 rounded-2xl border p-5 shadow-sm"
+            style={{ borderColor: colors.border, backgroundColor: cardBg }}
+          >
             <View className="flex-1">
               <View className="mb-1 flex-row items-center gap-2">
-                <View className="rounded-full bg-green-100 p-1.5 dark:bg-green-900/30">
-                  <Ionicons name="flash" size={20} color="#2E7D32" />
+                <View
+                  className="rounded-full p-1.5"
+                  style={{ backgroundColor: `${colors.status.completed}22` }}
+                >
+                  <Ionicons
+                    name="flash"
+                    size={20}
+                    color={colors.status.completed}
+                  />
                 </View>
-                <Text className="text-base font-bold text-gray-900 dark:text-white">
+                <Text
+                  className="text-base font-bold"
+                  style={{ color: colors.text }}
+                >
                   Trạng thái sẵn sàng
                 </Text>
               </View>
-              <Text className="pl-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+              <Text
+                className="pl-1 text-xs leading-relaxed"
+                style={{ color: colors.textSecondary }}
+              >
                 Nhận thông báo điều phối khi có thiên tai khẩn cấp.
               </Text>
             </View>
             <Switch
               value={isAvailable}
               onValueChange={setIsAvailable}
-              trackColor={{ false: '#e5e7eb', true: '#2E7D32' }}
-              thumbColor={'#ffffff'}
-              ios_backgroundColor="#e5e7eb"
+              trackColor={{
+                false: colors.border,
+                true: colors.status.completed,
+              }}
+              thumbColor={colors.white}
+              ios_backgroundColor={colors.border}
             />
           </View>
 
           {/* Skills */}
-          <View className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
+          <View
+            className="rounded-2xl border p-5 shadow-sm"
+            style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
+          >
             <View className="flex-row items-center justify-between gap-4">
               <View className="flex-1">
-                <Text className="text-base font-bold text-gray-900 dark:text-white">
+                <Text
+                  className="text-base font-bold"
+                  style={{ color: colors.text }}
+                >
                   Team của tôi
                 </Text>
-                <Text className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                <Text
+                  className="mt-1 text-xs leading-relaxed"
+                  style={{ color: colors.textSecondary }}
+                >
                   Xem trưởng nhóm, moderator, danh sách thành viên và kỹ năng
                   của team.
                 </Text>
               </View>
               <TouchableOpacity
-                onPress={() => onNavigate?.('my-team')}
+                onPress={() => onNavigate?.('/profile/my-team')}
                 className="rounded-xl bg-primary px-4 py-2.5"
               >
                 <Text className="font-semibold text-white">Mở</Text>
@@ -149,11 +243,17 @@ export default function VolunteerProfile({
           </View>
 
           {/* Skills */}
-          <View className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
+          <View
+            className="rounded-2xl border p-5 shadow-sm"
+            style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
+          >
             <View className="mb-4 flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
                 <View className="h-5 w-1 rounded-full bg-primary" />
-                <Text className="text-base font-bold text-gray-900 dark:text-white">
+                <Text
+                  className="text-base font-bold"
+                  style={{ color: colors.text }}
+                >
                   Kỹ năng chuyên môn
                 </Text>
               </View>
@@ -173,14 +273,21 @@ export default function VolunteerProfile({
               ].map((skill, index) => (
                 <View
                   key={index}
-                  className="flex-row items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800/50"
+                  className="flex-row items-center gap-2 rounded-xl border px-3 py-2"
+                  style={{
+                    borderColor: neutralBorder,
+                    backgroundColor: colors.surface,
+                  }}
                 >
                   <Ionicons
                     name={skill.icon as any}
                     size={20}
-                    color="#1565C0"
+                    color={iconAccent}
                   />
-                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  <Text
+                    className="text-sm font-medium"
+                    style={{ color: colors.text }}
+                  >
                     {skill.label}
                   </Text>
                 </View>
@@ -193,12 +300,18 @@ export default function VolunteerProfile({
             <View className="mb-3 flex-row items-center justify-between px-1">
               <View className="flex-row items-center gap-2">
                 <View className="h-5 w-1 rounded-full bg-primary" />
-                <Text className="text-base font-bold text-gray-900 dark:text-white">
+                <Text
+                  className="text-base font-bold"
+                  style={{ color: colors.text }}
+                >
                   Chứng chỉ & Huy hiệu
                 </Text>
               </View>
               <TouchableOpacity>
-                <Text className="text-xs font-medium text-gray-400 hover:text-primary dark:text-gray-500">
+                <Text
+                  className="text-xs font-medium"
+                  style={{ color: colors.textSecondary }}
+                >
                   Xem tất cả
                 </Text>
               </TouchableOpacity>
@@ -208,50 +321,97 @@ export default function VolunteerProfile({
               showsHorizontalScrollIndicator={false}
               className="flex-row gap-3 pb-4"
             >
-              <View className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
-                <View className="flex h-12 w-12 items-center justify-center rounded-full border border-yellow-100 bg-yellow-50 dark:border-yellow-900/20 dark:bg-yellow-900/10">
-                  <Ionicons name="medal" size={24} color="#CA8A04" />
+              <View
+                className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border p-3 shadow-sm"
+                style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
+              >
+                <View
+                  className="flex h-12 w-12 items-center justify-center rounded-full border"
+                  style={{
+                    borderColor: `${colors.status.pending}33`,
+                    backgroundColor: `${colors.status.pending}14`,
+                  }}
+                >
+                  <Ionicons
+                    name="medal"
+                    size={24}
+                    color={colors.status.pending}
+                  />
                 </View>
                 <View className="w-full text-center">
                   <Text
-                    className="truncate text-center text-xs font-bold leading-tight text-gray-900 dark:text-white"
+                    className="truncate text-center text-xs font-bold leading-tight"
+                    style={{ color: colors.text }}
                     numberOfLines={1}
                   >
                     Cứu hộ 2023
                   </Text>
-                  <Text className="mt-0.5 text-center text-[10px] font-medium text-yellow-600 dark:text-yellow-500">
+                  <Text
+                    className="mt-0.5 text-center text-[10px] font-medium"
+                    style={{ color: colors.status.pending }}
+                  >
                     Xuất sắc
                   </Text>
                 </View>
               </View>
-              <View className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
-                <View className="flex h-12 w-12 items-center justify-center rounded-full border border-red-100 bg-red-50 dark:border-red-900/20 dark:bg-red-900/10">
-                  <Ionicons name="shield-checkmark" size={24} color="#DA251D" />
+              <View
+                className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border p-3 shadow-sm"
+                style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
+              >
+                <View
+                  className="flex h-12 w-12 items-center justify-center rounded-full border"
+                  style={{
+                    borderColor: `${colors.status.error}33`,
+                    backgroundColor: `${colors.status.error}14`,
+                  }}
+                >
+                  <Ionicons
+                    name="shield-checkmark"
+                    size={24}
+                    color={colors.status.error}
+                  />
                 </View>
                 <View className="w-full text-center">
                   <Text
-                    className="truncate text-center text-xs font-bold leading-tight text-gray-900 dark:text-white"
+                    className="truncate text-center text-xs font-bold leading-tight"
+                    style={{ color: colors.text }}
                     numberOfLines={1}
                   >
                     Tập huấn Y tế
                   </Text>
-                  <Text className="mt-0.5 text-center text-[10px] font-medium text-primary dark:text-red-400">
+                  <Text
+                    className="mt-0.5 text-center text-[10px] font-medium"
+                    style={{ color: colors.primary }}
+                  >
                     Hoàn thành
                   </Text>
                 </View>
               </View>
-              <View className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
-                <View className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-100 bg-blue-50 dark:border-blue-900/20 dark:bg-blue-900/10">
-                  <Ionicons name="water" size={24} color="#1565C0" />
+              <View
+                className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border p-3 shadow-sm"
+                style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
+              >
+                <View
+                  className="flex h-12 w-12 items-center justify-center rounded-full border"
+                  style={{
+                    borderColor: `${iconAccent}33`,
+                    backgroundColor: `${iconAccent}14`,
+                  }}
+                >
+                  <Ionicons name="water" size={24} color={iconAccent} />
                 </View>
                 <View className="w-full text-center">
                   <Text
-                    className="truncate text-center text-xs font-bold leading-tight text-gray-900 dark:text-white"
+                    className="truncate text-center text-xs font-bold leading-tight"
+                    style={{ color: colors.text }}
                     numberOfLines={1}
                   >
                     Cứu nạn Thủy
                   </Text>
-                  <Text className="mt-0.5 text-center text-[10px] font-medium text-secondary dark:text-blue-400">
+                  <Text
+                    className="mt-0.5 text-center text-[10px] font-medium"
+                    style={{ color: colors.secondary }}
+                  >
                     Cơ bản
                   </Text>
                 </View>
@@ -263,69 +423,108 @@ export default function VolunteerProfile({
           <View className="pb-4">
             <View className="mb-3 flex-row items-center gap-2 px-1">
               <View className="h-5 w-1 rounded-full bg-primary" />
-              <Text className="text-base font-bold text-gray-900 dark:text-white">
+              <Text
+                className="text-base font-bold"
+                style={{ color: colors.text }}
+              >
                 Thông tin liên hệ
               </Text>
             </View>
-            <View className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
+            <View
+              className="overflow-hidden rounded-2xl border shadow-sm"
+              style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
+            >
               {/* Phone */}
-              <View className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50">
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
-                  <Ionicons
-                    name="call"
-                    size={18}
-                    color="#1565C0"
-                    className="dark:text-gray-400"
-                  />
+              <View
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
+              >
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="call" size={18} color={iconAccent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <Text
+                    className="mb-0.5 text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Số điện thoại
                   </Text>
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     0912 *** 789
                   </Text>
                 </View>
-                <TouchableOpacity className="rounded-lg bg-blue-50 px-3 py-1.5 dark:bg-blue-900/20">
-                  <Text className="text-xs font-bold text-secondary">Hiện</Text>
+                <TouchableOpacity
+                  className="rounded-lg px-3 py-1.5"
+                  style={{ backgroundColor: `${colors.secondary}18` }}
+                >
+                  <Text
+                    className="text-xs font-bold"
+                    style={{ color: colors.secondary }}
+                  >
+                    Hiện
+                  </Text>
                 </TouchableOpacity>
               </View>
 
               {/* Email */}
-              <View className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50">
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
-                  <Ionicons
-                    name="mail"
-                    size={18}
-                    color="#1565C0"
-                    className="dark:text-gray-400"
-                  />
+              <View
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
+              >
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="mail" size={18} color={iconAccent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <Text
+                    className="mb-0.5 text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Email
                   </Text>
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     {user?.email}
                   </Text>
                 </View>
               </View>
 
               {/* Emergency Contact */}
-              <View className="flex-row items-center gap-4 bg-red-50/50 p-4 dark:bg-red-900/10">
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+              <View
+                className="flex-row items-center gap-4 p-4"
+                style={{ backgroundColor: dangerSoft }}
+              >
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${colors.status.error}22` }}
+                >
                   <Ionicons
                     name="warning"
                     size={18}
-                    color="#DA251D"
-                    className="dark:text-red-400"
+                    color={colors.status.error}
                   />
                 </View>
                 <View className="flex-1">
-                  <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-red-500 dark:text-red-400/70">
+                  <Text
+                    className="mb-0.5 text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: colors.status.error }}
+                  >
                     Liên hệ khẩn cấp
                   </Text>
-                  <Text className="text-sm font-semibold text-red-700 dark:text-red-300">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.status.error }}
+                  >
                     Chị Lan (Vợ) - 0988 123 456
                   </Text>
                 </View>
@@ -337,185 +536,330 @@ export default function VolunteerProfile({
           <View className="pb-4">
             <View className="mb-3 flex-row items-center gap-2 px-1">
               <View className="h-5 w-1 rounded-full bg-primary" />
-              <Text className="text-base font-bold text-gray-900 dark:text-white">
+              <Text
+                className="text-base font-bold"
+                style={{ color: colors.text }}
+              >
                 Chức năng & Hệ thống
               </Text>
             </View>
-            <View className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-[#1a2632]">
+            <View
+              className="overflow-hidden rounded-2xl border shadow-sm"
+              style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
+            >
               <TouchableOpacity
-                onPress={() => onNavigate?.('tasks')}
-                className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
+                onPress={() => onNavigate?.('/profile/my-volunteer-profile')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
-                  <Ionicons
-                    name="clipboard"
-                    size={18}
-                    color="#1565C0"
-                    className="dark:text-gray-400"
-                  />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="person" size={18} color={iconAccent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
+                    Hồ sơ tình nguyện viên
+                  </Text>
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Email, số điện thoại, ngày sinh, giới tính và kỹ năng
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => onNavigate?.('/profile/tasks')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
+              >
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="clipboard" size={18} color={iconAccent} />
+                </View>
+                <View className="flex-1">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Theo dõi nhiệm vụ
                   </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Xem và cập nhật trạng thái nhiệm vụ
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('progress-rescue')}
-                className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
+                onPress={() => onNavigate?.('/profile/progress-rescue')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
-                  <Ionicons name="boat" size={18} color="#DA251D" />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${colors.status.error}18` }}
+                >
+                  <Ionicons name="boat" size={18} color={colors.status.error} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Tiến độ cứu hộ
                   </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Báo cáo tiến độ nhiệm vụ cứu hộ
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('progress-relief')}
-                className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
+                onPress={() => onNavigate?.('/profile/progress-relief')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-900/20">
-                  <Ionicons name="cube" size={18} color="#ea580c" />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${colors.status.pending}18` }}
+                >
+                  <Ionicons
+                    name="cube"
+                    size={18}
+                    color={colors.status.pending}
+                  />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Tiến độ cứu trợ
                   </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Báo cáo tiến độ phân phối hàng cứu trợ
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('dashboard-leader')}
-                className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
+                onPress={() => onNavigate?.('/profile/dashboard-leader')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/20">
-                  <Ionicons name="people" size={18} color="#1565C0" />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${iconAccent}18` }}
+                >
+                  <Ionicons name="people" size={18} color={iconAccent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Dashboard nhóm trưởng
                   </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Quản lý nhóm và phân công nhiệm vụ
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('report-leader')}
-                className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
+                onPress={() => onNavigate?.('/profile/report-leader')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/20">
-                  <Ionicons name="stats-chart" size={18} color="#16a34a" />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${colors.status.completed}18` }}
+                >
+                  <Ionicons
+                    name="stats-chart"
+                    size={18}
+                    color={colors.status.completed}
+                  />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Báo cáo tổng hợp
                   </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Gửi báo cáo tổng hợp của nhóm
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('requests')}
-                className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
+                onPress={() => onNavigate?.('/profile/requests')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
-                  <Ionicons
-                    name="document-text"
-                    size={18}
-                    color="#1565C0"
-                    className="dark:text-gray-400"
-                  />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="document-text" size={18} color={iconAccent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Theo dõi yêu cầu
                   </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Xem trạng thái yêu cầu của bạn
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('change-password')}
-                className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
+                onPress={() => onNavigate?.('/profile/change-password')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
-                  <Ionicons name="lock-closed" size={18} color="#1565C0" />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="lock-closed" size={18} color={iconAccent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Đổi mật khẩu
                   </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Cập nhật mật khẩu bảo mật
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('settings')}
-                className="flex-row items-center gap-4 border-b border-gray-50 p-4 dark:border-gray-800/50"
+                onPress={() => onNavigate?.('/profile/settings')}
+                className="flex-row items-center gap-4 border-b p-4"
+                style={{ borderColor: neutralBorder }}
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
-                  <Ionicons
-                    name="settings"
-                    size={18}
-                    color="#1565C0"
-                    className="dark:text-gray-400"
-                  />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="settings" size={18} color={iconAccent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Cài đặt ứng dụng
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('help')}
+                onPress={() => onNavigate?.('/profile/help')}
                 className="flex-row items-center gap-4 p-4"
               >
-                <View className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
-                  <Ionicons
-                    name="help-circle"
-                    size={18}
-                    color="#1565C0"
-                    className="dark:text-gray-400"
-                  />
+                <View
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="help-circle" size={18} color={iconAccent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Trung tâm trợ giúp
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -524,10 +868,23 @@ export default function VolunteerProfile({
           <View className="mb-4 mt-2">
             <TouchableOpacity
               onPress={onLogout}
-              className="flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-white py-4 shadow-sm transition-colors hover:bg-red-50 dark:border-red-900/30 dark:bg-[#1a2632] dark:hover:bg-red-900/10"
+              className="flex-row items-center justify-center gap-2 rounded-xl border py-4 shadow-sm"
+              style={{
+                borderColor: `${colors.status.error}33`,
+                backgroundColor: cardBg,
+              }}
             >
-              <Ionicons name="log-out-outline" size={20} color="#DA251D" />
-              <Text className="font-bold text-[#DA251D]">Đăng xuất</Text>
+              <Ionicons
+                name="log-out-outline"
+                size={20}
+                color={colors.status.error}
+              />
+              <Text
+                className="font-bold"
+                style={{ color: colors.status.error }}
+              >
+                Đăng xuất
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

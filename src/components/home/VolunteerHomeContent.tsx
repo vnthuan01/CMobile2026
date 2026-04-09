@@ -1,14 +1,11 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
-import { fetchRescueRequestDetail } from '@/src/services/rescueService';
-import {
-  RescueActiveBatchResponse,
-  rescueTeamService,
-} from '@/src/services/rescueTeamService';
-import { TeamDetailResponse, teamService } from '@/src/services/teamService';
+import { useVolunteerHomeOverview } from '@/src/hooks/useTeamOverview';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
+import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,77 +13,30 @@ export default function VolunteerHomeContent() {
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const volunteerHomeQuery = useVolunteerHomeOverview();
 
-  const [team, setTeam] = useState<TeamDetailResponse | null>(null);
-  const [batch, setBatch] = useState<RescueActiveBatchResponse | null>(null);
-  const [operationStatusMap, setOperationStatusMap] = useState<
-    Record<string, string>
-  >({});
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const team = volunteerHomeQuery.data?.team ?? null;
+  const batch = volunteerHomeQuery.data?.batch ?? null;
+  const operationStatusMap = volunteerHomeQuery.data?.operationStatusMap ?? {};
+  const loading = volunteerHomeQuery.isLoading || volunteerHomeQuery.isFetching;
+  const errorMessage = volunteerHomeQuery.data?.message ?? null;
 
-  const loadVolunteerHome = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const teamResult = await teamService.getMyTeam();
-
-      if (!teamResult.success || !teamResult.data?.teamId) {
-        setTeam(null);
-        setBatch(null);
-        setErrorMessage(teamResult.message || 'Không tải được thông tin đội.');
-        return;
-      }
-
-      setTeam(teamResult.data);
-
-      const batchResult = await rescueTeamService.getActiveBatchByTeam(
-        teamResult.data.teamId,
-      );
-
-      if (!batchResult.success || !batchResult.data) {
-        setBatch(null);
-        return;
-      }
-
-      setBatch(batchResult.data);
-
-      const statusEntries = await Promise.all(
-        (batchResult.data.items || []).map(async (item) => {
-          try {
-            const detail = await fetchRescueRequestDetail(item.rescueRequestId);
-            const operationStatus =
-              detail.assignedRescueTeam?.operationStatus || null;
-
-            return [item.rescueRequestId, operationStatus] as const;
-          } catch {
-            return [item.rescueRequestId, null] as const;
-          }
-        }),
-      );
-
-      setOperationStatusMap(
-        Object.fromEntries(
-          statusEntries.filter((entry) => Boolean(entry[1])) as Array<
-            readonly [string, string]
-          >,
-        ),
-      );
-    } catch {
-      setErrorMessage('Không tải được dữ liệu trang tình nguyện viên.');
-      setTeam(null);
-      setBatch(null);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    volunteerHomeQuery.refetch();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadVolunteerHome();
-    }, [loadVolunteerHome]),
-  );
+  useEffect(() => {
+    if (team || batch) {
+      setHasLoadedOnce(true);
+    }
+
+    if (!volunteerHomeQuery.isLoading && volunteerHomeQuery.data?.isEmpty && hasLoadedOnce) {
+      showInfoToast('Chưa có đội', volunteerHomeQuery.data.message || 'Bạn chưa thuộc đội nào.');
+    } else if (!volunteerHomeQuery.isLoading && !volunteerHomeQuery.data?.success && errorMessage && hasLoadedOnce) {
+      showErrorToast('Không tải được dữ liệu', errorMessage);
+    }
+  }, [batch, errorMessage, hasLoadedOnce, team, volunteerHomeQuery.data?.isEmpty, volunteerHomeQuery.data?.message, volunteerHomeQuery.data?.success, volunteerHomeQuery.isLoading]);
 
   const items = batch?.items ?? [];
 
@@ -193,7 +143,7 @@ export default function VolunteerHomeContent() {
               <View className="flex-row items-center gap-2">
                 <View
                   className="rounded-full px-3 py-1"
-                  style={{ backgroundColor: isDark ? '#1f2937' : '#f3f4f6' }}
+                  style={{ backgroundColor: colors.surface }}
                 >
                   <Text
                     className="text-xs font-semibold"
@@ -223,7 +173,7 @@ export default function VolunteerHomeContent() {
             <View
               className="h-12 w-12 items-center justify-center rounded-2xl"
               style={{
-                backgroundColor: isDark ? 'rgba(218,37,29,0.18)' : '#fee2e2',
+                backgroundColor: `${colors.primary}20`,
               }}
             >
               <Ionicons name="people" size={24} color={colors.primary} />
@@ -247,7 +197,7 @@ export default function VolunteerHomeContent() {
                 rescueTeamService.openCallReporter(team.contactPhone)
               }
               className="mt-4 h-11 flex-row items-center justify-center gap-2 rounded-xl"
-              style={{ backgroundColor: isDark ? '#111827' : '#f9fafb' }}
+              style={{ backgroundColor: colors.surface }}
             >
               <Ionicons name="call-outline" size={18} color={colors.primary} />
               <Text className="font-semibold" style={{ color: colors.text }}>
@@ -277,11 +227,11 @@ export default function VolunteerHomeContent() {
           {!!errorMessage && !team && (
             <View className="mt-6 px-4">
               <Card
-                colors="#fecaca"
-                bg={isDark ? 'rgba(127,29,29,0.25)' : '#fef2f2'}
+                colors={colors.status.error}
+                bg={isDark ? `${colors.status.error}20` : `${colors.status.error}10`}
               >
                 <View className="flex-row items-start gap-3">
-                  <Ionicons name="alert-circle" size={22} color="#dc2626" />
+                    <Ionicons name="alert-circle" size={22} color={colors.status.error} />
                   <View className="flex-1">
                     <Text
                       className="text-base font-bold"
@@ -296,7 +246,7 @@ export default function VolunteerHomeContent() {
                       {errorMessage}
                     </Text>
                     <TouchableOpacity
-                      onPress={loadVolunteerHome}
+                      onPress={() => volunteerHomeQuery.refetch()}
                       className="mt-4 self-start rounded-lg px-4 py-2"
                       style={{ backgroundColor: colors.primary }}
                     >
@@ -361,7 +311,7 @@ export default function VolunteerHomeContent() {
                   </View>
                   <View
                     className="mt-3 h-2 overflow-hidden rounded-full"
-                    style={{ backgroundColor: isDark ? '#1f2937' : '#e5e7eb' }}
+                     style={{ backgroundColor: colors.border }}
                   >
                     <View
                       className="h-full rounded-full"
@@ -393,18 +343,18 @@ export default function VolunteerHomeContent() {
                             )}
                             bg={
                               currentMission.rescueRequestType === 'Emergency'
-                                ? '#fef2f2'
-                                : '#eff6ff'
+                                ? `${colors.status.error}22`
+                                : `${colors.status.incoming}22`
                             }
                             text={
                               currentMission.rescueRequestType === 'Emergency'
-                                ? '#b91c1c'
-                                : '#1d4ed8'
+                                ? colors.status.error
+                                : colors.status.incoming
                             }
                           />
                           <Badge
                             label={formatMissionStatus(currentMission.status)}
-                            bg={isDark ? '#1f2937' : '#f3f4f6'}
+                            bg={colors.surface}
                             text={colors.textSecondary}
                           />
                           <Badge
@@ -462,7 +412,7 @@ export default function VolunteerHomeContent() {
                       <View
                         className="h-12 w-12 items-center justify-center rounded-2xl"
                         style={{
-                          backgroundColor: isDark ? '#1f2937' : '#f3f4f6',
+                          backgroundColor: colors.surface,
                         }}
                       >
                         <Ionicons
@@ -509,7 +459,7 @@ export default function VolunteerHomeContent() {
                       <ActionButton
                         label="Làm mới"
                         icon="refresh"
-                        onPress={loadVolunteerHome}
+                        onPress={() => volunteerHomeQuery.refetch()}
                       />
                     </View>
                   </Card>
@@ -536,7 +486,7 @@ export default function VolunteerHomeContent() {
                           : 'Hiện chưa có đợt hoạt động nào được giao cho đội của bạn.'}
                       </Text>
                       <TouchableOpacity
-                        onPress={loadVolunteerHome}
+                        onPress={() => volunteerHomeQuery.refetch()}
                         className="mt-4 rounded-xl px-4 py-3"
                         style={{ backgroundColor: colors.primary }}
                       >
@@ -581,11 +531,11 @@ export default function VolunteerHomeContent() {
                               {mission.address || 'Chưa có địa chỉ'}
                             </Text>
                           </View>
-                          <Badge
-                            label={formatMissionStatus(mission.status)}
-                            bg={isDark ? '#1f2937' : '#f3f4f6'}
-                            text={colors.textSecondary}
-                          />
+                        <Badge
+                          label={formatMissionStatus(mission.status)}
+                          bg={colors.surface}
+                          text={colors.textSecondary}
+                        />
                         </View>
                         <View className="mt-3 flex-row flex-wrap gap-2">
                           <Badge
@@ -639,12 +589,12 @@ export default function VolunteerHomeContent() {
                   <QuickAction
                     icon="heart"
                     label="Ủng hộ cứu trợ"
-                    onPress={() => router.push('/donate')}
+                    onPress={() => router.push('/fundraising')}
                   />
                   <QuickAction
                     icon="refresh"
                     label="Làm mới dữ liệu"
-                    onPress={loadVolunteerHome}
+                    onPress={() => volunteerHomeQuery.refetch()}
                   />
                 </View>
               </View>
@@ -704,7 +654,7 @@ function MiniInfo({ label, value }: { label: string; value: string }) {
   return (
     <View
       className="flex-1 rounded-xl p-3"
-      style={{ backgroundColor: isDark ? '#111827' : '#f9fafb' }}
+      style={{ backgroundColor: colors.surface }}
     >
       <Text className="text-xs" style={{ color: colors.textSecondary }}>
         {label}
@@ -773,18 +723,14 @@ function ActionButton({
   const { colors, isDark } = useTheme();
 
   const backgroundColor = disabled
-    ? isDark
-      ? '#1f2937'
-      : '#e5e7eb'
+    ? colors.surface
     : primary
       ? colors.primary
-      : isDark
-        ? '#111827'
-        : '#f9fafb';
+      : colors.surface;
 
-  const iconColor = disabled ? '#9ca3af' : primary ? '#ffffff' : colors.primary;
+  const iconColor = disabled ? colors.textSecondary : primary ? colors.white : colors.primary;
 
-  const textColor = disabled ? '#9ca3af' : primary ? '#ffffff' : colors.text;
+  const textColor = disabled ? colors.textSecondary : primary ? colors.white : colors.text;
 
   return (
     <TouchableOpacity

@@ -95,14 +95,14 @@ export default function ReportProgressTeamLeaderScreen({
                                     <Text className="text-xs font-bold text-white">Khẩn cấp</Text>
                                 </View>
                                 <View className="flex-row items-center gap-1">
-                                    <Ionicons name="time-outline" size={12} color="#d1d5db" />
-                                    <Text className="text-xs font-medium text-gray-300">Cập nhật 5p trước</Text>
+                                    <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+                                    <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>Cập nhật 5p trước</Text>
                                 </View>
                             </View>
                             <Text className="text-white text-xl font-bold leading-tight mb-1">
                                 Khu vực sạt lở X
                             </Text>
-                            <Text className="text-gray-200 text-sm font-medium">
+                            <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
                                 Lào Cai, Việt Nam
                             </Text>
                             <View className="mt-3">
@@ -120,9 +120,9 @@ export default function ReportProgressTeamLeaderScreen({
                     {/* Stats Grid */}
                     <View className="flex-row gap-3">
                         {[
-                            { icon: 'people', count: '3/5', label: 'Thành viên', color: colors.primary, bgColor: isDark ? 'rgba(220,38,38,0.1)' : '#fef2f2' },
-                            { icon: 'images', count: '12', label: 'Hình ảnh', color: colors.secondary, bgColor: isDark ? 'rgba(21,101,192,0.1)' : '#e3f2fd' },
-                            { icon: 'document-text', count: '5', label: 'Ghi chú', color: '#d97706', bgColor: isDark ? 'rgba(217,119,6,0.1)' : '#fffbeb' },
+                            { icon: 'people', count: '3/5', label: 'Thành viên', color: colors.primary, bgColor: `${colors.status.error}12` },
+                            { icon: 'images', count: '12', label: 'Hình ảnh', color: colors.secondary, bgColor: `${colors.secondary}12` },
+                            { icon: 'document-text', count: '5', label: 'Ghi chú', color: colors.status.pending, bgColor: `${colors.status.pending}12` },
                         ].map((stat, i) => (
                             <View
                                 key={i}
@@ -192,7 +192,7 @@ export default function ReportProgressTeamLeaderScreen({
                                                     <Text
                                                         className="text-[10px] font-bold"
                                                         style={{
-                                                            color: report.status === 'done' ? '#15803d' : '#a16207',
+                                                        color: report.status === 'done' ? colors.status.completed : colors.status.pending,
                                                         }}
                                                     >
                                                         {report.statusLabel}
@@ -219,7 +219,7 @@ export default function ReportProgressTeamLeaderScreen({
                                                                 opacity: i === 2 && report.imageCount > 3 ? 0.6 : 1,
                                                             }}
                                                         >
-                                                            <Ionicons name="image" size={24} color="#9ca3af" />
+                                <Ionicons name="image" size={24} color={colors.textSecondary} />
                                                             {i === 2 && report.imageCount > 3 && (
                                                                 <View className="absolute inset-0 items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
                                                                     <Text className="text-sm font-bold text-white">
@@ -269,8 +269,8 @@ export default function ReportProgressTeamLeaderScreen({
                         }}
                     >
                         <View className="flex-row items-center gap-2 mb-3">
-                            <Ionicons name="warning" size={18} color={isDark ? '#ef4444' : colors.primary} />
-                            <Text className="text-sm font-bold" style={{ color: isDark ? '#ef4444' : colors.primary }}>
+                            <Ionicons name="warning" size={18} color={colors.status.error} />
+                            <Text className="text-sm font-bold" style={{ color: colors.status.error }}>
                                 Trạng thái khẩn cấp
                             </Text>
                         </View>
