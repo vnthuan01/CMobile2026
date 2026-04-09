@@ -48,7 +48,7 @@ export default function MyVolunteerProfileScreen({
 
       if (!profileResult.success) {
         setErrorMessage(
-          profileResult.message || 'Không thể tải hồ sơ volunteer.',
+          profileResult.message || 'Không thể tải hồ sơ tình nguyện viên.',
         );
         setProfile(null);
         return;
@@ -69,11 +69,11 @@ export default function MyVolunteerProfileScreen({
 
   const normalizedStatus = useMemo(() => {
     const raw = String(profile?.verificationStatus ?? '').toLowerCase();
-    if (raw === 'rejected' || raw === '3') return 'Rejected';
-    if (raw === 'approved' || raw === '2') return 'Approved';
-    if (raw === 'pending' || raw === '1') return 'Pending';
-    return 'Pending';
-  }, [profile?.verificationStatus]);
+    if (raw.includes('reject')) return 'Rejected';
+    if (raw.includes('approve')) return 'Approved';
+    if (raw.includes('pending')) return 'Pending';
+    return profile?.reason ? 'Rejected' : 'Pending';
+  }, [profile?.reason, profile?.verificationStatus]);
 
   const statusMeta = useMemo(() => {
     switch (normalizedStatus) {
@@ -107,7 +107,7 @@ export default function MyVolunteerProfileScreen({
   if (loading) {
     return (
       <View className="flex-1 bg-background-light">
-        <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
+        <ScreenHeader title="Hồ sơ tình nguyện viên của tôi" onBack={onBack} />
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#DA251D" />
           <Text className="mt-3 text-text-secondary">Đang tải hồ sơ...</Text>
@@ -119,7 +119,7 @@ export default function MyVolunteerProfileScreen({
   if (errorMessage) {
     return (
       <View className="flex-1 bg-background-light">
-        <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
+        <ScreenHeader title="Hồ sơ tình nguyện viên của tôi" onBack={onBack} />
         <View className="flex-1 items-center justify-center px-6">
           <Ionicons name="alert-circle-outline" size={36} color="#DC2626" />
           <Text className="mt-4 text-center text-lg font-bold text-text-primary">
@@ -142,7 +142,7 @@ export default function MyVolunteerProfileScreen({
   if (!profile) {
     return (
       <View className="flex-1 bg-background-light">
-        <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
+        <ScreenHeader title="Hồ sơ tình nguyện viên của tôi" onBack={onBack} />
         <View className="flex-1 items-center justify-center px-6">
           <Ionicons name="document-text-outline" size={36} color="#94A3B8" />
           <Text className="mt-4 text-center text-lg font-bold text-text-primary">
@@ -166,7 +166,7 @@ export default function MyVolunteerProfileScreen({
 
   return (
     <View className="flex-1 bg-background-light">
-      <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
+      <ScreenHeader title="Hồ sơ tình nguyện viên của tôi" onBack={onBack} />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: bottom + 24 }}

@@ -158,6 +158,25 @@ export default function VolunteerHomeContent() {
   const batchProgress =
     stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
 
+  const getPriorityLevelLabel = (value?: number | null) => {
+    if (value == null) return 'Không có mức ưu tiên';
+    if (value === 0) return 'Thấp';
+    if (value === 1) return 'Trung bình';
+    if (value === 2) return 'Cao';
+    if (value === 3) return 'Khẩn cấp';
+    return 'Không hợp lệ';
+  };
+
+  const getPriorityPointColors = (value?: number | null) => {
+    if ((value ?? 0) >= 80) {
+      return { bg: '#fee2e2', text: '#b91c1c' };
+    }
+    if ((value ?? 0) >= 50) {
+      return { bg: '#fef3c7', text: '#92400e' };
+    }
+    return { bg: '#f1f5f9', text: '#334155' };
+  };
+
   return (
     <View style={{ paddingBottom: bottom + 20 }}>
       <View className="mt-6 px-4">
@@ -388,6 +407,24 @@ export default function VolunteerHomeContent() {
                             bg={isDark ? '#1f2937' : '#f3f4f6'}
                             text={colors.textSecondary}
                           />
+                          <Badge
+                            label={`Mức ưu tiên: ${getPriorityLevelLabel(currentMission.priorityLevel)}`}
+                            bg="#fef3c7"
+                            text="#92400e"
+                          />
+                          <Badge
+                            label={`Điểm ưu tiên: ${currentMission.priorityPoint ?? 0}`}
+                            bg={
+                              getPriorityPointColors(
+                                currentMission.priorityPoint,
+                              ).bg
+                            }
+                            text={
+                              getPriorityPointColors(
+                                currentMission.priorityPoint,
+                              ).text
+                            }
+                          />
                         </View>
 
                         <Text
@@ -548,6 +585,22 @@ export default function VolunteerHomeContent() {
                             label={formatMissionStatus(mission.status)}
                             bg={isDark ? '#1f2937' : '#f3f4f6'}
                             text={colors.textSecondary}
+                          />
+                        </View>
+                        <View className="mt-3 flex-row flex-wrap gap-2">
+                          <Badge
+                            label={`Mức ưu tiên: ${getPriorityLevelLabel(mission.priorityLevel)}`}
+                            bg="#fef3c7"
+                            text="#92400e"
+                          />
+                          <Badge
+                            label={`Điểm ưu tiên: ${mission.priorityPoint ?? 0}`}
+                            bg={
+                              getPriorityPointColors(mission.priorityPoint).bg
+                            }
+                            text={
+                              getPriorityPointColors(mission.priorityPoint).text
+                            }
                           />
                         </View>
                       </Card>

@@ -119,6 +119,13 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const [lastHeartbeatError, setLastHeartbeatError] = useState<string | null>(
     null,
   );
+  const [heartbeatBlockReason, setHeartbeatBlockReason] = useState<
+    string | null
+  >(null);
+  const [heartbeatRetryCount, setHeartbeatRetryCount] = useState(0);
+  const [lastHeartbeatAttemptAt, setLastHeartbeatAttemptAt] = useState<
+    string | null
+  >(null);
   const [lastHeartbeatSuccessAt, setLastHeartbeatSuccessAt] = useState<
     string | null
   >(null);
@@ -200,6 +207,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                 reporterPhone: request.reporterPhone,
                 sequenceOrder: request.sequenceOrder,
                 isAutoAssigned: false,
+                priorityPoint: request.priorityPoint ?? null,
+                priorityLevel: request.priorityLevel ?? null,
                 distanceKm: null,
                 estimatedMinutes: null,
                 status: request.batchItemStatus,
@@ -350,6 +359,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
       heartbeatInFlightRef.current = true;
       setIsSyncingEta(true);
+      setLastHeartbeatAttemptAt(new Date().toISOString());
       try {
         const payload: TeamTrackingHeartbeatRequest = {
           latitude: userLocation.latitude,
@@ -372,12 +382,15 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           setLastHeartbeatError(
             heartbeat.message || 'Heartbeat thất bại, sẽ thử lại.',
           );
+          setHeartbeatRetryCount((prev) => prev + 1);
           return;
         }
 
         setLastHeartbeatAt(new Date().toISOString());
         setLastHeartbeatSuccessAt(new Date().toISOString());
         setLastHeartbeatError(null);
+        setHeartbeatRetryCount(0);
+        setHeartbeatBlockReason(null);
 
         const refreshedBatch =
           await rescueTeamService.getActiveBatchByTeam(teamId);
@@ -414,6 +427,17 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     };
 
     if (!teamId || !userLocation || !batch?.rescueBatchId || actionSubmitting) {
+      const reason = !teamId
+        ? 'Chưa có teamId'
+        : !batch?.rescueBatchId
+          ? 'Chưa có batch hoạt động'
+          : !userLocation
+            ? 'Chưa có vị trí thiết bị'
+            : actionSubmitting
+              ? 'Đang submit thao tác nhiệm vụ'
+              : 'Không rõ';
+
+      setHeartbeatBlockReason(reason);
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
         heartbeatIntervalRef.current = null;
@@ -558,6 +582,48 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
       return { bg: '#FEE2E2', text: '#B91C1C', label: 'Khẩn cấp' };
     }
     return { bg: '#DBEAFE', text: '#1D4ED8', label: 'Bình thường' };
+  };
+
+  const priorityBadge = (point?: number | null, level?: number | null) => ({
+    pointLabel: `Điểm ưu tiên: ${point ?? 0}`,
+    levelLabel: `Mức ưu tiên: ${getPriorityLevelLabel(level)}`,
+    levelBg:
+      level === 3
+        ? '#FEE2E2'
+        : level === 2
+          ? '#FDE68A'
+          : level === 1
+            ? '#DBEAFE'
+            : '#ECFCCB',
+    levelText:
+      level === 3
+        ? '#B91C1C'
+        : level === 2
+          ? '#92400E'
+          : level === 1
+            ? '#1D4ED8'
+            : '#3F6212',
+    pointBg:
+      (point ?? 0) >= 80
+        ? '#FEE2E2'
+        : (point ?? 0) >= 50
+          ? '#FEF3C7'
+          : '#F1F5F9',
+    pointText:
+      (point ?? 0) >= 80
+        ? '#B91C1C'
+        : (point ?? 0) >= 50
+          ? '#92400E'
+          : '#334155',
+  });
+
+  const getPriorityLevelLabel = (value?: number | null) => {
+    if (value == null) return 'Không có mức ưu tiên';
+    if (value === 0) return 'Thấp';
+    if (value === 1) return 'Trung bình';
+    if (value === 2) return 'Cao';
+    if (value === 3) return 'Khẩn cấp';
+    return 'Không hợp lệ';
   };
 
   const formatDistanceKm = (value?: number | null) => {
@@ -990,18 +1056,20 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
   const heartbeatStatusLabel = useMemo(() => {
     if (isSyncingEta) return 'Dang cap nhat ETA...';
+    if (heartbeatBlockReason)
+      return `Tạm dừng tracking: ${heartbeatBlockReason}`;
     if (lastHeartbeatError) return `Loi heartbeat: ${lastHeartbeatError}`;
     if (!lastHeartbeatAt) return null;
 
     const date = new Date(lastHeartbeatAt);
     if (Number.isNaN(date.getTime())) return null;
 
-    return `Da dong bo vi tri luc ${date.toLocaleTimeString('vi-VN', {
+    return `Đã đồng bộ vị trí lúc ${date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
     })}`;
-  }, [isSyncingEta, lastHeartbeatAt, lastHeartbeatError]);
+  }, [heartbeatBlockReason, isSyncingEta, lastHeartbeatAt, lastHeartbeatError]);
 
   const debugTrackingLines = useMemo(() => {
     return [
@@ -1012,6 +1080,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
       `intervalActive: ${heartbeatIntervalRef.current ? 'yes' : 'no'}`,
       `intervalMs: ${heartbeatIntervalMs ?? '---'}`,
       `heartbeat: ${isSyncingEta ? 'syncing' : 'idle'}`,
+      `blockReason: ${heartbeatBlockReason || '---'}`,
+      `retryCount: ${heartbeatRetryCount}`,
+      `lastAttempt: ${lastHeartbeatAttemptAt || '---'}`,
       `lastSuccess: ${lastHeartbeatSuccessAt || '---'}`,
       `lastError: ${lastHeartbeatError || '---'}`,
       `lastSync: ${lastHeartbeatAt || '---'}`,
@@ -1028,9 +1099,12 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   }, [
     batch?.rescueBatchId,
     currentMission?.rescueBatchItemId,
+    heartbeatBlockReason,
     heartbeatIntervalMs,
+    heartbeatRetryCount,
     isSyncingEta,
     lastHeartbeatError,
+    lastHeartbeatAttemptAt,
     lastHeartbeatSuccessAt,
     lastHeartbeatAt,
     screen,
@@ -1561,6 +1635,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   const status = statusBadge(
                     getMissionDisplayStatus(item) || undefined,
                   );
+                  const priority = priorityBadge(
+                    item.priorityPoint,
+                    item.priorityLevel,
+                  );
 
                   return (
                     <View
@@ -1588,6 +1666,28 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                             style={{ color: status.text }}
                           >
                             {status.label}
+                          </Text>
+                        </View>
+                        <View
+                          className="rounded-full px-3 py-1"
+                          style={{ backgroundColor: priority.levelBg }}
+                        >
+                          <Text
+                            className="text-xs font-bold"
+                            style={{ color: priority.levelText }}
+                          >
+                            {priority.levelLabel}
+                          </Text>
+                        </View>
+                        <View
+                          className="rounded-full px-3 py-1"
+                          style={{ backgroundColor: priority.pointBg }}
+                        >
+                          <Text
+                            className="text-xs font-bold"
+                            style={{ color: priority.pointText }}
+                          >
+                            {priority.pointLabel}
                           </Text>
                         </View>
                         {currentMissionForUi?.rescueBatchItemId ===
@@ -1713,6 +1813,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                         const status = statusBadge(
                           getMissionDisplayStatus(item) || undefined,
                         );
+                        const priority = priorityBadge(
+                          item.priorityPoint,
+                          item.priorityLevel,
+                        );
 
                         return (
                           <View
@@ -1740,6 +1844,28 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                                   style={{ color: status.text }}
                                 >
                                   {status.label}
+                                </Text>
+                              </View>
+                              <View
+                                className="rounded-full px-3 py-1"
+                                style={{ backgroundColor: priority.levelBg }}
+                              >
+                                <Text
+                                  className="text-xs font-bold"
+                                  style={{ color: priority.levelText }}
+                                >
+                                  {priority.levelLabel}
+                                </Text>
+                              </View>
+                              <View
+                                className="rounded-full px-3 py-1"
+                                style={{ backgroundColor: priority.pointBg }}
+                              >
+                                <Text
+                                  className="text-xs font-bold"
+                                  style={{ color: priority.pointText }}
+                                >
+                                  {priority.pointLabel}
                                 </Text>
                               </View>
                             </View>

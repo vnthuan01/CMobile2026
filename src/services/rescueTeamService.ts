@@ -16,6 +16,8 @@ export interface RescueBatchItem {
   reporterPhone: string;
   sequenceOrder: number;
   isAutoAssigned: boolean;
+  priorityPoint?: number | null;
+  priorityLevel?: number | null;
   distanceKm: number | null;
   estimatedMinutes: number | null;
   status: 'Pending' | 'InProgress' | 'Done' | 'Cancelled' | string;
@@ -46,6 +48,8 @@ export interface RescueTeamHistoryRequestItem {
   updatedAt: string;
   sequenceOrder: number;
   batchItemStatus: string;
+  priorityPoint?: number | null;
+  priorityLevel?: number | null;
 }
 
 export interface RescueTeamHistoryBatch {

@@ -80,7 +80,43 @@ export const authService = {
         message: response.data.message,
       };
     } catch (error: any) {
+      const responseData = error?.response?.data;
+      const responseStatus = error?.response?.status;
+      const requestUrl = error?.config?.url || '/Auth/register';
+      const requestMethod = String(
+        error?.config?.method || 'post',
+      ).toUpperCase();
+      const requestPayload = error?.config?.data
+        ? (() => {
+            try {
+              const parsed = JSON.parse(error.config.data);
+              if (parsed?.password) parsed.password = '***';
+              return parsed;
+            } catch {
+              return error.config.data;
+            }
+          })()
+        : null;
+
       console.error('Register error:', error);
+      console.error('Register request info:', {
+        method: requestMethod,
+        url: requestUrl,
+        status: responseStatus,
+        payload: requestPayload,
+      });
+      console.error('Register response data:', responseData);
+
+      if (responseData?.errors && typeof responseData.errors === 'object') {
+        const flattenedErrors = Object.entries(responseData.errors).flatMap(
+          ([field, msgs]) =>
+            Array.isArray(msgs)
+              ? msgs.map((msg) => ({ field, message: msg }))
+              : [{ field, message: String(msgs) }],
+        );
+        console.error('Register validation errors:', flattenedErrors);
+      }
+
       return {
         success: false,
         message:
