@@ -38,8 +38,26 @@ export default function MyVolunteerProfileScreen({
   const { data: profileData, isLoading: loading } = useMyVolunteerProfile();
   const { data: skills = [] } = useAllSkills();
 
-  const profile = profileData?.profile ?? null;
-  const errorMessage = profileData?.errorMessage ?? null;
+    try {
+      const [profileResult, skillsResult] = await Promise.all([
+        volunteerService.getMyVolunteerProfile(),
+        volunteerService.getAllSkills(),
+      ]);
+
+      if (!profileResult.success) {
+        setErrorMessage(
+          profileResult.message || 'Không thể tải hồ sơ tình nguyện viên.',
+        );
+        setProfile(null);
+        return;
+      }
+
+      setProfile(profileResult.data);
+      setSkills(skillsResult.success ? skillsResult.data : []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -49,11 +67,11 @@ export default function MyVolunteerProfileScreen({
 
   const normalizedStatus = useMemo(() => {
     const raw = String(profile?.verificationStatus ?? '').toLowerCase();
-    if (raw === 'rejected' || raw === '3') return 'Rejected';
-    if (raw === 'approved' || raw === '2') return 'Approved';
-    if (raw === 'pending' || raw === '1') return 'Pending';
-    return 'Pending';
-  }, [profile?.verificationStatus]);
+    if (raw.includes('reject')) return 'Rejected';
+    if (raw.includes('approve')) return 'Approved';
+    if (raw.includes('pending')) return 'Pending';
+    return profile?.reason ? 'Rejected' : 'Pending';
+  }, [profile?.reason, profile?.verificationStatus]);
 
   const statusMeta = useMemo(() => {
     switch (normalizedStatus) {
