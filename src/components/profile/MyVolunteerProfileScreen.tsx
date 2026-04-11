@@ -3,9 +3,14 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
   TeamRolePreference,
+  SkillResponse,
   VolunteerProfileResponse,
 } from '@/src/services/volunteerService';
-import { useMyVolunteerProfile, useAllSkills, volunteerProfileKeys } from '@/src/hooks/useMyVolunteerProfile';
+import {
+  useAllSkills,
+  useMyVolunteerProfile,
+  volunteerProfileKeys,
+} from '@/src/hooks/useMyVolunteerProfile';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
@@ -35,29 +40,12 @@ export default function MyVolunteerProfileScreen({
   const { colors } = useTheme();
 
   const queryClient = useQueryClient();
-  const { data: profileData, isLoading: loading } = useMyVolunteerProfile();
-  const { data: skills = [] } = useAllSkills();
-
-    try {
-      const [profileResult, skillsResult] = await Promise.all([
-        volunteerService.getMyVolunteerProfile(),
-        volunteerService.getAllSkills(),
-      ]);
-
-      if (!profileResult.success) {
-        setErrorMessage(
-          profileResult.message || 'Không thể tải hồ sơ tình nguyện viên.',
-        );
-        setProfile(null);
-        return;
-      }
-
-      setProfile(profileResult.data);
-      setSkills(skillsResult.success ? skillsResult.data : []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const profileQuery = useMyVolunteerProfile();
+  const skillsQuery = useAllSkills();
+  const profile = profileQuery.data?.profile ?? null;
+  const errorMessage = profileQuery.data?.errorMessage ?? null;
+  const skills = skillsQuery.data ?? [];
+  const loading = profileQuery.isLoading || skillsQuery.isLoading;
 
   useFocusEffect(
     useCallback(() => {
@@ -239,16 +227,21 @@ export default function MyVolunteerProfileScreen({
         <SectionCard title="Kỹ năng" icon="sparkles-outline">
           {profile.skills?.length ? (
             <View className="flex-row flex-wrap gap-2">
-              {profile.skills.map((skillId) => (
+              {profile.skills.map((skillEntry: VolunteerProfileResponse['skills'][number]) => (
                 <View
-                  key={String(skillId)}
+                  key={getProfileSkillId(skillEntry)}
                   className="rounded-full bg-primary/10 px-3 py-2"
                 >
                   <Text className="text-sm font-medium text-primary">
                     {getLocalizedSkillName(
-                      skills.find((skill) => skill.skillId === skillId)?.name ||
-                        String(skillId),
-                      skills.find((skill) => skill.skillId === skillId)?.code,
+                      skills.find(
+                        (skill: SkillResponse) =>
+                          skill.skillId === getProfileSkillId(skillEntry),
+                      )?.name || getProfileSkillId(skillEntry),
+                      skills.find(
+                        (skill: SkillResponse) =>
+                          skill.skillId === getProfileSkillId(skillEntry),
+                      )?.code,
                     )}
                   </Text>
                 </View>
@@ -262,7 +255,7 @@ export default function MyVolunteerProfileScreen({
         <SectionCard title="Chứng chỉ" icon="document-attach-outline">
           {profile.certificates?.length ? (
             <View className="gap-3">
-              {profile.certificates.map((certificate, index) => (
+              {profile.certificates.map((certificate: VolunteerProfileResponse['certificates'][number], index: number) => (
                 <View
                   key={`${certificate.fileUrl}-${index}`}
                   className="rounded-2xl border p-4"
@@ -413,4 +406,11 @@ function getLocalizedSkillName(name?: string | null, code?: string | null) {
   }
 
   return name || code || 'Kỹ năng';
+}
+
+function getProfileSkillId(
+  skillEntry: VolunteerProfileResponse['skills'][number],
+) {
+  if (typeof skillEntry === 'string') return skillEntry;
+  return skillEntry?.skillId || skillEntry?.code || skillEntry?.name || '';
 }
