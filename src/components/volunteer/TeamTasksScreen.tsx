@@ -6,15 +6,36 @@ import WebViewMap from '@/src/components/common/WebViewMap';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useTeamTasksController } from '@/src/hooks/useTeamTasksController';
 import {
+  completeRescueOperation,
+  fetchRescueRequestDetail,
+  updateRescueOperationStatus,
+} from '@/src/services/rescueService';
+import {
   RescueActiveBatchResponse,
-  RescueBatchItem,
+  RescueBatchItem as BaseRescueBatchItem,
   rescueTeamService,
 } from '@/src/services/rescueTeamService';
+import {
+  TeamDetailResponse,
+  TeamTrackingHeartbeatRequest,
+  teamService,
+} from '@/src/services/teamService';
+import { uploadService } from '@/src/services/uploadService';
+import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import Constants from 'expo-constants';
-import React, { useMemo } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   Text,
@@ -32,6 +53,17 @@ type MissionFilter =
   | 'in-progress'
   | 'pending'
   | 'done';
+
+type TasksScreenType = 'list' | 'map';
+type LeaderActionMode = 'progress' | 'complete' | null;
+type RescueBatchItem = BaseRescueBatchItem & {
+  priorityPoint?: number | null;
+  priorityLevel?: number | null;
+};
+type RescueHistoryRequestWithPriority = {
+  priorityPoint?: number | null;
+  priorityLevel?: number | null;
+};
 
 interface TeamTasksScreenProps {
   onBack?: () => void;
@@ -182,8 +214,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                 reporterPhone: request.reporterPhone,
                 sequenceOrder: request.sequenceOrder,
                 isAutoAssigned: false,
-                priorityPoint: request.priorityPoint ?? null,
-                priorityLevel: request.priorityLevel ?? null,
+                priorityPoint:
+                  (request as RescueHistoryRequestWithPriority).priorityPoint ?? null,
+                priorityLevel:
+                  (request as RescueHistoryRequestWithPriority).priorityLevel ?? null,
                 distanceKm: null,
                 estimatedMinutes: null,
                 status: request.batchItemStatus,
@@ -488,7 +522,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
   const filteredItems = useMemo(() => {
     if (!displayBatch?.items) return [];
-    return rescueTeamService.getFilteredItems(displayBatch.items, filter);
+    return rescueTeamService.getFilteredItems(
+      displayBatch.items,
+      filter,
+    ) as RescueBatchItem[];
   }, [displayBatch?.items, filter]);
 
   const isLeader = useMemo(() => {
@@ -509,7 +546,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     return { total, emergencyCount };
   }, [displayBatch?.items]);
 
-  const mapStyle = rescueTeamService.getGoongMapStyleUrl();
+  const mapStyle = rescueTeamService.getMapStyleUrl();
 
   const getMissionDisplayStatus = useCallback(
     (item?: RescueBatchItem | null) => {
@@ -518,6 +555,57 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     },
     [operationStatusMap],
   );
+
+  const getEffectiveMissionState = useCallback(
+    (item?: RescueBatchItem | null) => {
+      if (!item) return null;
+
+      const operationStatus = getMissionDisplayStatus(item);
+      const normalized = String(operationStatus || '').toLowerCase();
+
+      if (
+        normalized === 'done' ||
+        normalized === 'rescuecompleted' ||
+        normalized === 'closed' ||
+        normalized === 'cancelled'
+      ) {
+        return 'done';
+      }
+
+      if (normalized === 'enroute' || normalized === 'rescuing') {
+        return 'in_progress';
+      }
+
+      return 'pending';
+    },
+    [getMissionDisplayStatus],
+  );
+
+  const currentMissionForUi = useMemo(() => {
+    if (!displayBatch?.items?.length) return null;
+
+    const inProgressMission = displayBatch.items.find(
+      (item) => getEffectiveMissionState(item) === 'in_progress',
+    );
+    if (inProgressMission) return inProgressMission;
+
+    return (
+      displayBatch.items.find((item) => getEffectiveMissionState(item) !== 'done') ||
+      null
+    );
+  }, [displayBatch?.items, getEffectiveMissionState]);
+
+  const openMapScreen = (item?: RescueBatchItem | null) => {
+    if (item) setSelectedMission(item);
+    setScreen('map');
+  };
+
+  const resetLeaderForms = () => {
+    setLeaderActionMode(null);
+    setActiveActionMission(null);
+    setLeaderNote('');
+    setLeaderImages([]);
+  };
 
   const statusBadge = (status?: string) => {
     const normalized = String(status ?? '').toLowerCase();
@@ -1100,9 +1188,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   />
                   <MetaBadge
                     icon="flag-outline"
-                    label={statusBadge(getMissionDisplayStatus(selectedMission)).label}
-                    bg={statusBadge(getMissionDisplayStatus(selectedMission)).bg}
-                    text={statusBadge(getMissionDisplayStatus(selectedMission)).text}
+                    label={statusBadge(getMissionDisplayStatus(selectedMission) || undefined).label}
+                    bg={statusBadge(getMissionDisplayStatus(selectedMission) || undefined).bg}
+                    text={statusBadge(getMissionDisplayStatus(selectedMission) || undefined).text}
                   />
                 </View>
 
@@ -1413,7 +1501,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   const historyItems = rescueTeamService.getFilteredItems(
                     historyBatch.items,
                     filter,
-                  );
+                  ) as RescueBatchItem[];
 
                   if (historyItems.length === 0) return null;
 
