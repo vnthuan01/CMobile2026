@@ -94,7 +94,6 @@ export function SosFloatingButton({
 
   return (
     <View
-      pointerEvents="box-none"
       style={{
         position: 'absolute',
         ...(align === 'center'
@@ -102,10 +101,10 @@ export function SosFloatingButton({
           : { right }),
         bottom,
         zIndex: 40,
+        pointerEvents: 'box-none',
       }}
     >
       <Animated.View
-        pointerEvents="none"
         style={[
           {
             position: 'absolute',
@@ -114,13 +113,13 @@ export function SosFloatingButton({
             borderRadius: radius,
             borderWidth: 2,
             borderColor: colors.status.error,
+            pointerEvents: 'none',
           },
           ringStyle1,
         ]}
       />
 
       <Animated.View
-        pointerEvents="none"
         style={[
           {
             position: 'absolute',
@@ -129,6 +128,7 @@ export function SosFloatingButton({
             borderRadius: radius,
             borderWidth: 2,
             borderColor: colors.status.error,
+            pointerEvents: 'none',
           },
           ringStyle2,
         ]}

@@ -6,36 +6,15 @@ import WebViewMap from '@/src/components/common/WebViewMap';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useTeamTasksController } from '@/src/hooks/useTeamTasksController';
 import {
-  completeRescueOperation,
-  fetchRescueRequestDetail,
-  updateRescueOperationStatus,
-} from '@/src/services/rescueService';
-import {
   RescueActiveBatchResponse,
   RescueBatchItem as BaseRescueBatchItem,
   rescueTeamService,
 } from '@/src/services/rescueTeamService';
-import {
-  TeamDetailResponse,
-  TeamTrackingHeartbeatRequest,
-  teamService,
-} from '@/src/services/teamService';
-import { uploadService } from '@/src/services/uploadService';
-import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import Constants from 'expo-constants';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   Text,
@@ -54,13 +33,7 @@ type MissionFilter =
   | 'pending'
   | 'done';
 
-type TasksScreenType = 'list' | 'map';
-type LeaderActionMode = 'progress' | 'complete' | null;
 type RescueBatchItem = BaseRescueBatchItem & {
-  priorityPoint?: number | null;
-  priorityLevel?: number | null;
-};
-type RescueHistoryRequestWithPriority = {
   priorityPoint?: number | null;
   priorityLevel?: number | null;
 };
@@ -83,529 +56,56 @@ const supportsNativeMap = Constants.appOwnership !== 'expo';
 export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
-  const user = useAuthStore((s) => s.user);
+  const {
+    screen,
+    setScreen,
+    team,
+    batch,
+    selectedMission,
+    setSelectedMission,
+    currentMission,
+    filter,
+    setFilter,
+    loading,
+    refreshing,
+    errorMessage,
+    historyBatches,
+    routeCoordinates,
+    teamName,
+    isSyncingEta,
+    leaderActionMode,
+    setLeaderActionMode,
+    setActiveActionMission,
+    leaderNote,
+    setLeaderNote,
+    leaderImages,
+    setLeaderImages,
+    actionSubmitting,
+    uploadingImages,
+    lastHeartbeatError,
+    loadData,
+    displayBatch,
+    filteredItems,
+    isLeader,
+    isCurrentMissionSelected,
+    summary,
+    mapStyle,
+    getMissionDisplayStatus,
+    openMapScreen,
+    resetLeaderForms,
+    currentMissionForUi,
+    pickLeaderImages,
+    submitProgressUpdate,
+    submitCompleteMission,
+    heartbeatStatusLabel,
+    debugTrackingLines,
+    activeActionMission,
+  } = useTeamTasksController();
 
-  const [screen, setScreen] = useState<TasksScreenType>('list');
-  const [team, setTeam] = useState<TeamDetailResponse | null>(null);
-  const [batch, setBatch] = useState<RescueActiveBatchResponse | null>(null);
-  const [selectedMission, setSelectedMission] =
-    useState<RescueBatchItem | null>(null);
-  const [currentMission, setCurrentMission] = useState<RescueBatchItem | null>(
-    null,
-  );
-  const [filter, setFilter] = useState<MissionFilter>('all');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [cachedBatch, setCachedBatch] =
-    useState<RescueActiveBatchResponse | null>(null);
-  const [historyBatches, setHistoryBatches] = useState<
-    RescueActiveBatchResponse[]
-  >([]);
-  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
-    [],
-  );
-  const [teamId, setTeamId] = useState<string | null>(null);
-  const [teamName, setTeamName] = useState<string | null>(null);
-  const [isSyncingEta, setIsSyncingEta] = useState(false);
-  const [lastHeartbeatAt, setLastHeartbeatAt] = useState<string | null>(null);
-  const [leaderActionMode, setLeaderActionMode] =
-    useState<LeaderActionMode>(null);
-  const [activeActionMission, setActiveActionMission] =
-    useState<RescueBatchItem | null>(null);
-  const [leaderNote, setLeaderNote] = useState('');
-  const [leaderImages, setLeaderImages] = useState<string[]>([]);
-  const [operationStatusMap, setOperationStatusMap] = useState<
-    Record<string, string>
-  >({});
-  const [actionSubmitting, setActionSubmitting] = useState(false);
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [heartbeatIntervalMs, setHeartbeatIntervalMs] = useState<number | null>(
-    null,
-  );
-  const [lastHeartbeatError, setLastHeartbeatError] = useState<string | null>(
-    null,
-  );
-  const [heartbeatBlockReason, setHeartbeatBlockReason] = useState<
-    string | null
-  >(null);
-  const [heartbeatRetryCount, setHeartbeatRetryCount] = useState(0);
-  const [lastHeartbeatAttemptAt, setLastHeartbeatAttemptAt] = useState<
-    string | null
-  >(null);
-  const [lastHeartbeatSuccessAt, setLastHeartbeatSuccessAt] = useState<
-    string | null
-  >(null);
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-    accuracy?: number | null;
-    speedKph?: number | null;
-    headingDegree?: number | null;
-  } | null>(null);
-  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null,
-  );
-  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(
-    null,
-  );
-  const heartbeatInFlightRef = useRef(false);
-  const actionSubmittingRef = useRef(false);
-
-  const loadData = useCallback(async (isRefresh?: boolean) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    setErrorMessage(null);
-
-    try {
-      const teamResult = await teamService.getMyTeam();
-      const teamId = teamResult.data?.teamId;
-      const teamName = teamResult.data?.name;
-
-      if (!teamResult.success || !teamId) {
-        setErrorMessage(
-          teamResult.message || 'Không xác định được team hiện tại.',
-        );
-        setBatch(null);
-        return;
-      }
-
-      setTeam(teamResult.data);
-      const batchResult = await rescueTeamService.getActiveBatchByTeam(teamId);
-      if (!batchResult.success) {
-        setErrorMessage(
-          batchResult.message || 'Không tải được dữ liệu nhiệm vụ.',
-        );
-        setBatch(null);
-        return;
-      }
-
-      if (!batchResult.data) {
-        const historyResult = await rescueTeamService.getHistoryByTeam(teamId);
-        const mappedHistoryBatches: RescueActiveBatchResponse[] = (
-          historyResult.data?.data || []
-        ).map((historyBatch) => ({
-          rescueBatchId: historyBatch.rescueBatchId,
-          teamId,
-          isActive: false,
-          status: 'Closed',
-          routePolyline: null,
-          totalDistanceKm: null,
-          estimatedMinutes: null,
-          createdAt: historyBatch.createdAt,
-          closedAt: historyBatch.closedAt,
-          items: (historyBatch.requests || [])
-            .map(
-              (request): RescueBatchItem => ({
-                rescueBatchItemId: `${historyBatch.rescueBatchId}-${request.requestId}`,
-                rescueRequestId: request.requestId,
-                disasterType: request.disasterType,
-                rescueRequestType: 'Normal',
-                rescueRequestStatus: request.rescueRequestStatus,
-                description: request.address || 'Nhiệm vụ cứu hộ',
-                address: request.address,
-                latitude: null,
-                longitude: null,
-                reporterFullName: request.reporterFullName,
-                reporterPhone: request.reporterPhone,
-                sequenceOrder: request.sequenceOrder,
-                isAutoAssigned: false,
-                priorityPoint:
-                  (request as RescueHistoryRequestWithPriority).priorityPoint ?? null,
-                priorityLevel:
-                  (request as RescueHistoryRequestWithPriority).priorityLevel ?? null,
-                distanceKm: null,
-                estimatedMinutes: null,
-                status: request.batchItemStatus,
-                createdAt: request.createdAt,
-              }),
-            )
-            .sort((a, b) => a.sequenceOrder - b.sequenceOrder),
-        }));
-
-        setTeamId(teamId);
-        setTeamName(teamName || null);
-        setBatch(null);
-        setHistoryBatches(mappedHistoryBatches);
-        setCurrentMission(null);
-        setSelectedMission(mappedHistoryBatches[0]?.items?.[0] || null);
-        return;
-      }
-
-      const nextBatch = batchResult.data;
-      const nextCurrentMission = rescueTeamService.getCurrentMission(
-        nextBatch.items,
-      );
-
-      setTeamId(teamId);
-      setTeamName(teamName || null);
-      setBatch(nextBatch);
-      setCachedBatch(nextBatch);
-      setHistoryBatches([]);
-      setCurrentMission(nextCurrentMission);
-      if (nextCurrentMission?.rescueRequestId) {
-        try {
-          const detail = await fetchRescueRequestDetail(
-            nextCurrentMission.rescueRequestId,
-          );
-          const operationStatus =
-            detail.assignedRescueTeam?.operationStatus ||
-            detail.rescueOperations?.find((item) => item.teamId === teamId)
-              ?.status;
-
-          if (operationStatus) {
-            setOperationStatusMap((prev) => ({
-              ...prev,
-              [nextCurrentMission.rescueRequestId]: operationStatus,
-            }));
-          }
-        } catch {
-          // ignore detail failure, keep batch data fallback
-        }
-      }
-      setSelectedMission((prev) => {
-        if (!prev) return nextCurrentMission || nextBatch.items[0] || null;
-
-        return (
-          nextBatch.items.find(
-            (item) => item.rescueBatchItemId === prev.rescueBatchItemId,
-          ) ||
-          nextCurrentMission ||
-          nextBatch.items[0] ||
-          null
-        );
-      });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const watchLocation = async () => {
-      try {
-        const permission = await Location.requestForegroundPermissionsAsync();
-        if (permission.status !== 'granted') {
-          if (isMounted) setUserLocation(null);
-          return;
-        }
-
-        const current = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-
-        if (isMounted) {
-          setUserLocation({
-            latitude: current.coords.latitude,
-            longitude: current.coords.longitude,
-            accuracy: current.coords.accuracy,
-            speedKph:
-              current.coords.speed != null && current.coords.speed >= 0
-                ? current.coords.speed * 3.6
-                : null,
-            headingDegree:
-              current.coords.heading != null && current.coords.heading >= 0
-                ? current.coords.heading
-                : null,
-          });
-        }
-
-        const subscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.Balanced,
-            timeInterval: 8000,
-            distanceInterval: 8,
-          },
-          (position) => {
-            if (!isMounted) return;
-
-            setUserLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy,
-              speedKph:
-                position.coords.speed != null && position.coords.speed >= 0
-                  ? position.coords.speed * 3.6
-                  : null,
-              headingDegree:
-                position.coords.heading != null && position.coords.heading >= 0
-                  ? position.coords.heading
-                  : null,
-            });
-          },
-        );
-
-        locationSubscriptionRef.current = subscription;
-      } catch {
-        if (isMounted) setUserLocation(null);
-      }
-    };
-
-    watchLocation();
-
-    return () => {
-      isMounted = false;
-      locationSubscriptionRef.current?.remove();
-      locationSubscriptionRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const sendHeartbeat = async () => {
-      if (!teamId || !userLocation || !batch?.rescueBatchId) return;
-      if (heartbeatInFlightRef.current) return;
-      if (actionSubmittingRef.current) return;
-
-      heartbeatInFlightRef.current = true;
-      setIsSyncingEta(true);
-      setLastHeartbeatAttemptAt(new Date().toISOString());
-      try {
-        const payload: TeamTrackingHeartbeatRequest = {
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          accuracyMeters: userLocation.accuracy ?? null,
-          speedKph: userLocation.speedKph ?? null,
-          headingDegree: userLocation.headingDegree ?? null,
-          source: 0,
-          capturedAtUtc: new Date().toISOString(),
-          rescueBatchId: batch.rescueBatchId,
-          rescueOperationId: null,
-          note: 'tracking from mobile',
-        };
-
-        const heartbeat = await teamService.sendTrackingHeartbeat(
-          teamId,
-          payload,
-        );
-        if (!heartbeat.success) {
-          setLastHeartbeatError(
-            heartbeat.message || 'Heartbeat thất bại, sẽ thử lại.',
-          );
-          setHeartbeatRetryCount((prev) => prev + 1);
-          return;
-        }
-
-        setLastHeartbeatAt(new Date().toISOString());
-        setLastHeartbeatSuccessAt(new Date().toISOString());
-        setLastHeartbeatError(null);
-        setHeartbeatRetryCount(0);
-        setHeartbeatBlockReason(null);
-
-        const refreshedBatch =
-          await rescueTeamService.getActiveBatchByTeam(teamId);
-        if (!refreshedBatch.success) return;
-        if (!refreshedBatch.data) {
-          setBatch(null);
-          setCurrentMission(null);
-          setSelectedMission(null);
-          return;
-        }
-
-        const nextBatch = refreshedBatch.data;
-        const nextCurrentMission = rescueTeamService.getCurrentMission(
-          nextBatch.items,
-        );
-
-        setBatch(nextBatch);
-        setCurrentMission(nextCurrentMission);
-        setSelectedMission((prev) => {
-          if (!prev) return nextCurrentMission || nextBatch.items[0] || null;
-          return (
-            nextBatch.items.find(
-              (item) => item.rescueBatchItemId === prev.rescueBatchItemId,
-            ) ||
-            nextCurrentMission ||
-            nextBatch.items[0] ||
-            null
-          );
-        });
-      } finally {
-        heartbeatInFlightRef.current = false;
-        setIsSyncingEta(false);
-      }
-    };
-
-    if (!teamId || !userLocation || !batch?.rescueBatchId || actionSubmitting) {
-      const reason = !teamId
-        ? 'Chưa có teamId'
-        : !batch?.rescueBatchId
-          ? 'Chưa có batch hoạt động'
-          : !userLocation
-            ? 'Chưa có vị trí thiết bị'
-            : actionSubmitting
-              ? 'Đang submit thao tác nhiệm vụ'
-              : 'Không rõ';
-
-      setHeartbeatBlockReason(reason);
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
-      return;
-    }
-
-    sendHeartbeat();
-
-    const speed = userLocation.speedKph ?? 0;
-    const intervalMs = speed >= 5 ? 10000 : 20000;
-    setHeartbeatIntervalMs(intervalMs);
-
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-
-    heartbeatIntervalRef.current = setInterval(() => {
-      sendHeartbeat();
-    }, intervalMs);
-
-    return () => {
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
-    };
-  }, [actionSubmitting, batch?.rescueBatchId, teamId, userLocation]);
-
-  useEffect(() => {
-    const loadRoute = async () => {
-      if (
-        !selectedMission ||
-        selectedMission.latitude == null ||
-        selectedMission.longitude == null
-      ) {
-        setRouteCoordinates([]);
-        return;
-      }
-
-      if (batch?.routePolyline) {
-        setRouteCoordinates(
-          rescueTeamService.decodePolyline(batch.routePolyline),
-        );
-        return;
-      }
-
-      if (!userLocation) {
-        setRouteCoordinates([]);
-        return;
-      }
-
-      const route = await rescueTeamService.fetchDirectionsPolyline(
-        userLocation,
-        {
-          latitude: selectedMission.latitude,
-          longitude: selectedMission.longitude,
-        },
-      );
-
-      if (route.success && route.polyline) {
-        setRouteCoordinates(rescueTeamService.decodePolyline(route.polyline));
-      } else {
-        setRouteCoordinates([]);
-      }
-    };
-
-    loadRoute();
-  }, [batch?.routePolyline, selectedMission, userLocation]);
-
-  const displayBatch = batch ?? cachedBatch;
-
-  const filteredItems = useMemo(() => {
-    if (!displayBatch?.items) return [];
-    return rescueTeamService.getFilteredItems(
-      displayBatch.items,
-      filter,
-    ) as RescueBatchItem[];
-  }, [displayBatch?.items, filter]);
-
-  const isLeader = useMemo(() => {
-    if (!user?.id || !team?.leader?.userId) return false;
-    return user.id === team.leader.userId;
-  }, [team?.leader?.userId, user?.id]);
-
-  const isCurrentMissionSelected =
-    !!selectedMission &&
-    selectedMission.rescueBatchItemId === currentMission?.rescueBatchItemId;
-
-  const summary = useMemo(() => {
-    const total = displayBatch?.items?.length || 0;
-    const emergencyCount =
-      displayBatch?.items?.filter(
-        (item: RescueBatchItem) => item.rescueRequestType === 'Emergency',
-      ).length || 0;
-    return { total, emergencyCount };
-  }, [displayBatch?.items]);
-
-  const mapStyle = rescueTeamService.getMapStyleUrl();
-
-  const getMissionDisplayStatus = useCallback(
-    (item?: RescueBatchItem | null) => {
-      if (!item) return null;
-      return operationStatusMap[item.rescueRequestId] || item.status || null;
-    },
-    [operationStatusMap],
-  );
-
-  const getEffectiveMissionState = useCallback(
-    (item?: RescueBatchItem | null) => {
-      if (!item) return null;
-
-      const operationStatus = getMissionDisplayStatus(item);
-      const normalized = String(operationStatus || '').toLowerCase();
-
-      if (
-        normalized === 'done' ||
-        normalized === 'rescuecompleted' ||
-        normalized === 'closed' ||
-        normalized === 'cancelled'
-      ) {
-        return 'done';
-      }
-
-      if (normalized === 'enroute' || normalized === 'rescuing') {
-        return 'in_progress';
-      }
-
-      return 'pending';
-    },
-    [getMissionDisplayStatus],
-  );
-
-  const currentMissionForUi = useMemo(() => {
-    if (!displayBatch?.items?.length) return null;
-
-    const inProgressMission = displayBatch.items.find(
-      (item) => getEffectiveMissionState(item) === 'in_progress',
-    );
-    if (inProgressMission) return inProgressMission;
-
-    return (
-      displayBatch.items.find((item) => getEffectiveMissionState(item) !== 'done') ||
-      null
-    );
-  }, [displayBatch?.items, getEffectiveMissionState]);
-
-  const openMapScreen = (item?: RescueBatchItem | null) => {
-    if (item) setSelectedMission(item);
-    setScreen('map');
-  };
-
-  const resetLeaderForms = () => {
-    setLeaderActionMode(null);
-    setActiveActionMission(null);
-    setLeaderNote('');
-    setLeaderImages([]);
-  };
+  const filteredItemsWithPriority = filteredItems as RescueBatchItem[];
+  const historyBatchesWithPriority = historyBatches as Array<
+    RescueActiveBatchResponse & { items: RescueBatchItem[] }
+  >;
 
   const statusBadge = (status?: string) => {
     const normalized = String(status ?? '').toLowerCase();
@@ -827,280 +327,6 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
       </View>
     );
   };
-
-  const pickLeaderImages = useCallback(async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permission.status !== 'granted') {
-      Alert.alert(
-        'Cần quyền',
-        'Cho phép truy cập thư viện ảnh để đính kèm minh chứng.',
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
-
-    if (result.canceled || !result.assets?.length) return;
-
-    setUploadingImages(true);
-    try {
-      const uploadedUrls: string[] = [];
-
-      for (const asset of result.assets.slice(0, 5 - leaderImages.length)) {
-        const uploadResult = await uploadService.uploadImageToCloudinary(
-          asset.uri,
-          asset.fileName || `mission_${Date.now()}.jpg`,
-          asset.mimeType ?? 'image/jpeg',
-        );
-
-        if (!uploadResult.success || !uploadResult.url) {
-          Alert.alert(
-            'Upload thất bại',
-            uploadResult.message || 'Không thể upload ảnh minh chứng.',
-          );
-          continue;
-        }
-
-        uploadedUrls.push(uploadResult.url);
-      }
-
-      if (uploadedUrls.length > 0) {
-        setLeaderImages((prev) => [...prev, ...uploadedUrls]);
-      }
-    } finally {
-      setUploadingImages(false);
-    }
-  }, [leaderImages.length]);
-
-  const resolveOperationId = useCallback(
-    async (requestId: string) => {
-      const detail = await fetchRescueRequestDetail(requestId);
-      const operation = detail.rescueOperations?.find(
-        (item) => item.teamId === teamId,
-      );
-
-      if (!operation?.rescueOperationId) {
-        throw new Error('Không tìm thấy operation của team cho nhiệm vụ này.');
-      }
-
-      return operation.rescueOperationId;
-    },
-    [teamId],
-  );
-
-  const submitProgressUpdate = useCallback(
-    async (status: 2 | 3, mission?: RescueBatchItem | null) => {
-      if (actionSubmittingRef.current) return;
-
-      const targetMission = mission || activeActionMission || selectedMission;
-
-      if (!targetMission?.rescueRequestId) {
-        Alert.alert(
-          'Thiếu dữ liệu',
-          'Không xác định được rescue request hiện tại.',
-        );
-        return;
-      }
-
-      actionSubmittingRef.current = true;
-      setActionSubmitting(true);
-      try {
-        const operationId = await resolveOperationId(
-          targetMission.rescueRequestId,
-        );
-        await updateRescueOperationStatus(
-          targetMission.rescueRequestId,
-          operationId,
-          {
-            status,
-            note: leaderNote.trim() || null,
-          },
-        );
-
-        const detail = await fetchRescueRequestDetail(
-          targetMission.rescueRequestId,
-        );
-        const operationStatus =
-          detail.assignedRescueTeam?.operationStatus ||
-          detail.rescueOperations?.find((item) => item.teamId === teamId)
-            ?.status;
-
-        if (operationStatus) {
-          setOperationStatusMap((prev) => ({
-            ...prev,
-            [targetMission.rescueRequestId]: operationStatus,
-          }));
-        }
-
-        Alert.alert('Thành công', 'Đã cập nhật tiến độ nhiệm vụ.');
-        resetLeaderForms();
-        await loadData(true);
-      } catch (error: any) {
-        Alert.alert(
-          'Không thể cập nhật',
-          error?.message || 'Cập nhật tiến độ thất bại.',
-        );
-      } finally {
-        actionSubmittingRef.current = false;
-        setActionSubmitting(false);
-      }
-    },
-    [
-      activeActionMission,
-      leaderNote,
-      loadData,
-      resolveOperationId,
-      selectedMission?.rescueRequestId,
-    ],
-  );
-
-  const submitCompleteMission = useCallback(
-    async (mission?: RescueBatchItem | null) => {
-      if (actionSubmittingRef.current) return;
-
-      const targetMission = mission || activeActionMission || selectedMission;
-
-      if (!targetMission?.rescueRequestId) {
-        Alert.alert(
-          'Thiếu dữ liệu',
-          'Không xác định được rescue request hiện tại.',
-        );
-        return;
-      }
-
-      if (leaderImages.length === 0) {
-        Alert.alert(
-          'Thiếu ảnh minh chứng',
-          'Cần ít nhất 1 ảnh trước khi hoàn thành nhiệm vụ.',
-        );
-        return;
-      }
-
-      actionSubmittingRef.current = true;
-      setActionSubmitting(true);
-      try {
-        const operationId = await resolveOperationId(
-          targetMission.rescueRequestId,
-        );
-        await completeRescueOperation(
-          targetMission.rescueRequestId,
-          operationId,
-          {
-            attachments: leaderImages.map((fileUrl) => ({
-              fileUrl,
-              contentType: 'image/jpeg',
-            })),
-            note: leaderNote.trim() || null,
-          },
-        );
-
-        const detail = await fetchRescueRequestDetail(
-          targetMission.rescueRequestId,
-        );
-        const operationStatus =
-          detail.assignedRescueTeam?.operationStatus ||
-          detail.rescueOperations?.find((item) => item.teamId === teamId)
-            ?.status;
-
-        if (operationStatus) {
-          setOperationStatusMap((prev) => ({
-            ...prev,
-            [targetMission.rescueRequestId]: operationStatus,
-          }));
-        }
-
-        Alert.alert('Hoàn thành', 'Đã xác nhận hoàn thành nhiệm vụ.');
-        setSelectedMission(null);
-        resetLeaderForms();
-        await loadData(true);
-      } catch (error: any) {
-        Alert.alert(
-          'Không thể hoàn thành',
-          error?.message || 'Hoàn thành nhiệm vụ thất bại.',
-        );
-      } finally {
-        actionSubmittingRef.current = false;
-        setActionSubmitting(false);
-      }
-    },
-    [
-      activeActionMission,
-      leaderImages,
-      leaderNote,
-      loadData,
-      resolveOperationId,
-      selectedMission?.rescueRequestId,
-    ],
-  );
-
-  const heartbeatStatusLabel = useMemo(() => {
-    if (isSyncingEta) return 'Dang cap nhat ETA...';
-    if (heartbeatBlockReason)
-      return `Tạm dừng tracking: ${heartbeatBlockReason}`;
-    if (lastHeartbeatError) return `Loi heartbeat: ${lastHeartbeatError}`;
-    if (!lastHeartbeatAt) return null;
-
-    const date = new Date(lastHeartbeatAt);
-    if (Number.isNaN(date.getTime())) return null;
-
-    return `Đã đồng bộ vị trí lúc ${date.toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })}`;
-  }, [heartbeatBlockReason, isSyncingEta, lastHeartbeatAt, lastHeartbeatError]);
-
-  const debugTrackingLines = useMemo(() => {
-    return [
-      `teamId: ${teamId || '---'}`,
-      `batchId: ${batch?.rescueBatchId || '---'}`,
-      `screen: ${screen}`,
-      `hasLocation: ${userLocation ? 'yes' : 'no'}`,
-      `intervalActive: ${heartbeatIntervalRef.current ? 'yes' : 'no'}`,
-      `intervalMs: ${heartbeatIntervalMs ?? '---'}`,
-      `heartbeat: ${isSyncingEta ? 'syncing' : 'idle'}`,
-      `blockReason: ${heartbeatBlockReason || '---'}`,
-      `retryCount: ${heartbeatRetryCount}`,
-      `lastAttempt: ${lastHeartbeatAttemptAt || '---'}`,
-      `lastSuccess: ${lastHeartbeatSuccessAt || '---'}`,
-      `lastError: ${lastHeartbeatError || '---'}`,
-      `lastSync: ${lastHeartbeatAt || '---'}`,
-      `lat: ${userLocation?.latitude ?? '---'}`,
-      `lng: ${userLocation?.longitude ?? '---'}`,
-      `accuracy: ${userLocation?.accuracy ?? '---'}`,
-      `speedKph: ${userLocation?.speedKph ?? '---'}`,
-      `heading: ${userLocation?.headingDegree ?? '---'}`,
-      `currentMission: ${currentMission?.rescueBatchItemId || '---'}`,
-      `selectedMission: ${selectedMission?.rescueBatchItemId || '---'}`,
-      `eta: ${selectedMission?.estimatedMinutes ?? '---'} phút`,
-      `distance: ${selectedMission?.distanceKm ?? '---'} km`,
-    ];
-  }, [
-    batch?.rescueBatchId,
-    currentMission?.rescueBatchItemId,
-    heartbeatBlockReason,
-    heartbeatIntervalMs,
-    heartbeatRetryCount,
-    isSyncingEta,
-    lastHeartbeatError,
-    lastHeartbeatAttemptAt,
-    lastHeartbeatSuccessAt,
-    lastHeartbeatAt,
-    screen,
-    selectedMission?.distanceKm,
-    selectedMission?.estimatedMinutes,
-    selectedMission?.rescueBatchItemId,
-    teamId,
-    userLocation?.accuracy,
-    userLocation?.headingDegree,
-    userLocation?.latitude,
-    userLocation?.longitude,
-    userLocation?.speedKph,
-  ]);
 
   if (screen === 'map') {
     return (
@@ -1371,7 +597,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
             {displayBatch ? (
               <View className="mt-4 gap-3">
-                {filteredItems.map((item) => {
+                {filteredItemsWithPriority.map((item) => {
                   const type = typeBadge(item.rescueRequestType);
                   const status = statusBadge(
                     getMissionDisplayStatus(item) || undefined,
@@ -1497,7 +723,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
               </View>
             ) : (
               <View className="mt-4 gap-5">
-                {historyBatches.map((historyBatch) => {
+                {historyBatchesWithPriority.map((historyBatch) => {
                   const historyItems = rescueTeamService.getFilteredItems(
                     historyBatch.items,
                     filter,

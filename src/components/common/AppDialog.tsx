@@ -116,7 +116,9 @@ export function AppDialog({
       </TouchableWithoutFeedback>
 
       {/* Card */}
-      <View style={styles.centeredWrapper} pointerEvents="box-none">
+      <View
+        style={[styles.centeredWrapper, { pointerEvents: 'box-none' }]}
+      >
         <Animated.View
           style={[
             styles.card,

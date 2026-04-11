@@ -281,8 +281,10 @@ export default function WebViewMap({
       {/* Loading overlay */}
       {loading && !hasError && (
         <View
-          style={[styles.overlay, { backgroundColor: colors.surface }]}
-          pointerEvents="none"
+          style={[
+            styles.overlay,
+            { backgroundColor: colors.surface, pointerEvents: 'none' },
+          ]}
         >
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>

@@ -5,6 +5,10 @@ import { Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, Platform, Text, View } from 'react-native';
 
+type TabIconProps = {
+  color: string;
+};
+
 const TAB_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
 const ICON_SIZE = 24;
 
@@ -121,7 +125,7 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: 'Trang chủ',
-            tabBarIcon: ({ color }) => (
+            tabBarIcon: ({ color }: TabIconProps) => (
               <Ionicons name="home-outline" size={ICON_SIZE} color={color} />
             ),
           }}
@@ -131,7 +135,7 @@ export default function TabsLayout() {
           name="tasks"
           options={{
             title: 'Nhiệm vụ',
-            tabBarIcon: ({ color }) => (
+            tabBarIcon: ({ color }: TabIconProps) => (
               <Ionicons name="list-outline" size={ICON_SIZE} color={color} />
             ),
           }}
@@ -141,7 +145,7 @@ export default function TabsLayout() {
           name="profile"
           options={{
             title: 'Hồ sơ',
-            tabBarIcon: ({ color }) => (
+            tabBarIcon: ({ color }: TabIconProps) => (
               <Ionicons name="person-outline" size={ICON_SIZE} color={color} />
             ),
           }}
@@ -152,7 +156,6 @@ export default function TabsLayout() {
         <Tabs.Screen name="home/volunteer" options={{ href: null }} />
         <Tabs.Screen name="create-request" options={{ href: null }} />
         <Tabs.Screen name="requests" options={{ href: null }} />
-        <Tabs.Screen name="requests/[requestId]" options={{ href: null }} />
       </Tabs>
     );
   }
@@ -164,7 +167,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Trang chủ',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color }: TabIconProps) => (
             <Ionicons name="home-outline" size={ICON_SIZE} color={color} />
           ),
         }}
@@ -269,7 +272,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Hồ sơ',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color }: TabIconProps) => (
             <Ionicons name="person-outline" size={ICON_SIZE} color={color} />
           ),
         }}
@@ -280,7 +283,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="home/volunteer" options={{ href: null }} />
       <Tabs.Screen name="tasks" options={{ href: null }} />
       <Tabs.Screen name="requests" options={{ href: null }} />
-      <Tabs.Screen name="requests/[requestId]" options={{ href: null }} />
     </Tabs>
   );
 }
