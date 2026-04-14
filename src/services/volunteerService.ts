@@ -1,20 +1,17 @@
-import api from './api';
-import { extractApiErrorMessage } from '../utils/apiError';
-import { uploadService } from './uploadService';
 import type {
-  CreateVolunteerRequest,
-  SkillResponse,
-  VolunteerProfileResponse,
-  ResubmitVolunteerProfileRequest,
+    CreateVolunteerRequest,
+    ResubmitVolunteerProfileRequest,
+    SkillResponse,
+    VolunteerProfileResponse,
 } from '../types/volunteer';
-import { TeamRolePreference } from '../types/volunteer';
+import { extractApiErrorMessage } from '../utils/apiError';
+import api from './api';
+import { uploadService } from './uploadService';
 
 export type {
-  CreateVolunteerCertificateRequest,
-  CreateVolunteerRequest,
-  SkillResponse,
-  VolunteerProfileResponse,
-  ResubmitVolunteerProfileRequest,
+    CreateVolunteerCertificateRequest,
+    CreateVolunteerRequest, ResubmitVolunteerProfileRequest, SkillResponse,
+    VolunteerProfileResponse
 } from '../types/volunteer';
 
 export { TeamRolePreference } from '../types/volunteer';
@@ -227,5 +224,46 @@ export const volunteerService = {
         'Không tìm thấy endpoint VolunteerProfile/my-profile/resubmit. Kiểm tra lại route backend.',
     };
   },
+
+  updateMyVolunteerProfile: async (
+    payload: ResubmitVolunteerProfileRequest,
+  ) => {
+    const routes = [
+      '/VolunteerProfile/my-profile',
+      '/api/VolunteerProfile/my-profile',
+      '/VolunteerProfile/my-profile/resubmit',
+      '/api/VolunteerProfile/my-profile/resubmit',
+    ];
+
+    for (const route of routes) {
+      try {
+        const response = await api.put<any>(route, payload);
+        return {
+          success: response.status === 200,
+          data: normalizeVolunteerProfile(response.data),
+          message: 'Cập nhật hồ sơ volunteer thành công',
+        };
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          return {
+            success: false,
+            data: null,
+            message: extractApiErrorMessage(
+              error,
+              'Không thể cập nhật hồ sơ volunteer.',
+            ),
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      data: null,
+      message:
+        'Không tìm thấy endpoint cập nhật hồ sơ VolunteerProfile/my-profile.',
+    };
+  },
+
   uploadImageToCloudinary: uploadService.uploadImageToCloudinary,
 };

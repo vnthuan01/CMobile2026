@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { authService } from '../services/authService';
+import { userService } from '../services/userService';
 
 export const citizenProfileKeys = {
   all: ['citizenProfile'] as const,
@@ -12,9 +12,10 @@ export function useCitizenProfile(
 ) {
   return useQuery({
     queryKey: citizenProfileKeys.me(),
-    queryFn: () => authService.getProfile(),
+    queryFn: () => userService.getProfile(),
     enabled,
     refetchInterval,
+    refetchOnMount: 'always',
     select: (result) => ({
       profile: result.success ? result.data : null,
       errorMessage: result.success ? null : (result.message ?? null),

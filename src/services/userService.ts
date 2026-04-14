@@ -1,13 +1,13 @@
 import type {
-  UpdateUserProfilePayload,
-  UserProfileResponse,
+    UpdateUserProfilePayload,
+    UserProfileResponse,
 } from '../types/user';
 import { extractApiErrorMessage } from '../utils/apiError';
 import api from './api';
 
 export type {
-  UpdateUserProfilePayload,
-  UserProfileResponse
+    UpdateUserProfilePayload,
+    UserProfileResponse
 } from '../types/user';
 
 function normalizeUserProfile(raw: any): UserProfileResponse {
@@ -42,6 +42,14 @@ function toProfileFormData(payload: UpdateUserProfilePayload) {
 
   Object.entries(payload).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
+
+    if (key === 'dateOfBirth') {
+      const normalizedDate = normalizeDateOfBirth(value);
+      if (!normalizedDate) return;
+      formData.append(fieldMap[key] ?? key, normalizedDate);
+      return;
+    }
+
     formData.append(fieldMap[key] ?? key, String(value));
   });
 
@@ -62,6 +70,14 @@ function toProfileRequestBody(payload: UpdateUserProfilePayload) {
   return Object.entries(payload).reduce<Record<string, string>>(
     (acc, [key, value]) => {
       if (value === undefined || value === null) return acc;
+
+      if (key === 'dateOfBirth') {
+        const normalizedDate = normalizeDateOfBirth(value);
+        if (!normalizedDate) return acc;
+        acc[fieldMap[key] ?? key] = normalizedDate;
+        return acc;
+      }
+
       acc[fieldMap[key] ?? key] = String(value);
       return acc;
     },
@@ -69,9 +85,26 @@ function toProfileRequestBody(payload: UpdateUserProfilePayload) {
   );
 }
 
+function normalizeDateOfBirth(value: unknown): string | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+
+  // Backend schema expects date-time; enrich plain date to midnight time.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return `${raw}T00:00:00`;
+  }
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString();
+  }
+
+  return null;
+}
+
 export const userService = {
   getProfile: async () => {
-    const routes = ['/User/profile', '/api/User/profile'];
+    const routes = ['/api/User/profile', '/User/profile'];
 
     for (const route of routes) {
       try {
@@ -105,9 +138,22 @@ export const userService = {
   },
 
   updateProfile: async (payload: UpdateUserProfilePayload) => {
-    const routes = ['/User/profile', '/api/User/profile'];
+    const routes = ['/api/User/profile', '/User/profile'];
     const formData = toProfileFormData(payload);
     const jsonBody = toProfileRequestBody(payload);
+    const jsonBodyCamel = Object.entries(payload).reduce<
+      Record<string, string>
+    >((acc, [key, value]) => {
+      if (value === undefined || value === null) return acc;
+      if (key === 'dateOfBirth') {
+        const normalizedDate = normalizeDateOfBirth(value);
+        if (!normalizedDate) return acc;
+        acc[key] = normalizedDate;
+        return acc;
+      }
+      acc[key] = String(value);
+      return acc;
+    }, {});
 
     for (const route of routes) {
       try {
@@ -117,39 +163,57 @@ export const userService = {
           },
         });
 
+        const isSuccessStatus = response.status >= 200 && response.status < 300;
+        const normalizedData = response.data
+          ? normalizeUserProfile(response.data)
+          : null;
+
         return {
-          success: response.status === 200,
-          data: normalizeUserProfile(response.data),
+          success: isSuccessStatus,
+          status: response.status,
+          data: normalizedData,
           message: 'Cập nhật hồ sơ thành công',
         };
       } catch (error: any) {
-        // Some mobile environments can fail multipart PUT with network error.
-        // Retry with JSON body while preserving backend PascalCase field names.
-        if (!error?.response) {
-          try {
-            const retryResponse = await api.put<UserProfileResponse>(
-              route,
-              jsonBody,
-              {
-                headers: {
-                  'Content-Type': 'application/json',
-                },
+        // Retry JSON payloads (PascalCase then camelCase) when multipart is not accepted.
+        const tryJsonPayload = async (body: Record<string, string>) => {
+          const retryResponse = await api.put<UserProfileResponse>(
+            route,
+            body,
+            {
+              headers: {
+                'Content-Type': 'application/json',
               },
-            );
+            },
+          );
 
-            return {
-              success: retryResponse.status === 200,
-              data: normalizeUserProfile(retryResponse.data),
-              message: 'Cập nhật hồ sơ thành công',
-            };
-          } catch (retryError: any) {
-            if (retryError?.response?.status !== 404) {
+          const isSuccessStatus =
+            retryResponse.status >= 200 && retryResponse.status < 300;
+          const normalizedData = retryResponse.data
+            ? normalizeUserProfile(retryResponse.data)
+            : null;
+
+          return {
+            success: isSuccessStatus,
+            status: retryResponse.status,
+            data: normalizedData,
+            message: 'Cập nhật hồ sơ thành công',
+          };
+        };
+
+        try {
+          return await tryJsonPayload(jsonBody);
+        } catch {
+          try {
+            return await tryJsonPayload(jsonBodyCamel);
+          } catch (retryErrorCamel: any) {
+            if (retryErrorCamel?.response?.status !== 404) {
               return {
                 success: false,
                 data: null,
-                status: retryError?.response?.status,
+                status: retryErrorCamel?.response?.status,
                 message: extractApiErrorMessage(
-                  retryError,
+                  retryErrorCamel,
                   'Không thể cập nhật hồ sơ người dùng.',
                 ),
               };
