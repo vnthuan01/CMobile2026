@@ -5,15 +5,7 @@ import {
     resolveDisplayName,
 } from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import {
-    Image,
-    ScrollView,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 
@@ -48,13 +40,13 @@ export default function VolunteerProfile({
   const user = useAuthStore((s) => s.user);
   const profileQuery = useCitizenProfile(Boolean(user));
   const profile = profileQuery.data?.profile ?? null;
-  const [isAvailable, setIsAvailable] = useState(true);
   const headerBg = colors.secondary;
   const cardBg = colors.card;
   const subtleBg = colors.surface;
   const iconAccent = colors.secondary;
   const neutralBorder = colors.border;
-  const dangerSoft = `${colors.status.error}14`;
+  const phoneNumber = profile?.phoneNumber || '--';
+  const emailAddress = profile?.email || user?.email || '--';
   const displayName = resolveDisplayName({
     profileDisplayName: profile?.displayName,
     authUserName: user?.user_name,
@@ -93,10 +85,12 @@ export default function VolunteerProfile({
             {onEdit && (
               <TouchableOpacity
                 onPress={onEdit}
-                className="rounded-full bg-white/20 px-3 py-1.5 transition-colors hover:bg-white/30"
+                className="items-center justify-center rounded-full bg-white/20 px-3 transition-colors hover:bg-white/30"
+                style={{ minWidth: 44, height: 36 }}
               >
                 <Text
                   className="text-xs font-semibold"
+                  numberOfLines={1}
                   style={{ color: colors.white }}
                 >
                   Sửa
@@ -169,49 +163,6 @@ export default function VolunteerProfile({
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-col gap-4">
-          {/* Availability Toggle */}
-          <View
-            className="flex-row items-center justify-between gap-4 rounded-2xl border p-5 shadow-sm"
-            style={{ borderColor: colors.border, backgroundColor: cardBg }}
-          >
-            <View className="flex-1">
-              <View className="mb-1 flex-row items-center gap-2">
-                <View
-                  className="rounded-full p-1.5"
-                  style={{ backgroundColor: `${colors.status.completed}22` }}
-                >
-                  <Ionicons
-                    name="flash"
-                    size={20}
-                    color={colors.status.completed}
-                  />
-                </View>
-                <Text
-                  className="text-base font-bold"
-                  style={{ color: colors.text }}
-                >
-                  Trạng thái sẵn sàng
-                </Text>
-              </View>
-              <Text
-                className="pl-1 text-xs leading-relaxed"
-                style={{ color: colors.textSecondary }}
-              >
-                Nhận thông báo điều phối khi có thiên tai khẩn cấp.
-              </Text>
-            </View>
-            <Switch
-              value={isAvailable}
-              onValueChange={setIsAvailable}
-              trackColor={{
-                false: colors.border,
-                true: colors.status.completed,
-              }}
-              thumbColor={colors.white}
-              ios_backgroundColor={colors.border}
-            />
-          </View>
-
           {/* Skills */}
           <View
             className="rounded-2xl border p-5 shadow-sm"
@@ -456,27 +407,13 @@ export default function VolunteerProfile({
                     className="text-sm font-semibold"
                     style={{ color: colors.text }}
                   >
-                    0912 *** 789
+                    {phoneNumber}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  className="rounded-lg px-3 py-1.5"
-                  style={{ backgroundColor: `${colors.secondary}18` }}
-                >
-                  <Text
-                    className="text-xs font-bold"
-                    style={{ color: colors.secondary }}
-                  >
-                    Hiện
-                  </Text>
-                </TouchableOpacity>
               </View>
 
               {/* Email */}
-              <View
-                className="flex-row items-center gap-4 border-b p-4"
-                style={{ borderColor: neutralBorder }}
-              >
+              <View className="flex-row items-center gap-4 p-4">
                 <View
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                   style={{ backgroundColor: colors.surface }}
@@ -494,38 +431,7 @@ export default function VolunteerProfile({
                     className="text-sm font-semibold"
                     style={{ color: colors.text }}
                   >
-                    {user?.email}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Emergency Contact */}
-              <View
-                className="flex-row items-center gap-4 p-4"
-                style={{ backgroundColor: dangerSoft }}
-              >
-                <View
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `${colors.status.error}22` }}
-                >
-                  <Ionicons
-                    name="warning"
-                    size={18}
-                    color={colors.status.error}
-                  />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="mb-0.5 text-[10px] font-bold uppercase tracking-wider"
-                    style={{ color: colors.status.error }}
-                  >
-                    Liên hệ khẩn cấp
-                  </Text>
-                  <Text
-                    className="text-sm font-semibold"
-                    style={{ color: colors.status.error }}
-                  >
-                    Chị Lan (Vợ) - 0988 123 456
+                    {emailAddress}
                   </Text>
                 </View>
               </View>

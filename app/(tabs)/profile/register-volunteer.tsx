@@ -11,14 +11,18 @@ export default function ProfileRegisterVolunteerRoute() {
   const volunteerFormInitialProfile = useProfileFlowStore(
     (state: ProfileFlowStoreState) => state.volunteerFormInitialProfile,
   );
-  const resetVolunteerDraft = useProfileFlowStore.getState().resetVolunteerDraft;
+  const resetVolunteerDraft =
+    useProfileFlowStore.getState().resetVolunteerDraft;
 
   return (
     <RegisterVolunteerScreen
       onBack={() => router.replace('/profile')}
       onSuccess={() => {
         resetVolunteerDraft();
-        router.replace('/profile/my-volunteer-profile' as any);
+        router.replace({
+          pathname: '/profile/my-volunteer-profile',
+          params: { submitted: '1' },
+        } as any);
       }}
       mode={volunteerFormMode}
       initialProfile={volunteerFormInitialProfile}

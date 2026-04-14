@@ -6,11 +6,15 @@ export const citizenProfileKeys = {
   me: () => [...citizenProfileKeys.all, 'me'] as const,
 };
 
-export function useCitizenProfile(enabled = true) {
+export function useCitizenProfile(
+  enabled = true,
+  refetchInterval: number | false = false,
+) {
   return useQuery({
     queryKey: citizenProfileKeys.me(),
     queryFn: () => authService.getProfile(),
     enabled,
+    refetchInterval,
     select: (result) => ({
       profile: result.success ? result.data : null,
       errorMessage: result.success ? null : (result.message ?? null),

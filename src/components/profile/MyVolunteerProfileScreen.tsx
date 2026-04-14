@@ -1,20 +1,23 @@
 import '@/global.css';
+import { AppDialog, useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
-import {
-  TeamRolePreference,
-  SkillResponse,
-  VolunteerProfileResponse,
-} from '@/src/services/volunteerService';
+import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
 import {
   useAllSkills,
   useMyVolunteerProfile,
   volunteerProfileKeys,
 } from '@/src/hooks/useMyVolunteerProfile';
-import { useQueryClient } from '@tanstack/react-query';
+import {
+  SkillResponse,
+  TeamRolePreference,
+  VolunteerProfileResponse,
+} from '@/src/services/volunteerService';
+import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -29,23 +32,45 @@ interface MyVolunteerProfileScreenProps {
   onBack?: () => void;
   onCreate?: () => void;
   onResubmit?: (profile: VolunteerProfileResponse) => void;
+  justSubmitted?: boolean;
 }
 
 export default function MyVolunteerProfileScreen({
   onBack,
   onCreate,
   onResubmit,
+  justSubmitted = false,
 }: MyVolunteerProfileScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const router = useRouter();
+  const { dialogProps, showDialog } = useDialog();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const currentRole = (user?.role ?? '').toLowerCase();
+  const isCurrentVolunteerRole =
+    currentRole === 'volunteer' || currentRole === 'leader';
+  const hasShownRoleChangeDialogRef = useRef(false);
 
   const queryClient = useQueryClient();
-  const profileQuery = useMyVolunteerProfile();
+  const profileQuery = useMyVolunteerProfile(
+    true,
+    justSubmitted || !isCurrentVolunteerRole ? 5000 : false,
+  );
   const skillsQuery = useAllSkills();
+  const citizenProfileQuery = useCitizenProfile(
+    Boolean(user),
+    justSubmitted || !isCurrentVolunteerRole ? 5000 : false,
+  );
   const profile = profileQuery.data?.profile ?? null;
   const errorMessage = profileQuery.data?.errorMessage ?? null;
   const skills = skillsQuery.data ?? [];
   const loading = profileQuery.isLoading || skillsQuery.isLoading;
+  const backendRoles = citizenProfileQuery.data?.profile?.roles ?? [];
+  const backendHasVolunteerRole = backendRoles.some((role) => {
+    const normalized = String(role).toLowerCase();
+    return normalized === 'volunteer' || normalized === 'leader';
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -84,11 +109,39 @@ export default function MyVolunteerProfileScreen({
           bg: `${colors.status.pending}22`,
           text: colors.status.pending,
           title: 'Chờ duyệt',
-          description: 'Hồ sơ của bạn đang chờ moderator duyệt.',
+          description: 'Hồ sơ của bạn đang chờ duyệt.',
           icon: 'time' as const,
         };
     }
   }, [normalizedStatus]);
+
+  useEffect(() => {
+    if (hasShownRoleChangeDialogRef.current) return;
+    if (normalizedStatus !== 'Approved') return;
+    if (!backendHasVolunteerRole) return;
+    if (isCurrentVolunteerRole) return;
+
+    hasShownRoleChangeDialogRef.current = true;
+    showDialog({
+      title: 'Hồ sơ đã được duyệt',
+      message:
+        'Tài khoản của bạn đã được duyệt thành tình nguyện viên. Vui lòng đăng xuất và đăng nhập lại để cập nhật quyền mới.',
+      type: 'success',
+      cancelLabel: 'Để sau',
+      confirmLabel: 'Đăng xuất',
+      onConfirm: async () => {
+        await logout();
+        router.replace('/login');
+      },
+    });
+  }, [
+    backendHasVolunteerRole,
+    isCurrentVolunteerRole,
+    logout,
+    normalizedStatus,
+    router,
+    showDialog,
+  ]);
 
   if (loading) {
     return (
@@ -107,7 +160,11 @@ export default function MyVolunteerProfileScreen({
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="alert-circle-outline" size={36} color={colors.status.error} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={36}
+            color={colors.status.error}
+          />
           <Text className="mt-4 text-center text-lg font-bold text-text-primary">
             Không thể tải hồ sơ tình nguyện viên
           </Text>
@@ -115,7 +172,11 @@ export default function MyVolunteerProfileScreen({
             {errorMessage}
           </Text>
           <TouchableOpacity
-            onPress={() => queryClient.invalidateQueries({ queryKey: volunteerProfileKeys.all })}
+            onPress={() =>
+              queryClient.invalidateQueries({
+                queryKey: volunteerProfileKeys.all,
+              })
+            }
             className="mt-6 rounded-xl bg-primary px-5 py-3"
           >
             <Text className="font-bold text-white">Thử lại</Text>
@@ -126,11 +187,43 @@ export default function MyVolunteerProfileScreen({
   }
 
   if (!profile) {
+    if (justSubmitted) {
+      return (
+        <View className="flex-1" style={{ backgroundColor: colors.background }}>
+          <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
+          <View className="flex-1 items-center justify-center px-6">
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text className="mt-4 text-center text-lg font-bold text-text-primary">
+              Đang cập nhật hồ sơ đã gửi
+            </Text>
+            <Text className="mt-2 text-center text-text-secondary">
+              Hệ thống đang kiểm tra trạng thái hồ sơ của bạn mỗi 5 giây.
+            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                queryClient.invalidateQueries({
+                  queryKey: volunteerProfileKeys.all,
+                })
+              }
+              className="mt-6 rounded-xl bg-primary px-5 py-3"
+            >
+              <Text className="font-bold text-white">Làm mới ngay</Text>
+            </TouchableOpacity>
+          </View>
+          <AppDialog {...dialogProps} />
+        </View>
+      );
+    }
+
     return (
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="document-text-outline" size={36} color={colors.textSecondary} />
+          <Ionicons
+            name="document-text-outline"
+            size={36}
+            color={colors.textSecondary}
+          />
           <Text className="mt-4 text-center text-lg font-bold text-text-primary">
             Bạn chưa có hồ sơ tình nguyện viên
           </Text>
@@ -146,6 +239,7 @@ export default function MyVolunteerProfileScreen({
             </Text>
           </TouchableOpacity>
         </View>
+        <AppDialog {...dialogProps} />
       </View>
     );
   }
@@ -159,7 +253,10 @@ export default function MyVolunteerProfileScreen({
         showsVerticalScrollIndicator={false}
       >
         <View className="px-4 pt-4">
-          <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
+          <View
+            className="rounded-3xl p-5"
+            style={{ backgroundColor: colors.secondary }}
+          >
             <View className="flex-row items-start justify-between gap-3">
               <View className="flex-1">
                 <View
@@ -181,7 +278,11 @@ export default function MyVolunteerProfileScreen({
                 </Text>
               </View>
               <View className="rounded-2xl bg-white/15 p-3">
-                <Ionicons name={statusMeta.icon} size={24} color={colors.white} />
+                <Ionicons
+                  name={statusMeta.icon}
+                  size={24}
+                  color={colors.white}
+                />
               </View>
             </View>
 
@@ -215,37 +316,45 @@ export default function MyVolunteerProfileScreen({
             }
           />
           <View className="mt-4">
-              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
-                Mô tả
-              </Text>
-              <Text className="mt-2 text-base leading-6" style={{ color: colors.text }}>
-                {profile.descriptions || '--'}
-              </Text>
+            <Text
+              className="text-sm font-semibold"
+              style={{ color: colors.textSecondary }}
+            >
+              Mô tả
+            </Text>
+            <Text
+              className="mt-2 text-base leading-6"
+              style={{ color: colors.text }}
+            >
+              {profile.descriptions || '--'}
+            </Text>
           </View>
         </SectionCard>
 
         <SectionCard title="Kỹ năng" icon="sparkles-outline">
           {profile.skills?.length ? (
             <View className="flex-row flex-wrap gap-2">
-              {profile.skills.map((skillEntry: VolunteerProfileResponse['skills'][number]) => (
-                <View
-                  key={getProfileSkillId(skillEntry)}
-                  className="rounded-full bg-primary/10 px-3 py-2"
-                >
-                  <Text className="text-sm font-medium text-primary">
-                    {getLocalizedSkillName(
-                      skills.find(
-                        (skill: SkillResponse) =>
-                          skill.skillId === getProfileSkillId(skillEntry),
-                      )?.name || getProfileSkillId(skillEntry),
-                      skills.find(
-                        (skill: SkillResponse) =>
-                          skill.skillId === getProfileSkillId(skillEntry),
-                      )?.code,
-                    )}
-                  </Text>
-                </View>
-              ))}
+              {profile.skills.map(
+                (skillEntry: VolunteerProfileResponse['skills'][number]) => (
+                  <View
+                    key={getProfileSkillId(skillEntry)}
+                    className="rounded-full bg-primary/10 px-3 py-2"
+                  >
+                    <Text className="text-sm font-medium text-primary">
+                      {getLocalizedSkillName(
+                        skills.find(
+                          (skill: SkillResponse) =>
+                            skill.skillId === getProfileSkillId(skillEntry),
+                        )?.name || getProfileSkillId(skillEntry),
+                        skills.find(
+                          (skill: SkillResponse) =>
+                            skill.skillId === getProfileSkillId(skillEntry),
+                        )?.code,
+                      )}
+                    </Text>
+                  </View>
+                ),
+              )}
             </View>
           ) : (
             <EmptyInline text="Chưa có kỹ năng nào được chọn." />
@@ -255,35 +364,55 @@ export default function MyVolunteerProfileScreen({
         <SectionCard title="Chứng chỉ" icon="document-attach-outline">
           {profile.certificates?.length ? (
             <View className="gap-3">
-              {profile.certificates.map((certificate: VolunteerProfileResponse['certificates'][number], index: number) => (
-                <View
-                  key={`${certificate.fileUrl}-${index}`}
-                  className="rounded-2xl border p-4"
-                  style={{ borderColor: colors.border, backgroundColor: colors.surface }}
-                >
-                  <Text className="text-base font-bold" style={{ color: colors.text }}>
-                    {certificate.name}
-                  </Text>
-                  <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-                    {certificate.issuedBy}
-                  </Text>
-                  <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
-                    Cấp ngày {formatDate(certificate.issuedDate)}
-                    {certificate.expiryDate
-                      ? ` • Hết hạn ${formatDate(certificate.expiryDate)}`
-                      : ''}
-                  </Text>
-                  {!!certificate.fileUrl && (
-                    <View className="mt-3 overflow-hidden rounded-xl border" style={{ borderColor: colors.border }}>
-                      <Image
-                        source={{ uri: certificate.fileUrl }}
-                        className="h-40 w-full"
-                        resizeMode="cover"
-                      />
-                    </View>
-                  )}
-                </View>
-              ))}
+              {profile.certificates.map(
+                (
+                  certificate: VolunteerProfileResponse['certificates'][number],
+                  index: number,
+                ) => (
+                  <View
+                    key={`${certificate.fileUrl}-${index}`}
+                    className="rounded-2xl border p-4"
+                    style={{
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                    }}
+                  >
+                    <Text
+                      className="text-base font-bold"
+                      style={{ color: colors.text }}
+                    >
+                      {certificate.name}
+                    </Text>
+                    <Text
+                      className="mt-1 text-sm"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {certificate.issuedBy}
+                    </Text>
+                    <Text
+                      className="mt-2 text-sm"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Cấp ngày {formatDate(certificate.issuedDate)}
+                      {certificate.expiryDate
+                        ? ` • Hết hạn ${formatDate(certificate.expiryDate)}`
+                        : ''}
+                    </Text>
+                    {!!certificate.fileUrl && (
+                      <View
+                        className="mt-3 overflow-hidden rounded-xl border"
+                        style={{ borderColor: colors.border }}
+                      >
+                        <Image
+                          source={{ uri: certificate.fileUrl }}
+                          className="h-40 w-full"
+                          resizeMode="cover"
+                        />
+                      </View>
+                    )}
+                  </View>
+                ),
+              )}
             </View>
           ) : (
             <EmptyInline text="Chưa có chứng chỉ nào được đính kèm." />
@@ -303,6 +432,7 @@ export default function MyVolunteerProfileScreen({
           </View>
         ) : null}
       </ScrollView>
+      <AppDialog {...dialogProps} />
     </View>
   );
 }
@@ -320,10 +450,15 @@ function SectionCard({
 
   return (
     <View className="mt-4 px-4">
-      <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+      <View
+        className="rounded-2xl border p-4"
+        style={{ borderColor: colors.border, backgroundColor: colors.card }}
+      >
         <View className="mb-4 flex-row items-center gap-2">
           <Ionicons name={icon} size={18} color={colors.primary} />
-          <Text className="text-base font-bold" style={{ color: colors.text }}>{title}</Text>
+          <Text className="text-base font-bold" style={{ color: colors.text }}>
+            {title}
+          </Text>
         </View>
         {children}
       </View>
@@ -335,15 +470,26 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   const { colors } = useTheme();
   return (
     <View className="mb-3">
-      <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>{label}</Text>
-      <Text className="mt-1 text-base" style={{ color: colors.text }}>{value}</Text>
+      <Text
+        className="text-sm font-semibold"
+        style={{ color: colors.textSecondary }}
+      >
+        {label}
+      </Text>
+      <Text className="mt-1 text-base" style={{ color: colors.text }}>
+        {value}
+      </Text>
     </View>
   );
 }
 
 function EmptyInline({ text }: { text: string }) {
   const { colors } = useTheme();
-  return <Text className="text-sm" style={{ color: colors.textSecondary }}>{text}</Text>;
+  return (
+    <Text className="text-sm" style={{ color: colors.textSecondary }}>
+      {text}
+    </Text>
+  );
 }
 
 function formatDate(value?: string | null) {

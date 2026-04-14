@@ -37,7 +37,8 @@ export default function CitizenProfile({
   const loading = profileQuery.isLoading;
   const headerRed = '#E52521';
   const iconRed = '#D73A34';
-  const roleLabel = 'Người dùng';
+  const roleLabel =
+    (user?.role ?? '').toLowerCase() === 'user' ? 'Người dân' : 'Người dùng';
   const displayName = resolveDisplayName({
     profileDisplayName: profile?.displayName,
     authUserName: user?.user_name,
