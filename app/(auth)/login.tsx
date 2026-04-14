@@ -1,32 +1,30 @@
 import '@/global.css';
 import { AppDialog } from '@/src/components/common/AppDialog';
 import { SosFloatingButton } from '@/src/components/common/SosFloatingButton';
-import { useTheme } from '@/src/context/ThemeContext';
 import { useLogin } from '@/src/hooks/useAuthActions';
 import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const { bottom } = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const loginMutation = useLogin();
@@ -39,9 +37,12 @@ export default function LoginScreen() {
   const loading = loginMutation.isPending;
   const isShortScreen = height < 700;
   const fieldHeight = isShortScreen ? 46 : 52;
-  const fieldRadius = 12;
+  const fieldRadius = 16;
   const fieldFontSize = isShortScreen ? 15 : 16;
   const fieldIconSize = isShortScreen ? 18 : 20;
+
+  const dangerRed = '#E52521';
+  const neutralLine = '#E6E6E6';
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -78,7 +79,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView
       edges={['top']}
-      style={{ flex: 1, backgroundColor: colors.bg }}
+      style={{ flex: 1, backgroundColor: '#FFFFFF' }}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -94,30 +95,49 @@ export default function LoginScreen() {
         >
           <View
             className="w-full self-center px-5"
-            style={{ paddingTop: isShortScreen ? 20 : 40 }}
+            style={{ paddingTop: isShortScreen ? 10 : 18 }}
           >
-            <View style={{ marginBottom: isShortScreen ? 20 : 28 }}>
+            <View className="mb-4 mt-2 flex-row items-center justify-end">
+              <TouchableOpacity
+                onPress={() => router.push('/donate')}
+                className="flex-row items-center gap-1 rounded-full border px-4 py-2"
+                style={{
+                  borderColor: '#F3D1D0',
+                  backgroundColor: '#FFFFFF',
+                  shadowColor: '#CB2D28',
+                  shadowOffset: { width: 0, height: 5 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 10,
+                  elevation: 2,
+                }}
+              >
+                <Ionicons name="heart-outline" size={16} color={dangerRed} />
+                <Text className="font-semibold" style={{ color: dangerRed }}>
+                  Donation
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginBottom: isShortScreen ? 20 : 24 }}>
               <Text
-                className="text-[30px] font-bold"
-                style={{ color: colors.textPrimary }}
+                className="mt-2 text-[46px] font-extrabold"
+                style={{ color: '#1F2937', lineHeight: 52 }}
               >
                 Đăng nhập
               </Text>
-              <Text
-                className="mt-2 text-base"
-                style={{ color: colors.textSecondary }}
-              >
-                Nhập thông tin để tiếp tục nhận hỗ trợ.
+              <Text className="mt-2 text-base" style={{ color: '#4B5563' }}>
+                Kết nối để nhận hỗ trợ khẩn cấp và cập nhật tình{`\n`}hình thiên
+                tai.
               </Text>
             </View>
 
-            <View className="rounded-xl" style={{ backgroundColor: colors.bg }}>
+            <View className="rounded-xl" style={{ backgroundColor: '#FFFFFF' }}>
               <View className="mb-4">
                 <Text
                   className="mb-2 text-sm font-semibold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#111827' }}
                 >
-                  Email
+                  Email hoặc số điện thoại
                 </Text>
                 <View
                   className="flex-row items-center px-3"
@@ -125,23 +145,18 @@ export default function LoginScreen() {
                     height: fieldHeight,
                     borderRadius: fieldRadius,
                     borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.card,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F5F5F5',
                   }}
                 >
-                  <Ionicons
-                    name="mail-outline"
-                    size={fieldIconSize}
-                    color={colors.textSecondary}
-                  />
                   <TextInput
-                    className="ml-2 flex-1"
+                    className="flex-1"
                     style={{
-                      color: colors.textPrimary,
+                      color: '#111827',
                       fontSize: fieldFontSize,
                     }}
-                    placeholder="example@email.com"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholder="Nhập email hoặc số điện thoại"
+                    placeholderTextColor="#9CA3AF"
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
@@ -154,7 +169,7 @@ export default function LoginScreen() {
               <View>
                 <Text
                   className="mb-2 text-sm font-semibold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#111827' }}
                 >
                   Mật khẩu
                 </Text>
@@ -164,23 +179,18 @@ export default function LoginScreen() {
                     height: fieldHeight,
                     borderRadius: fieldRadius,
                     borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.card,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F5F5F5',
                   }}
                 >
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={fieldIconSize}
-                    color={colors.textSecondary}
-                  />
                   <TextInput
-                    className="ml-2 flex-1"
+                    className="flex-1"
                     style={{
-                      color: colors.textPrimary,
+                      color: '#111827',
                       fontSize: fieldFontSize,
                     }}
                     placeholder="Nhập mật khẩu"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholderTextColor="#9CA3AF"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -194,7 +204,7 @@ export default function LoginScreen() {
                     <Ionicons
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={fieldIconSize}
-                      color={colors.textSecondary}
+                      color="#6B7280"
                     />
                   </TouchableOpacity>
                 </View>
@@ -205,11 +215,11 @@ export default function LoginScreen() {
                   <Ionicons
                     name="alert-circle-outline"
                     size={16}
-                    color={colors.emergency}
+                    color={dangerRed}
                   />
                   <Text
                     className="ml-1 flex-1 text-sm"
-                    style={{ color: colors.emergency }}
+                    style={{ color: dangerRed }}
                   >
                     {inlineError}
                   </Text>
@@ -222,7 +232,7 @@ export default function LoginScreen() {
               >
                 <Text
                   className="text-sm font-semibold"
-                  style={{ color: colors.primary }}
+                  style={{ color: dangerRed }}
                 >
                   Quên mật khẩu?
                 </Text>
@@ -234,9 +244,8 @@ export default function LoginScreen() {
                 disabled={loading}
                 activeOpacity={0.85}
                 style={{
-                  backgroundColor: loading
-                    ? colors.textDisabled
-                    : colors.primary,
+                  borderRadius: 999,
+                  backgroundColor: loading ? '#F4A9A6' : dangerRed,
                 }}
               >
                 {loading ? (
@@ -252,38 +261,31 @@ export default function LoginScreen() {
                 <View className="mb-4 w-full flex-row items-center">
                   <View
                     className="h-px flex-1"
-                    style={{ backgroundColor: colors.border }}
+                    style={{ backgroundColor: neutralLine }}
                   />
-                  <Text
-                    className="mx-3 text-sm"
-                    style={{ color: colors.textSecondary }}
-                  >
+                  <Text className="mx-3 text-sm" style={{ color: '#6B7280' }}>
                     Hoặc đăng nhập bằng
                   </Text>
                   <View
                     className="h-px flex-1"
-                    style={{ backgroundColor: colors.border }}
+                    style={{ backgroundColor: neutralLine }}
                   />
                 </View>
 
                 <TouchableOpacity
                   className="h-12 w-full flex-row items-center justify-center rounded-xl"
                   style={{
-                    borderColor: colors.border,
+                    borderColor: neutralLine,
                     borderWidth: 1,
-                    backgroundColor: colors.card,
+                    backgroundColor: '#FFFFFF',
                   }}
                   onPress={handleGoogleLogin}
                   activeOpacity={0.85}
                 >
-                  <Ionicons
-                    name="logo-google"
-                    size={20}
-                    color={colors.primary}
-                  />
+                  <Ionicons name="logo-google" size={20} color={dangerRed} />
                   <Text
                     className="ml-2 text-base font-semibold"
-                    style={{ color: colors.textPrimary }}
+                    style={{ color: '#1F2937' }}
                   >
                     Tiếp tục với Google
                   </Text>
@@ -293,16 +295,13 @@ export default function LoginScreen() {
 
             <Pressable
               className="items-center"
-              style={{ marginTop: isShortScreen ? 24 : 40 }}
+              style={{ marginTop: isShortScreen ? 24 : 32 }}
               onPress={() => router.push('/register')}
             >
-              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+              <Text className="text-sm" style={{ color: '#6B7280' }}>
                 Chưa có tài khoản?
               </Text>
-              <Text
-                className="mt-1 font-bold"
-                style={{ color: colors.primary }}
-              >
+              <Text className="mt-1 font-bold" style={{ color: dangerRed }}>
                 Đăng ký ngay
               </Text>
             </Pressable>

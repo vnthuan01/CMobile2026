@@ -35,6 +35,8 @@ export default function CitizenProfile({
   const profileQuery = useCitizenProfile();
   const profile = profileQuery.data?.profile ?? null;
   const loading = profileQuery.isLoading;
+  const headerRed = '#E52521';
+  const iconRed = '#D73A34';
   const roleLabel = 'Người dùng';
   const displayName = resolveDisplayName({
     profileDisplayName: profile?.displayName,
@@ -104,7 +106,7 @@ export default function CitizenProfile({
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <View
         className="px-4 pb-10"
-        style={{ backgroundColor: colors.primary, paddingTop: top + 8 }}
+        style={{ backgroundColor: headerRed, paddingTop: top + 8 }}
       >
         <View className="mb-4 flex-row items-center justify-between">
           <View className="w-10">
@@ -130,7 +132,10 @@ export default function CitizenProfile({
               className="h-24 w-24 rounded-full"
             />
           ) : (
-            <View className="h-24 w-24 items-center justify-center rounded-full bg-white/20">
+            <View
+              className="h-24 w-24 items-center justify-center rounded-full"
+              style={{ backgroundColor: '#FFFFFF3D' }}
+            >
               <Ionicons name="person" size={42} color={colors.white} />
             </View>
           )}
@@ -142,7 +147,10 @@ export default function CitizenProfile({
           </Text>
 
           <View className="mt-3 flex-row flex-wrap items-center justify-center gap-2">
-            <View className="rounded-full bg-white/20 px-3 py-1">
+            <View
+              className="rounded-full px-3 py-1"
+              style={{ backgroundColor: '#FFFFFF3D' }}
+            >
               <Text className="text-xs font-bold text-white">{roleLabel}</Text>
             </View>
           </View>
@@ -156,18 +164,18 @@ export default function CitizenProfile({
       >
         <View
           className="mt-4 overflow-hidden rounded-2xl border"
-          style={{ borderColor: colors.border, backgroundColor: colors.card }}
+          style={{ borderColor: '#EFEFF0', backgroundColor: '#FFFFFF' }}
         >
           <TouchableOpacity
             onPress={() => onNavigate?.('/profile/user-profile')}
             className="flex-row items-center justify-between border-b px-4 py-4"
-            style={{ borderBottomColor: colors.border }}
+            style={{ borderBottomColor: '#EFEFF0' }}
           >
             <View className="flex-row items-center gap-3">
               <Ionicons
                 name="person-circle-outline"
                 size={20}
-                color={colors.primary}
+                color={iconRed}
               />
               <View>
                 <Text
@@ -186,16 +194,35 @@ export default function CitizenProfile({
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => onNavigate?.('/profile/change-password')}
+            onPress={() => onNavigate?.('/profile/my-volunteer-profile')}
             className="flex-row items-center justify-between border-b px-4 py-4"
-            style={{ borderBottomColor: colors.border }}
+            style={{ borderBottomColor: '#EFEFF0' }}
           >
             <View className="flex-row items-center gap-3">
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color={colors.primary}
-              />
+              <Ionicons name="heart-outline" size={20} color={iconRed} />
+              <View>
+                <Text
+                  className="text-base font-medium"
+                  style={{ color: colors.text }}
+                >
+                  Hồ sơ tình nguyện viên
+                </Text>
+              </View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => onNavigate?.('/profile/change-password')}
+            className="flex-row items-center justify-between border-b px-4 py-4"
+            style={{ borderBottomColor: '#EFEFF0' }}
+          >
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="lock-closed-outline" size={20} color={iconRed} />
               <Text
                 className="text-base font-medium"
                 style={{ color: colors.text }}
@@ -213,14 +240,10 @@ export default function CitizenProfile({
           <TouchableOpacity
             onPress={() => onNavigate?.('/profile/settings')}
             className="flex-row items-center justify-between border-b px-4 py-4"
-            style={{ borderBottomColor: colors.border }}
+            style={{ borderBottomColor: '#EFEFF0' }}
           >
             <View className="flex-row items-center gap-3">
-              <Ionicons
-                name="settings-outline"
-                size={20}
-                color={colors.primary}
-              />
+              <Ionicons name="settings-outline" size={20} color={iconRed} />
               <Text
                 className="text-base font-medium"
                 style={{ color: colors.text }}
@@ -240,11 +263,7 @@ export default function CitizenProfile({
             className="flex-row items-center justify-between px-4 py-4"
           >
             <View className="flex-row items-center gap-3">
-              <Ionicons
-                name="help-circle-outline"
-                size={20}
-                color={colors.primary}
-              />
+              <Ionicons name="help-circle-outline" size={20} color={iconRed} />
               <Text
                 className="text-base font-medium"
                 style={{ color: colors.text }}
@@ -264,16 +283,12 @@ export default function CitizenProfile({
           onPress={onLogout}
           className="mt-4 flex-row items-center justify-center gap-2 rounded-xl border py-4"
           style={{
-            borderColor: `${colors.status.error}44`,
-            backgroundColor: colors.card,
+            borderColor: '#F2B8B5',
+            backgroundColor: '#FFFFFF',
           }}
         >
-          <Ionicons
-            name="log-out-outline"
-            size={20}
-            color={colors.status.error}
-          />
-          <Text className="font-bold" style={{ color: colors.status.error }}>
+          <Ionicons name="log-out-outline" size={20} color={headerRed} />
+          <Text className="font-bold" style={{ color: headerRed }}>
             Đăng xuất
           </Text>
         </TouchableOpacity>
