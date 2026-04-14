@@ -1,8 +1,8 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useVolunteerHomeOverview } from '@/src/hooks/useTeamOverview';
-import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -31,12 +31,33 @@ export default function VolunteerHomeContent() {
       setHasLoadedOnce(true);
     }
 
-    if (!volunteerHomeQuery.isLoading && volunteerHomeQuery.data?.isEmpty && hasLoadedOnce) {
-      showInfoToast('Chưa có đội', volunteerHomeQuery.data.message || 'Bạn chưa thuộc đội nào.');
-    } else if (!volunteerHomeQuery.isLoading && !volunteerHomeQuery.data?.success && errorMessage && hasLoadedOnce) {
+    if (
+      !volunteerHomeQuery.isLoading &&
+      volunteerHomeQuery.data?.isEmpty &&
+      hasLoadedOnce
+    ) {
+      showInfoToast(
+        'Chưa có đội',
+        volunteerHomeQuery.data.message || 'Bạn chưa thuộc đội nào.',
+      );
+    } else if (
+      !volunteerHomeQuery.isLoading &&
+      !volunteerHomeQuery.data?.success &&
+      errorMessage &&
+      hasLoadedOnce
+    ) {
       showErrorToast('Không tải được dữ liệu', errorMessage);
     }
-  }, [batch, errorMessage, hasLoadedOnce, team, volunteerHomeQuery.data?.isEmpty, volunteerHomeQuery.data?.message, volunteerHomeQuery.data?.success, volunteerHomeQuery.isLoading]);
+  }, [
+    batch,
+    errorMessage,
+    hasLoadedOnce,
+    team,
+    volunteerHomeQuery.data?.isEmpty,
+    volunteerHomeQuery.data?.message,
+    volunteerHomeQuery.data?.success,
+    volunteerHomeQuery.isLoading,
+  ]);
 
   const items = batch?.items ?? [];
 
@@ -228,22 +249,24 @@ export default function VolunteerHomeContent() {
             <View className="mt-6 px-4">
               <Card
                 colors={colors.status.error}
-                bg={isDark ? `${colors.status.error}20` : `${colors.status.error}10`}
+                bg={
+                  isDark
+                    ? `${colors.status.error}20`
+                    : `${colors.status.error}10`
+                }
               >
                 <View className="flex-row items-start gap-3">
-                    <Ionicons name="alert-circle" size={22} color={colors.status.error} />
+                  <Ionicons
+                    name="alert-circle"
+                    size={22}
+                    color={colors.status.error}
+                  />
                   <View className="flex-1">
                     <Text
                       className="text-base font-bold"
                       style={{ color: colors.text }}
                     >
                       Không tải được dữ liệu
-                    </Text>
-                    <Text
-                      className="mt-1 text-sm"
-                      style={{ color: colors.textSecondary }}
-                    >
-                      {errorMessage}
                     </Text>
                     <TouchableOpacity
                       onPress={() => volunteerHomeQuery.refetch()}
@@ -531,11 +554,11 @@ export default function VolunteerHomeContent() {
                               {mission.address || 'Chưa có địa chỉ'}
                             </Text>
                           </View>
-                        <Badge
-                          label={formatMissionStatus(mission.status)}
-                          bg={colors.surface}
-                          text={colors.textSecondary}
-                        />
+                          <Badge
+                            label={formatMissionStatus(mission.status)}
+                            bg={colors.surface}
+                            text={colors.textSecondary}
+                          />
                         </View>
                         <View className="mt-3 flex-row flex-wrap gap-2">
                           <Badge
@@ -728,9 +751,17 @@ function ActionButton({
       ? colors.primary
       : colors.surface;
 
-  const iconColor = disabled ? colors.textSecondary : primary ? colors.white : colors.primary;
+  const iconColor = disabled
+    ? colors.textSecondary
+    : primary
+      ? colors.white
+      : colors.primary;
 
-  const textColor = disabled ? colors.textSecondary : primary ? colors.white : colors.text;
+  const textColor = disabled
+    ? colors.textSecondary
+    : primary
+      ? colors.white
+      : colors.text;
 
   return (
     <TouchableOpacity

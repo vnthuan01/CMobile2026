@@ -7,26 +7,28 @@ import { usePriorityCriteria } from '@/src/hooks/useRescueMeta';
 import { useSubmitRescueRequest } from '@/src/hooks/useSubmitRescueRequest';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
-  DisasterType,
-  RescueAttachment,
-  RescueType,
+    DisasterType,
+    RescueAttachment,
+    RescueType,
 } from '@/src/services/rescueService';
+import { useAuthStore } from '@/src/store/authStore';
+import type { PriorityCriteria } from '@/src/types/rescue';
 import {
-  showErrorToast,
-  showSuccessToast,
-  showWarningToast,
+    showErrorToast,
+    showSuccessToast,
+    showWarningToast,
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RequestRescueMiniMap from './RequestRescueMiniMap';
@@ -81,12 +83,15 @@ export default function RequestRescueScreen({
 }: RequestRescueScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { dialogProps, showDialog } = useDialog();
   const uploadImageMutation = useUploadImage();
   const submitRescueRequestMutation = useSubmitRescueRequest();
 
   // ── Form state ───────────────────────────────────────────────────────────
-  const [rescueType, setRescueType] = useState<RescueType>(0);
+  const [rescueType, setRescueType] = useState<RescueType>(
+    isAuthenticated ? 0 : 1,
+  );
   const [disasterType, setDisasterType] = useState<DisasterType>(0); // Bão lũ first
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
@@ -118,7 +123,7 @@ export default function RequestRescueScreen({
     disasterType,
     rescueType === 0,
   );
-  const criteria = priorityCriteriaQuery.data ?? [];
+  const criteria: PriorityCriteria[] = priorityCriteriaQuery.data ?? [];
   const loadingCriteria = priorityCriteriaQuery.isLoading;
   const submitting = submitRescueRequestMutation.isPending;
 
@@ -127,6 +132,12 @@ export default function RequestRescueScreen({
       setAddress(detectedAddress);
     }
   }, [address, detectedAddress]);
+
+  useEffect(() => {
+    if (!isAuthenticated && rescueType === 0) {
+      setRescueType(1);
+    }
+  }, [isAuthenticated, rescueType]);
 
   // ── Fetch priority criteria when disaster type changes ────────────────────
   useEffect(() => {
@@ -309,11 +320,12 @@ export default function RequestRescueScreen({
             className="flex-row rounded-xl border-2 p-1"
             style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
-            {(
-              [
-                { label: 'Thông thường', value: 0 as RescueType },
-                { label: 'Khẩn cấp', value: 1 as RescueType },
-              ] as const
+            {(isAuthenticated
+              ? [
+                  { label: 'Thông thường', value: 0 as RescueType },
+                  { label: 'Khẩn cấp', value: 1 as RescueType },
+                ]
+              : [{ label: 'Khẩn cấp', value: 1 as RescueType }]
             ).map((opt) => (
               <TouchableOpacity
                 key={opt.value}
