@@ -1,10 +1,19 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
 import {
-    resolveAvatarUrl,
-    resolveDisplayName,
+  useAllSkills,
+  useMyVolunteerProfile,
+} from '@/src/hooks/useMyVolunteerProfile';
+import type {
+  SkillResponse,
+  VolunteerProfileResponse,
+} from '@/src/types/volunteer';
+import {
+  resolveAvatarUrl,
+  resolveDisplayName,
 } from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
+import { useMemo } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
@@ -39,7 +48,14 @@ export default function VolunteerProfile({
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const profileQuery = useCitizenProfile(Boolean(user));
+  const volunteerProfileQuery = useMyVolunteerProfile(Boolean(user));
+  const allSkillsQuery = useAllSkills(Boolean(user));
   const profile = profileQuery.data?.profile ?? null;
+  const volunteerProfile = volunteerProfileQuery.data?.profile ?? null;
+  const allSkills = useMemo(
+    () => (allSkillsQuery.data ?? []) as SkillResponse[],
+    [allSkillsQuery.data],
+  );
   const headerBg = colors.secondary;
   const cardBg = colors.card;
   const subtleBg = colors.surface;
@@ -56,6 +72,23 @@ export default function VolunteerProfile({
     profilePictureUrl: profile?.pictureUrl,
     authPictureUrl: null,
   });
+
+  const volunteerSkills = useMemo(() => {
+    if (!volunteerProfile?.skills?.length) return [] as string[];
+
+    return volunteerProfile.skills
+      .map((skillEntry: VolunteerProfileResponse['skills'][number]) => {
+        const id = getProfileSkillId(skillEntry);
+        const matched = allSkills.find(
+          (skill: SkillResponse) => skill.skillId === id,
+        );
+        return getLocalizedSkillName(matched?.name || id, matched?.code);
+      })
+      .filter(Boolean);
+  }, [allSkills, volunteerProfile?.skills]);
+
+  const volunteerCertificates: VolunteerProfileResponse['certificates'] =
+    volunteerProfile?.certificates ?? [];
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -208,42 +241,41 @@ export default function VolunteerProfile({
                   Kỹ năng chuyên môn
                 </Text>
               </View>
-              <TouchableOpacity>
-                <Text className="text-xs font-bold text-primary hover:underline">
-                  Thêm mới
-                </Text>
-              </TouchableOpacity>
             </View>
-            <View className="flex-row flex-wrap gap-2.5">
-              {[
-                { icon: 'medkit', label: 'Sơ cứu y tế' },
-                { icon: 'water', label: 'Lặn cứu hộ' },
-                { icon: 'car', label: 'Lái xe tải' },
-                { icon: 'body', label: 'Bơi lội' },
-                { icon: 'map', label: 'Thông thạo địa hình' },
-              ].map((skill, index) => (
-                <View
-                  key={index}
-                  className="flex-row items-center gap-2 rounded-xl border px-3 py-2"
-                  style={{
-                    borderColor: neutralBorder,
-                    backgroundColor: colors.surface,
-                  }}
-                >
-                  <Ionicons
-                    name={skill.icon as any}
-                    size={20}
-                    color={iconAccent}
-                  />
-                  <Text
-                    className="text-sm font-medium"
-                    style={{ color: colors.text }}
+            {volunteerProfileQuery.isLoading || allSkillsQuery.isLoading ? (
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                Đang tải kỹ năng chuyên môn...
+              </Text>
+            ) : volunteerSkills.length > 0 ? (
+              <View className="flex-row flex-wrap gap-2.5">
+                {volunteerSkills.map((skill: string, index: number) => (
+                  <View
+                    key={`${skill}-${index}`}
+                    className="flex-row items-center gap-2 rounded-xl border px-3 py-2"
+                    style={{
+                      borderColor: neutralBorder,
+                      backgroundColor: colors.surface,
+                    }}
                   >
-                    {skill.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={18}
+                      color={iconAccent}
+                    />
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: colors.text }}
+                    >
+                      {skill}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                Chưa có kỹ năng chuyên môn.
+              </Text>
+            )}
           </View>
 
           {/* Certifications and Badges */}
@@ -255,10 +287,12 @@ export default function VolunteerProfile({
                   className="text-base font-bold"
                   style={{ color: colors.text }}
                 >
-                  Chứng chỉ & Huy hiệu
+                  Chứng chỉ
                 </Text>
               </View>
-              <TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => onNavigate?.('/profile/my-volunteer-profile')}
+              >
                 <Text
                   className="text-xs font-medium"
                   style={{ color: colors.textSecondary }}
@@ -267,107 +301,62 @@ export default function VolunteerProfile({
                 </Text>
               </TouchableOpacity>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="flex-row gap-3 pb-4"
+            <View
+              className="rounded-2xl border p-4"
+              style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
             >
-              <View
-                className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border p-3 shadow-sm"
-                style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
-              >
-                <View
-                  className="flex h-12 w-12 items-center justify-center rounded-full border"
-                  style={{
-                    borderColor: `${colors.status.pending}33`,
-                    backgroundColor: `${colors.status.pending}14`,
-                  }}
+              {volunteerProfileQuery.isLoading ? (
+                <Text
+                  className="text-sm"
+                  style={{ color: colors.textSecondary }}
                 >
-                  <Ionicons
-                    name="medal"
-                    size={24}
-                    color={colors.status.pending}
-                  />
+                  Đang tải chứng chỉ...
+                </Text>
+              ) : volunteerCertificates.length > 0 ? (
+                <View className="gap-3">
+                  {volunteerCertificates
+                    .slice(0, 3)
+                    .map(
+                      (
+                        certificate: VolunteerProfileResponse['certificates'][number],
+                        index: number,
+                      ) => (
+                        <View
+                          key={`${certificate.name}-${index}`}
+                          className="flex-row items-start gap-3"
+                        >
+                          <Ionicons
+                            name="document-text-outline"
+                            size={18}
+                            color={colors.primary}
+                          />
+                          <View className="flex-1">
+                            <Text
+                              className="text-sm font-semibold"
+                              style={{ color: colors.text }}
+                            >
+                              {certificate.name || 'Chứng chỉ'}
+                            </Text>
+                            <Text
+                              className="text-xs"
+                              style={{ color: colors.textSecondary }}
+                            >
+                              {certificate.issuedBy || 'Không rõ đơn vị cấp'}
+                            </Text>
+                          </View>
+                        </View>
+                      ),
+                    )}
                 </View>
-                <View className="w-full text-center">
-                  <Text
-                    className="truncate text-center text-xs font-bold leading-tight"
-                    style={{ color: colors.text }}
-                    numberOfLines={1}
-                  >
-                    Cứu hộ 2023
-                  </Text>
-                  <Text
-                    className="mt-0.5 text-center text-[10px] font-medium"
-                    style={{ color: colors.status.pending }}
-                  >
-                    Xuất sắc
-                  </Text>
-                </View>
-              </View>
-              <View
-                className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border p-3 shadow-sm"
-                style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
-              >
-                <View
-                  className="flex h-12 w-12 items-center justify-center rounded-full border"
-                  style={{
-                    borderColor: `${colors.status.error}33`,
-                    backgroundColor: `${colors.status.error}14`,
-                  }}
+              ) : (
+                <Text
+                  className="text-sm"
+                  style={{ color: colors.textSecondary }}
                 >
-                  <Ionicons
-                    name="shield-checkmark"
-                    size={24}
-                    color={colors.status.error}
-                  />
-                </View>
-                <View className="w-full text-center">
-                  <Text
-                    className="truncate text-center text-xs font-bold leading-tight"
-                    style={{ color: colors.text }}
-                    numberOfLines={1}
-                  >
-                    Tập huấn Y tế
-                  </Text>
-                  <Text
-                    className="mt-0.5 text-center text-[10px] font-medium"
-                    style={{ color: colors.primary }}
-                  >
-                    Hoàn thành
-                  </Text>
-                </View>
-              </View>
-              <View
-                className="w-28 shrink-0 flex-col items-center gap-2 rounded-2xl border p-3 shadow-sm"
-                style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
-              >
-                <View
-                  className="flex h-12 w-12 items-center justify-center rounded-full border"
-                  style={{
-                    borderColor: `${iconAccent}33`,
-                    backgroundColor: `${iconAccent}14`,
-                  }}
-                >
-                  <Ionicons name="water" size={24} color={iconAccent} />
-                </View>
-                <View className="w-full text-center">
-                  <Text
-                    className="truncate text-center text-xs font-bold leading-tight"
-                    style={{ color: colors.text }}
-                    numberOfLines={1}
-                  >
-                    Cứu nạn Thủy
-                  </Text>
-                  <Text
-                    className="mt-0.5 text-center text-[10px] font-medium"
-                    style={{ color: colors.secondary }}
-                  >
-                    Cơ bản
-                  </Text>
-                </View>
-              </View>
-            </ScrollView>
+                  Chưa có chứng chỉ chuyên môn.
+                </Text>
+              )}
+            </View>
           </View>
 
           {/* Contact Information */}
@@ -797,4 +786,51 @@ export default function VolunteerProfile({
       </ScrollView>
     </View>
   );
+}
+
+function getLocalizedSkillName(name?: string | null, code?: string | null) {
+  const source = `${code || ''} ${name || ''}`.toLowerCase().trim();
+
+  if (!source) return 'Kỹ năng';
+  if (
+    source.includes('first') ||
+    source.includes('aid') ||
+    source.includes('sơ cứu')
+  ) {
+    return 'Sơ cứu';
+  }
+  if (source.includes('medical') || source.includes('y tế')) {
+    return 'Hỗ trợ y tế';
+  }
+  if (source.includes('swim') || source.includes('bơi')) {
+    return 'Bơi cứu hộ';
+  }
+  if (
+    source.includes('drive') ||
+    source.includes('driver') ||
+    source.includes('lái xe')
+  ) {
+    return 'Lái xe cứu trợ';
+  }
+  if (source.includes('logistic') || source.includes('hậu cần')) {
+    return 'Hậu cần';
+  }
+  if (source.includes('communicat') || source.includes('liên lạc')) {
+    return 'Liên lạc điều phối';
+  }
+  if (source.includes('rescue') || source.includes('cứu hộ')) {
+    return 'Cứu hộ';
+  }
+  if (source.includes('search') || source.includes('tìm kiếm')) {
+    return 'Tìm kiếm cứu nạn';
+  }
+
+  return name || code || 'Kỹ năng';
+}
+
+function getProfileSkillId(
+  skillEntry: VolunteerProfileResponse['skills'][number],
+) {
+  if (typeof skillEntry === 'string') return skillEntry;
+  return skillEntry?.skillId || skillEntry?.code || skillEntry?.name || '';
 }

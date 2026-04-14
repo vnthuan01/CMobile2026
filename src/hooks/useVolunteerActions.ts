@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  volunteerService,
-  type CreateVolunteerRequest,
-  type ResubmitVolunteerProfileRequest,
+    volunteerService,
+    type CreateVolunteerRequest,
+    type ResubmitVolunteerProfileRequest,
 } from '../services/volunteerService';
-import { showApiErrorToast, showApiResultToast } from '../utils/apiToast';
+import { showApiErrorToast } from '../utils/apiToast';
 import { volunteerProfileKeys } from './useMyVolunteerProfile';
 
 export function useVolunteerSkills(enabled = true) {
@@ -55,6 +55,26 @@ export function useResubmitVolunteerProfile() {
       showApiErrorToast(error, {
         errorTitle: 'Không thể gửi lại hồ sơ',
         errorMessage: 'Không thể gửi lại hồ sơ tình nguyện viên.',
+      });
+    },
+  });
+}
+
+export function useUpdateVolunteerProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: ResubmitVolunteerProfileRequest) =>
+      volunteerService.updateMyVolunteerProfile(payload),
+    onSuccess: (result) => {
+      if (result?.success) {
+        queryClient.invalidateQueries({ queryKey: volunteerProfileKeys.all });
+      }
+    },
+    onError: (error) => {
+      showApiErrorToast(error, {
+        errorTitle: 'Không thể cập nhật hồ sơ',
+        errorMessage: 'Không thể cập nhật thông tin tình nguyện viên.',
       });
     },
   });

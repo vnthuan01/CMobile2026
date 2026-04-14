@@ -1,17 +1,26 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
   useUpdateUserProfile,
   useUserProfile,
 } from '@/src/hooks/useUserProfile';
 import { useAuthStore } from '@/src/store/authStore';
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Image,
   Platform,
   ScrollView,
   Text,
@@ -39,10 +48,12 @@ export default function UpdateProfileCitizenScreen({
   const authUser = useAuthStore((state) => state.user);
   const { data } = useUserProfile(true);
   const updateProfile = useUpdateUserProfile();
+  const uploadImageMutation = useUploadImage();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [dateOfBirthValue, setDateOfBirthValue] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -88,6 +99,7 @@ export default function UpdateProfileCitizenScreen({
     setFullName(profile.displayName ?? authUser?.user_name ?? '');
     setEmail(profile.email ?? authUser?.email ?? '');
     setPhone(profile.phoneNumber ?? '');
+    setAvatarUrl(profile.pictureUrl ?? null);
     const parsedDate = parseDateFromApi(profile.dateOfBirth);
     setDateOfBirthValue(parsedDate);
     setDateOfBirth(parsedDate ? formatBirthDateDisplay(parsedDate) : '');
@@ -110,19 +122,75 @@ export default function UpdateProfileCitizenScreen({
   };
 
   const handleSave = async () => {
+    const picturePublicId = extractCloudinaryPublicId(avatarUrl);
     const result = await updateProfile.mutateAsync({
       displayName: fullName.trim() || undefined,
       phoneNumber: phone.trim() || undefined,
-      // Backend is currently unstable for DateOfBirth updates.
-      // Keep other fields updatable by omitting DateOfBirth from payload for now.
-      dateOfBirth: undefined,
+      dateOfBirth: formatDateForApi(dateOfBirthValue),
       gender: mapGenderToApi(gender),
       address: address.trim() || undefined,
+      pictureUrl: avatarUrl || undefined,
+      picturePublicId: picturePublicId || undefined,
     });
 
+    console.log(
+      `[UpdateProfileCitizen] update profile status: ${result?.status ?? 'unknown'}`,
+    );
+
+    const statusCode = Number(result?.status ?? 0);
+    const isSuccessStatus =
+      statusCode >= 200 && statusCode < 300 && Boolean(result?.success);
+
+    if (!isSuccessStatus) {
+      showErrorToast(
+        'Không thể cập nhật avatar',
+        `API cập nhật trả status ${statusCode || 'không xác định'}.`,
+      );
+      return;
+    }
+
     if (result?.success) {
+      showSuccessToast('Thành công', 'Đã cập nhật hồ sơ và ảnh đại diện.');
       onSave?.();
     }
+  };
+
+  const handlePickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showWarningToast(
+        'Cần quyền truy cập',
+        'Bạn cần cấp quyền thư viện ảnh để cập nhật avatar.',
+      );
+      return;
+    }
+
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+
+    if (picked.canceled || !picked.assets?.[0]) return;
+
+    const asset = picked.assets[0];
+    const uploadResult = await uploadImageMutation.mutateAsync({
+      localUri: asset.uri,
+      fileName: asset.fileName || `avatar_${Date.now()}.jpg`,
+      mimeType: asset.mimeType || 'image/jpeg',
+    });
+
+    if (!uploadResult.success || !uploadResult.url) {
+      showErrorToast(
+        'Upload avatar thất bại',
+        uploadResult.message || 'Không thể upload ảnh đại diện.',
+      );
+      return;
+    }
+
+    setAvatarUrl(uploadResult.url);
+    showSuccessToast('Đã chọn ảnh', 'Nhấn Cập nhật để lưu avatar mới.');
   };
 
   const renderInput = (
@@ -220,16 +288,34 @@ export default function UpdateProfileCitizenScreen({
                 borderColor: colors.card,
               }}
             >
-              <Ionicons name="person" size={56} color={colors.textSecondary} />
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  className="h-full w-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <Ionicons
+                  name="person"
+                  size={56}
+                  color={colors.textSecondary}
+                />
+              )}
             </View>
             <TouchableOpacity
+              onPress={handlePickAvatar}
+              disabled={uploadImageMutation.isPending}
               className="absolute bottom-1 right-1 rounded-full border-2 p-2 shadow-md"
               style={{
                 backgroundColor: colors.primary,
                 borderColor: colors.card,
               }}
             >
-              <Ionicons name="camera" size={16} color={colors.white} />
+              {uploadImageMutation.isPending ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Ionicons name="camera" size={16} color={colors.white} />
+              )}
             </TouchableOpacity>
           </View>
           <View className="mt-4 items-center">
@@ -269,7 +355,7 @@ export default function UpdateProfileCitizenScreen({
                   color: dateOfBirth ? colors.text : colors.textSecondary,
                 }}
               >
-                {dateOfBirth || 'dd-mm-yyyy'}
+                {dateOfBirth || 'Chọn ngày sinh'}
               </Text>
               <Ionicons
                 name="calendar-outline"
@@ -367,4 +453,27 @@ export default function UpdateProfileCitizenScreen({
       </ScrollView>
     </View>
   );
+}
+
+function extractCloudinaryPublicId(url?: string | null): string | null {
+  if (!url) return null;
+  const cleanedUrl = url.split('?')[0].split('#')[0];
+  const uploadIndex = cleanedUrl.indexOf('/upload/');
+  if (uploadIndex === -1) return null;
+
+  let tail = cleanedUrl.slice(uploadIndex + '/upload/'.length);
+  if (/^v\d+\//.test(tail)) {
+    tail = tail.replace(/^v\d+\//, '');
+  }
+
+  const lastDot = tail.lastIndexOf('.');
+  return lastDot > 0 ? tail.slice(0, lastDot) : tail || null;
+}
+
+function formatDateForApi(date: Date | null): string | undefined {
+  if (!date) return undefined;
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T00:00:00`;
 }
