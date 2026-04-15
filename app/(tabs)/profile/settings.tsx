@@ -4,5 +4,10 @@ import { useRouter } from 'expo-router';
 export default function ProfileSettingsRoute() {
   const router = useRouter();
 
-  return <SettingsScreen onBack={() => router.replace('/profile')} />;
+  return (
+    <SettingsScreen
+      onBack={() => router.replace('/profile')}
+      onNavigate={(screen) => router.push(screen as any)}
+    />
+  );
 }

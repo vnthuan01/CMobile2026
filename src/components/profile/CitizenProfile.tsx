@@ -20,6 +20,7 @@ interface CitizenProfileProps {
       | '/profile/my-volunteer-profile'
       | '/profile/change-password'
       | '/profile/settings'
+      | '/profile/requests'
       | '/profile/help',
   ) => void;
 }

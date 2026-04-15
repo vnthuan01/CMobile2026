@@ -6,7 +6,7 @@ import { useRequestTrackingDetail } from '@/src/hooks/useRequestTracking';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
 import { showWarningToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -18,6 +18,93 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UserRescueTrackingMap from './UserRescueTrackingMap';
+
+const WEATHER_FIELD_LABELS: Record<string, string> = {
+  weather: 'Thời tiết',
+  weathercondition: 'Tình trạng thời tiết',
+  condition: 'Tình trạng',
+  description: 'Mô tả thời tiết',
+  summary: 'Tổng quan',
+  forecast: 'Dự báo',
+  temperature: 'Nhiệt độ',
+  temperaturec: 'Nhiệt độ',
+  temp: 'Nhiệt độ',
+  feelslike: 'Cảm giác như',
+  feelslikec: 'Cảm giác như',
+  humidity: 'Độ ẩm',
+  wind: 'Gió',
+  windspeed: 'Tốc độ gió',
+  windspeedkmh: 'Tốc độ gió',
+  windgust: 'Gió giật',
+  winddirection: 'Hướng gió',
+  visibility: 'Tầm nhìn',
+  pressure: 'Áp suất',
+  cloud: 'Mây che phủ',
+  cloudcover: 'Mây che phủ',
+  rainfall: 'Lượng mưa',
+  rain: 'Mưa',
+  precipitation: 'Lượng mưa',
+  precipprobability: 'Xác suất mưa',
+  uv: 'Chỉ số UV',
+  uvindex: 'Chỉ số UV',
+  sunrise: 'Mặt trời mọc',
+  sunset: 'Mặt trời lặn',
+  alert: 'Cảnh báo',
+  warning: 'Cảnh báo',
+  note: 'Ghi chú',
+  location: 'Khu vực',
+  updatedat: 'Thời điểm cập nhật',
+  observationtime: 'Thời điểm quan trắc',
+};
+
+const WEATHER_VALUE_MAP: Record<string, string> = {
+  clear: 'Trời quang',
+  sunny: 'Nắng ráo',
+  partlycloudy: 'Có mây rải rác',
+  cloudy: 'Nhiều mây',
+  overcast: 'Âm u nhiều mây',
+  mist: 'Sương mù nhẹ',
+  fog: 'Sương mù',
+  haze: 'Mù khô',
+  smoke: 'Khói bụi',
+  drizzle: 'Mưa phùn',
+  rain: 'Mưa',
+  lightrain: 'Mưa nhẹ',
+  moderaterain: 'Mưa vừa',
+  heavyrain: 'Mưa lớn',
+  shower: 'Mưa rào',
+  storm: 'Dông bão',
+  thunderstorm: 'Giông sét',
+  squall: 'Mưa giông mạnh',
+  wind: 'Có gió',
+  windy: 'Gió mạnh',
+  humid: 'Độ ẩm cao',
+  cold: 'Trời lạnh',
+  hot: 'Trời nóng',
+  dangerous: 'Nguy hiểm',
+  moderate: 'Mức trung bình',
+  high: 'Mức cao',
+  low: 'Mức thấp',
+  north: 'Bắc',
+  south: 'Nam',
+  east: 'Đông',
+  west: 'Tây',
+  northeast: 'Đông Bắc',
+  northwest: 'Tây Bắc',
+  southeast: 'Đông Nam',
+  southwest: 'Tây Nam',
+};
+
+const WEATHER_UNIT_MAP: Array<[RegExp, string]> = [
+  [/\bkm\/h\b/gi, 'km/giờ'],
+  [/\bm\/s\b/gi, 'm/giây'],
+  [/\bmm\b/gi, 'mm'],
+  [/\bmb\b/gi, 'mb'],
+  [/\bhpa\b/gi, 'hPa'],
+  [/\bmi\b/gi, 'dặm'],
+  [/\bkm\b/gi, 'km'],
+  [/\b%\b/g, '%'],
+];
 
 interface ViewRequestRescueScreenProps {
   requestId: string;
@@ -36,6 +123,17 @@ export default function ViewRequestRescueScreen({
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelReasonError, setCancelReasonError] = useState('');
+  const [fallbackRouteCoordinates, setFallbackRouteCoordinates] = useState<
+    [number, number][]
+  >([]);
+  const [loadingDirections, setLoadingDirections] = useState(false);
+  const [fallbackDistanceKm, setFallbackDistanceKm] = useState<number | null>(
+    null,
+  );
+  const [fallbackEtaMinutes, setFallbackEtaMinutes] = useState<number | null>(
+    null,
+  );
+  const [showFullscreenMap, setShowFullscreenMap] = useState(false);
 
   const detail = trackingQuery.data?.detail ?? null;
   const teamLocation = trackingQuery.data?.teamLocation ?? null;
@@ -88,11 +186,108 @@ export default function ViewRequestRescueScreen({
 
   const routeCoordinates = useMemo(() => {
     const polyline = activeTeam?.routePolyline;
-    if (!polyline) return [];
+    if (!polyline) return fallbackRouteCoordinates;
     return rescueTeamService.decodePolyline(polyline);
-  }, [activeTeam?.routePolyline]);
+  }, [activeTeam?.routePolyline, fallbackRouteCoordinates]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDirections = async () => {
+      if (activeTeam?.routePolyline) {
+        setFallbackRouteCoordinates([]);
+        setFallbackDistanceKm(null);
+        setFallbackEtaMinutes(null);
+        return;
+      }
+
+      if (!teamCoordinate || !victimCoordinate || !shouldShowTeamTracking) {
+        setFallbackRouteCoordinates([]);
+        setFallbackDistanceKm(null);
+        setFallbackEtaMinutes(null);
+        return;
+      }
+
+      try {
+        setLoadingDirections(true);
+        const route = await rescueTeamService.fetchDirectionsPolyline(
+          {
+            latitude: teamCoordinate[1],
+            longitude: teamCoordinate[0],
+          },
+          {
+            latitude: victimCoordinate[1],
+            longitude: victimCoordinate[0],
+          },
+        );
+
+        if (!isMounted) return;
+
+        if (route.success && route.polyline) {
+          setFallbackRouteCoordinates(
+            rescueTeamService.decodePolyline(route.polyline),
+          );
+          setFallbackDistanceKm(
+            route.distanceMeters != null ? route.distanceMeters / 1000 : null,
+          );
+          setFallbackEtaMinutes(
+            route.durationSeconds != null ? route.durationSeconds / 60 : null,
+          );
+        } else {
+          setFallbackRouteCoordinates([]);
+          setFallbackDistanceKm(null);
+          setFallbackEtaMinutes(null);
+        }
+      } catch {
+        if (isMounted) {
+          setFallbackRouteCoordinates([]);
+          setFallbackDistanceKm(null);
+          setFallbackEtaMinutes(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingDirections(false);
+        }
+      }
+    };
+
+    loadDirections();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    activeTeam?.routePolyline,
+    shouldShowTeamTracking,
+    teamCoordinate,
+    victimCoordinate,
+  ]);
 
   const canRenderMap = !!(victimCoordinate || teamCoordinate);
+  const distanceToVictimKm =
+    activeTeam?.distanceKmToVictim ?? fallbackDistanceKm ?? null;
+  const etaToVictimMinutes =
+    activeTeam?.estimatedMinutesToArrival ?? fallbackEtaMinutes ?? null;
+  const translatedVerificationNote = useMemo(
+    () => formatWeatherNoteVi(latestVerification?.note),
+    [latestVerification?.note],
+  );
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return '---';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString('vi-VN');
+  };
+
+  const formatDistanceKm = (value?: number | null) => {
+    if (value == null || Number.isNaN(value)) return '--';
+    return value >= 10 ? value.toFixed(0) : value.toFixed(1);
+  };
+
+  const formatMinutes = (value?: number | null) => {
+    if (value == null || Number.isNaN(value)) return '--';
+    return String(Math.round(value));
+  };
 
   const statusBadge = (status?: string) => {
     switch (status) {
@@ -169,6 +364,16 @@ export default function ViewRequestRescueScreen({
     }
 
     setCancelReasonError('');
+
+    if (__DEV__) {
+      console.info('[CancelRequest] Submit from ViewRequestRescueScreen', {
+        requestId,
+        status: detail?.rescueRequestStatus,
+        hasAssignedTeam: !!detail?.assignedRescueTeam,
+        reason: normalizedReason,
+      });
+    }
+
     cancelMutation.mutate(
       {
         requestId,
@@ -206,7 +411,12 @@ export default function ViewRequestRescueScreen({
         className="flex-1"
         showsVerticalScrollIndicator={false}
       >
-        <View className="relative h-64 w-full overflow-hidden">
+        <TouchableOpacity
+          activeOpacity={0.92}
+          onPress={() => canRenderMap && setShowFullscreenMap(true)}
+          className="relative h-64 w-full overflow-hidden"
+          disabled={!canRenderMap}
+        >
           {canRenderMap ? (
             <UserRescueTrackingMap
               victimCoordinate={victimCoordinate}
@@ -222,10 +432,27 @@ export default function ViewRequestRescueScreen({
               <Ionicons name="map" size={60} color={colors.status.error} />
             </View>
           )}
-
+          {canRenderMap ? (
+            <View className="absolute inset-x-0 bottom-0 px-4 pb-4">
+              <View
+                className="flex-row items-center justify-between rounded-2xl px-4 py-3"
+                style={{ backgroundColor: 'rgba(17, 24, 39, 0.64)' }}
+              >
+                <View className="flex-1 pr-3">
+                  <Text className="text-sm font-semibold text-white">
+                    Chạm để mở bản đồ toàn màn hình
+                  </Text>
+                  <Text className="mt-0.5 text-xs text-white/80">
+                    Xem rõ lộ trình đội cứu hộ đang đến vị trí của bạn
+                  </Text>
+                </View>
+                <Ionicons name="expand-outline" size={20} color="#FFFFFF" />
+              </View>
+            </View>
+          ) : null}
           {activeTeam && shouldShowTeamTracking ? (
             <View
-              className="absolute bottom-4 left-4 flex-row items-center gap-2 rounded-full border px-4 py-2 shadow-lg"
+              className="absolute left-4 top-4 flex-row items-center gap-2 rounded-full border px-4 py-2 shadow-lg"
               style={{
                 backgroundColor: colors.card,
                 borderColor: colors.border,
@@ -243,12 +470,12 @@ export default function ViewRequestRescueScreen({
                   className="text-sm font-bold"
                   style={{ color: colors.text }}
                 >
-                  {activeTeam.estimatedMinutesToArrival ?? '--'} phút
+                  {formatMinutes(etaToVictimMinutes)} phút
                 </Text>
               </View>
             </View>
-          ) : null}
-        </View>
+          ) : null}{' '}
+        </TouchableOpacity>
 
         <View className="px-4 pb-2 pt-4">
           <View className="flex-row items-center gap-2">
@@ -286,33 +513,71 @@ export default function ViewRequestRescueScreen({
             className="rounded-2xl border p-4"
             style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
-            <Text className="text-lg font-bold" style={{ color: colors.text }}>
-              Thông tin đơn
-            </Text>
-            <Text
-              className="mt-3 text-sm"
-              style={{ color: colors.textSecondary }}
+            <View className="flex-row items-start justify-between gap-3">
+              <View className="flex-1">
+                <Text
+                  className="text-lg font-bold"
+                  style={{ color: colors.text }}
+                >
+                  Thông tin yêu cầu
+                </Text>
+                <Text
+                  className="mt-1 text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Tóm tắt nội dung và thời gian cập nhật của yêu cầu.
+                </Text>
+              </View>
+
+              <View
+                className="rounded-full px-3 py-1"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <Text
+                  className="text-xs font-bold"
+                  style={{ color: colors.textSecondary }}
+                >
+                  #{requestId.slice(0, 8)}
+                </Text>
+              </View>
+            </View>
+
+            <View
+              className="mt-4 rounded-2xl p-3"
+              style={{ backgroundColor: colors.surface }}
             >
-              Mô tả: {detail?.description || 'Không có mô tả'}
-            </Text>
-            <Text
-              className="mt-2 text-sm"
-              style={{ color: colors.textSecondary }}
-            >
-              Thời gian gửi:{' '}
-              {detail?.createdAt
-                ? new Date(detail.createdAt).toLocaleString('vi-VN')
-                : '---'}
-            </Text>
-            <Text
-              className="mt-2 text-sm"
-              style={{ color: colors.textSecondary }}
-            >
-              Cập nhật gần nhất:{' '}
-              {detail?.updatedAt
-                ? new Date(detail.updatedAt).toLocaleString('vi-VN')
-                : '---'}
-            </Text>
+              <Text
+                className="text-xs font-semibold uppercase"
+                style={{ color: colors.textSecondary }}
+              >
+                Địa điểm
+              </Text>
+              <Text
+                className="mt-1 text-sm font-medium"
+                style={{ color: colors.text }}
+              >
+                {detail?.address || 'Chưa có địa chỉ'}
+              </Text>
+            </View>
+
+            <View className="mt-4 gap-3">
+              <InfoRow
+                icon="document-text-outline"
+                label="Mô tả"
+                value={detail?.description || 'Không có mô tả'}
+                multiline
+              />
+              <InfoRow
+                icon="time-outline"
+                label="Thời gian gửi"
+                value={formatDateTime(detail?.createdAt)}
+              />
+              <InfoRow
+                icon="refresh-outline"
+                label="Cập nhật gần nhất"
+                value={formatDateTime(detail?.updatedAt)}
+              />
+            </View>
           </View>
         </View>
 
@@ -331,28 +596,78 @@ export default function ViewRequestRescueScreen({
               >
                 Kết quả xác minh
               </Text>
-              <Text
-                className="mt-3 text-sm"
-                style={{ color: colors.textSecondary }}
-              >
-                Trạng thái:{' '}
-                {latestVerification.status ? 'Đã xác minh' : 'Chưa xác minh'}
-              </Text>
-              {latestVerification.reason ? (
-                <Text
-                  className="mt-2 text-sm"
-                  style={{ color: colors.textSecondary }}
+              <View className="mt-4 flex-row items-center gap-2">
+                <View
+                  className="rounded-full px-3 py-1"
+                  style={{
+                    backgroundColor: latestVerification.status
+                      ? `${colors.status.completed}22`
+                      : `${colors.status.pending}22`,
+                  }}
                 >
-                  Lý do: {latestVerification.reason}
-                </Text>
+                  <Text
+                    className="text-xs font-bold"
+                    style={{
+                      color: latestVerification.status
+                        ? colors.status.completed
+                        : colors.status.pending,
+                    }}
+                  >
+                    {latestVerification.status
+                      ? 'Đã xác minh'
+                      : 'Chưa xác minh'}
+                  </Text>
+                </View>
+              </View>
+              {latestVerification.reason ? (
+                <View
+                  className="mt-4 rounded-2xl p-3"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Text
+                    className="text-xs font-semibold uppercase"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Lý do
+                  </Text>
+                  <Text className="mt-1 text-sm" style={{ color: colors.text }}>
+                    {latestVerification.reason}
+                  </Text>
+                </View>
               ) : null}
               {latestVerification.note ? (
-                <Text
-                  className="mt-2 text-sm"
-                  style={{ color: colors.textSecondary }}
+                <View
+                  className="mt-3 rounded-2xl p-3"
+                  style={{ backgroundColor: colors.surface }}
                 >
-                  Ghi chú: {latestVerification.note}
-                </Text>
+                  <Text
+                    className="text-xs font-semibold uppercase"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Ghi chú
+                  </Text>
+                  <View className="mt-2 gap-2">
+                    {translatedVerificationNote.map((line, index) => (
+                      <View
+                        key={`${index}-${line}`}
+                        className="flex-row items-start gap-2"
+                      >
+                        <Text
+                          className="mt-0.5 text-sm font-bold"
+                          style={{ color: colors.primary }}
+                        >
+                          •
+                        </Text>
+                        <Text
+                          className="flex-1 text-sm leading-6"
+                          style={{ color: colors.text }}
+                        >
+                          {line}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
               ) : null}
             </View>
           </View>
@@ -373,33 +688,59 @@ export default function ViewRequestRescueScreen({
               >
                 Team cứu hộ
               </Text>
-              <Text
-                className="mt-3 text-base font-semibold"
-                style={{ color: colors.text }}
+              <View
+                className="mt-4 rounded-2xl p-3"
+                style={{ backgroundColor: colors.surface }}
               >
-                {activeTeam.teamName}
-              </Text>
-              <Text
-                className="mt-2 text-sm"
-                style={{ color: colors.textSecondary }}
-              >
-                ETA: {activeTeam.estimatedMinutesToArrival ?? '--'} phút
-              </Text>
-              <Text
-                className="mt-2 text-sm"
-                style={{ color: colors.textSecondary }}
-              >
-                Khoảng cách còn lại: {activeTeam.distanceKmToVictim ?? '--'} km
-              </Text>
-              <Text
-                className="mt-2 text-sm"
-                style={{ color: colors.textSecondary }}
-              >
-                Tracking gần nhất:{' '}
-                {activeTeam.lastTrackedAt
-                  ? new Date(activeTeam.lastTrackedAt).toLocaleString('vi-VN')
-                  : '---'}
-              </Text>
+                <Text
+                  className="text-xs font-semibold uppercase"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Đội phụ trách
+                </Text>
+                <Text
+                  className="mt-1 text-base font-semibold"
+                  style={{ color: colors.text }}
+                >
+                  {activeTeam.teamName || 'Chưa có thông tin đội'}
+                </Text>
+              </View>
+
+              <View className="mt-4 flex-row flex-wrap gap-3">
+                <MetricCard
+                  icon="time-outline"
+                  label="ETA"
+                  value={`${formatMinutes(etaToVictimMinutes)} phút`}
+                />
+                <MetricCard
+                  icon="navigate-outline"
+                  label="Khoảng cách"
+                  value={`${formatDistanceKm(distanceToVictimKm)} km`}
+                />
+              </View>
+
+              <View className="mt-3">
+                <InfoRow
+                  icon="map-outline"
+                  label="Chỉ dẫn đường"
+                  value={
+                    loadingDirections
+                      ? 'Đang tải lộ trình đội cứu hộ đến vị trí của bạn...'
+                      : routeCoordinates.length >= 2
+                        ? 'Bản đồ đang hiển thị tuyến đường đội cứu hộ di chuyển đến vị trí của bạn.'
+                        : 'Chưa có dữ liệu chỉ dẫn đường từ đội cứu hộ đến vị trí của bạn.'
+                  }
+                  multiline
+                />
+              </View>
+
+              <View className="mt-3">
+                <InfoRow
+                  icon="locate-outline"
+                  label="Tracking gần nhất"
+                  value={formatDateTime(activeTeam.lastTrackedAt)}
+                />
+              </View>
             </View>
           </View>
         ) : null}
@@ -447,6 +788,52 @@ export default function ViewRequestRescueScreen({
           </Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showFullscreenMap}
+        animationType="slide"
+        onRequestClose={() => setShowFullscreenMap(false)}
+      >
+        <View className="flex-1" style={{ backgroundColor: colors.background }}>
+          <ScreenHeader
+            title="Bản đồ cứu hộ"
+            onBack={() => setShowFullscreenMap(false)}
+          />
+
+          <View className="flex-1">
+            {canRenderMap ? (
+              <UserRescueTrackingMap
+                victimCoordinate={victimCoordinate}
+                teamCoordinate={teamCoordinate}
+                routeCoordinates={routeCoordinates}
+                mapStyle=""
+              />
+            ) : (
+              <View
+                className="flex-1 items-center justify-center"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <Ionicons name="map" size={60} color={colors.status.error} />
+              </View>
+            )}
+
+            <View className="absolute left-4 right-4 top-4">
+              <View
+                className="rounded-2xl px-4 py-3"
+                style={{ backgroundColor: 'rgba(17, 24, 39, 0.7)' }}
+              >
+                <Text className="text-sm font-semibold text-white">
+                  Lộ trình đội cứu hộ đến vị trí của bạn
+                </Text>
+                <Text className="mt-1 text-xs text-white/80">
+                  Khoảng cách {formatDistanceKm(distanceToVictimKm)} km • ETA{' '}
+                  {formatMinutes(etaToVictimMinutes)} phút
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={showCancelModal}
@@ -540,6 +927,175 @@ export default function ViewRequestRescueScreen({
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+function normalizeWeatherKey(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function translateWeatherLabel(rawKey: string) {
+  const normalizedKey = normalizeWeatherKey(rawKey);
+  return WEATHER_FIELD_LABELS[normalizedKey] || rawKey.trim();
+}
+
+function translateWeatherValue(rawValue: string) {
+  let result = rawValue.trim();
+  const normalized = normalizeWeatherKey(result);
+
+  if (WEATHER_VALUE_MAP[normalized]) {
+    return WEATHER_VALUE_MAP[normalized];
+  }
+
+  Object.entries(WEATHER_VALUE_MAP).forEach(([key, translated]) => {
+    const matcher = new RegExp(`\\b${key}\\b`, 'gi');
+    result = result.replace(matcher, translated);
+  });
+
+  WEATHER_UNIT_MAP.forEach(([pattern, replacement]) => {
+    result = result.replace(pattern, replacement);
+  });
+
+  result = result
+    .replace(/\bfeels like\b/gi, 'cảm giác như')
+    .replace(/\btemperature\b/gi, 'nhiệt độ')
+    .replace(/\bhumidity\b/gi, 'độ ẩm')
+    .replace(/\bwind speed\b/gi, 'tốc độ gió')
+    .replace(/\bwind direction\b/gi, 'hướng gió')
+    .replace(/\bvisibility\b/gi, 'tầm nhìn')
+    .replace(/\bpressure\b/gi, 'áp suất')
+    .replace(/\bcloud cover\b/gi, 'mây che phủ')
+    .replace(/\buv index\b/gi, 'chỉ số UV')
+    .replace(/\brainfall\b/gi, 'lượng mưa')
+    .replace(/\bupdated at\b/gi, 'thời điểm cập nhật')
+    .replace(/\bobservation time\b/gi, 'thời điểm quan trắc');
+
+  return result;
+}
+
+function formatWeatherNoteVi(note?: string | null) {
+  if (!note?.trim()) return ['Không có ghi chú.'];
+
+  const trimmed = note.trim();
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const lines = Object.entries(parsed)
+        .filter(([, value]) => value != null && String(value).trim() !== '')
+        .map(([key, value]) => {
+          const label = translateWeatherLabel(key);
+          const translatedValue = translateWeatherValue(String(value));
+          return `${label}: ${translatedValue}`;
+        });
+
+      if (lines.length > 0) {
+        return lines;
+      }
+    }
+  } catch {
+    // ignore JSON parse failure and continue with text formatting
+  }
+
+  const rawLines = trimmed
+    .split(/\r?\n+/)
+    .flatMap((line) => line.split(/;+/))
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const formattedLines = rawLines.map((line) => {
+    const matched = line.match(
+      /^([A-Za-z][A-Za-z\s/_-]{1,40})\s*[:=-]\s*(.+)$/,
+    );
+
+    if (matched) {
+      const [, key, value] = matched;
+      return `${translateWeatherLabel(key)}: ${translateWeatherValue(value)}`;
+    }
+
+    return translateWeatherValue(line);
+  });
+
+  return formattedLines.length > 0
+    ? formattedLines
+    : [translateWeatherValue(trimmed)];
+}
+
+function InfoRow({
+  icon,
+  label,
+  value,
+  multiline = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  multiline?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      className="flex-row items-start gap-3 rounded-2xl p-3"
+      style={{ backgroundColor: colors.surface }}
+    >
+      <View
+        className="mt-0.5 h-9 w-9 items-center justify-center rounded-full"
+        style={{ backgroundColor: colors.card }}
+      >
+        <Ionicons name={icon} size={18} color={colors.primary} />
+      </View>
+      <View className="flex-1">
+        <Text
+          className="text-xs font-semibold uppercase"
+          style={{ color: colors.textSecondary }}
+        >
+          {label}
+        </Text>
+        <Text
+          className="mt-1 text-sm"
+          style={{ color: colors.text }}
+          numberOfLines={multiline ? undefined : 2}
+        >
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function MetricCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      className="min-w-[140px] flex-1 rounded-2xl p-3"
+      style={{ backgroundColor: colors.surface }}
+    >
+      <View className="flex-row items-center gap-2">
+        <Ionicons name={icon} size={16} color={colors.primary} />
+        <Text
+          className="text-xs font-semibold uppercase"
+          style={{ color: colors.textSecondary }}
+        >
+          {label}
+        </Text>
+      </View>
+      <Text
+        className="mt-2 text-sm font-semibold"
+        style={{ color: colors.text }}
+      >
+        {value}
+      </Text>
     </View>
   );
 }

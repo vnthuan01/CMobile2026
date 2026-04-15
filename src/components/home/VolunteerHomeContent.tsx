@@ -90,8 +90,8 @@ export default function VolunteerHomeContent() {
 
   const currentMission = useMemo(
     () =>
-      items.find((item) => getEffectiveStatus(item) === 'InProgress') ||
-      items.find((item) => getEffectiveStatus(item) !== 'Done') ||
+      items.find((item: any) => getEffectiveStatus(item) === 'InProgress') ||
+      items.find((item: any) => getEffectiveStatus(item) !== 'Done') ||
       null,
     [getEffectiveStatus, items],
   );
@@ -100,7 +100,7 @@ export default function VolunteerHomeContent() {
     () =>
       items
         .filter(
-          (item) =>
+          (item: any) =>
             item.rescueBatchItemId !== currentMission?.rescueBatchItemId &&
             getEffectiveStatus(item) !== 'Done' &&
             getEffectiveStatus(item) !== 'Cancelled',
@@ -111,16 +111,16 @@ export default function VolunteerHomeContent() {
 
   const stats = useMemo(() => {
     const done = items.filter(
-      (item) => getEffectiveStatus(item) === 'Done',
+      (item: any) => getEffectiveStatus(item) === 'Done',
     ).length;
     const inProgress = items.filter(
-      (item) => getEffectiveStatus(item) === 'InProgress',
+      (item: any) => getEffectiveStatus(item) === 'InProgress',
     ).length;
     const pending = items.filter(
-      (item) => getEffectiveStatus(item) === 'Pending',
+      (item: any) => getEffectiveStatus(item) === 'Pending',
     ).length;
     const emergency = items.filter(
-      (item) => item.rescueRequestType === 'Emergency',
+      (item: any) => item.rescueRequestType === 'Emergency',
     ).length;
 
     return { done, inProgress, pending, emergency, total: items.length };
@@ -532,7 +532,7 @@ export default function VolunteerHomeContent() {
 
                 {upcomingMissions.length > 0 ? (
                   <View className="gap-3">
-                    {upcomingMissions.map((mission) => (
+                    {upcomingMissions.map((mission: any) => (
                       <Card
                         key={mission.rescueBatchItemId}
                         colors={colors.border}
