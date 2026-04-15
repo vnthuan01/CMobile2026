@@ -218,7 +218,15 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
                           ? 'green'
                           : item.rescueRequestStatus === 'Cancelled'
                             ? 'red'
-                            : 'gray'
+                            : item.rescueRequestStatus === 'Pending'
+                              ? 'yellow'
+                              : item.rescueRequestStatus === 'Verified'
+                                ? 'blue'
+                                : item.rescueRequestStatus === 'Assigned'
+                                  ? 'blue'
+                                  : item.rescueRequestStatus === 'InProgress'
+                                    ? 'orange'
+                                    : 'gray'
                       }
                       type={getTypeLabel(item.rescueRequestType)}
                       isEmergency={
@@ -256,7 +264,7 @@ function RequestHistoryItem({
 }: {
   id: string;
   status: string;
-  statusColor: 'green' | 'gray' | 'red';
+  statusColor: 'green' | 'gray' | 'red' | 'yellow' | 'blue' | 'orange';
   type: string;
   isEmergency: boolean;
   date: string;
@@ -269,6 +277,12 @@ function RequestHistoryItem({
       ? isEmergency
         ? { bg: `${colors.status.error}18`, text: colors.status.error }
         : { bg: `${colors.status.pending}18`, text: colors.status.pending }
+      : statusColor === 'yellow'
+        ? { bg: `${colors.status.pending}18`, text: colors.status.pending }
+        : statusColor === 'blue'
+          ? { bg: `${colors.status.incoming}18`, text: colors.status.incoming }
+          : statusColor === 'orange'
+            ? { bg: `${colors.status.inProgress}18`, text: colors.status.inProgress }
       : statusColor === 'green'
         ? { bg: `${colors.status.completed}18`, text: colors.status.completed }
         : statusColor === 'red'

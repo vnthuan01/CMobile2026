@@ -474,7 +474,7 @@ export default function ViewRequestRescueScreen({
                 </Text>
               </View>
             </View>
-          ) : null}{' '}
+          ) : null}
         </TouchableOpacity>
 
         <View className="px-4 pb-2 pt-4">

@@ -14,7 +14,7 @@ import {
   DonateQuickActionIcon,
   TrackingQuickActionIcon,
   VolunteerQuickActionIcon,
-} from '../icons/QuickActionIcons';
+} from '../icons';
 import UserRescueTrackingMap from '../user/UserRescueTrackingMap';
 
 export default function UserHomeContent() {
@@ -156,21 +156,21 @@ export default function UserHomeContent() {
         </Text>
         <View className="flex-row gap-3">
           <QuickActionCard
-            icon={<VolunteerQuickActionIcon size={112} />}
+            icon={<VolunteerQuickActionIcon size={68} />}
             label="Tình nguyện"
             description="Tạo hồ sơ TNV"
             variant="request"
             onPress={() => router.push('/profile/my-volunteer-profile' as any)}
           />
           <QuickActionCard
-            icon={<TrackingQuickActionIcon size={112} />}
+            icon={<TrackingQuickActionIcon size={68} />}
             label="Theo dõi"
             description="Yêu cầu của tôi"
             variant="tracking"
             onPress={openRequestsScreen}
           />
           <QuickActionCard
-            icon={<DonateQuickActionIcon size={112} />}
+            icon={<DonateQuickActionIcon size={68} />}
             label="Ủng hộ"
             description="Góp quỹ cứu trợ"
             variant="donate"
@@ -347,34 +347,36 @@ function QuickActionCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
-      className="h-40 flex-1 overflow-hidden rounded-2xl border px-3 pb-3 pt-2"
+      className="relative h-48 flex-1 rounded-2xl px-3 pb-3 pt-3"
       style={{
         backgroundColor: colors.card,
-        borderColor: colors.border,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.06,
-        shadowRadius: 10,
-        elevation: 2,
+        // borderColor: colors.border,
+        // shadowColor: colors.black,
+        // shadowOffset: { width: 0, height: 6 },
+        // shadowOpacity: 0.06,
+        // shadowRadius: 10,
+        // elevation: 2,
       }}
     >
-      <View className="absolute inset-x-1 top-1 items-center opacity-100">
-        {icon}
+      <View className=" items-center justify-center overflow-hidden rounded-[22px]">
+        <View className="items-center justify-center bg-transparent">
+          {icon}
+        </View>
       </View>
 
       <View
-        className="mt-auto items-center rounded-2xl px-2 py-2"
-        style={{ backgroundColor: `${colors.card}F2` }}
+        className="mt-1 min-h-[56px] items-center justify-start px-1 py-1"
+        style={{ backgroundColor: 'transparent' }}
       >
         <Text
-          className="text-center text-base font-extrabold"
+          className="text-center text-[15px] font-extrabold leading-5"
           style={{ color: colors.text }}
-          numberOfLines={2}
+          numberOfLines={1}
         >
           {label}
         </Text>
         <Text
-          className="mt-0.5 text-center text-xs"
+          className="text-center text-xs leading-4"
           style={{ color: colors.textSecondary }}
           numberOfLines={2}
         >
@@ -382,7 +384,7 @@ function QuickActionCard({
         </Text>
       </View>
 
-      <View className="mt-2 flex-row justify-end self-stretch">
+      <View className="absolute right-4 top-2 justify-end">
         <Ionicons
           name="arrow-forward-circle"
           size={18}

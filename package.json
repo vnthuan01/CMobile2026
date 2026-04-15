@@ -80,6 +80,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "jetifier": "^2.0.0",
     "prettier": "^3.6.2",
+    "react-native-svg-transformer": "^1.5.3",
     "typescript": "~5.9.2"
   },
   "private": true
