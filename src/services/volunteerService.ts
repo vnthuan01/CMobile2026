@@ -49,6 +49,8 @@ const normalizeVolunteerProfile = (raw: any): VolunteerProfileResponse => {
 
   return {
     volunteerProfileId: raw?.volunteerProfileId || raw?.id || '',
+    campaignId: raw?.campaignId || raw?.campaign?.campaignId || null,
+    campaignName: raw?.campaignName || raw?.campaign?.name || null,
     fullName: raw?.fullName || raw?.full_name || null,
     email: raw?.email || '',
     phoneNumber: raw?.phoneNumber || raw?.phone || null,

@@ -52,6 +52,8 @@ export default function LoginScreen() {
       return;
     }
 
+    setInlineError(null);
+
     try {
       const result = await loginMutation.mutateAsync({
         email: email.trim(),
@@ -62,13 +64,18 @@ export default function LoginScreen() {
         setSuccessMessage('Đăng nhập thành công. Chào mừng bạn quay lại!');
         setSuccessDialogVisible(true);
       } else {
-        console.error('[Login failed detail]:', result.message);
-        const msg = 'Đăng nhập thất bại. Vui lòng thử lại.';
+        const msg =
+          result.message?.trim() || 'Đăng nhập thất bại. Vui lòng thử lại.';
         setInlineError(msg);
-        showErrorToast('Đăng nhập thất bại');
+        showErrorToast('Đăng nhập thất bại', msg);
       }
-    } catch {
-      showErrorToast('Có lỗi xảy ra', 'Vui lòng thử lại sau');
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Vui lòng thử lại sau';
+      setInlineError(msg);
+      showErrorToast('Có lỗi xảy ra', msg);
     }
   };
 

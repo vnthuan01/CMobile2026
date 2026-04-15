@@ -7,11 +7,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -59,15 +59,15 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
       'InProgress',
     ];
     if (filter === 'processing') {
-      return requests.filter((r) =>
+      return requests.filter((r: any) =>
         processingStatuses.includes(r.rescueRequestStatus),
       );
     }
     if (filter === 'completed') {
-      return requests.filter((r) => r.rescueRequestStatus === 'Completed');
+      return requests.filter((r: any) => r.rescueRequestStatus === 'Completed');
     }
     if (filter === 'cancelled') {
-      return requests.filter((r) => r.rescueRequestStatus === 'Cancelled');
+      return requests.filter((r: any) => r.rescueRequestStatus === 'Cancelled');
     }
     return requests;
   }, [filter, requests]);
@@ -208,7 +208,7 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
                     </Text>
                   </View>
                 ) : (
-                  filteredRequests.map((item) => (
+                  filteredRequests.map((item: any) => (
                     <RequestHistoryItem
                       key={item.requestId}
                       id={`#${item.requestId.slice(0, 8)}`}
@@ -218,7 +218,15 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
                           ? 'green'
                           : item.rescueRequestStatus === 'Cancelled'
                             ? 'red'
-                            : 'gray'
+                            : item.rescueRequestStatus === 'Pending'
+                              ? 'yellow'
+                              : item.rescueRequestStatus === 'Verified'
+                                ? 'blue'
+                                : item.rescueRequestStatus === 'Assigned'
+                                  ? 'blue'
+                                  : item.rescueRequestStatus === 'InProgress'
+                                    ? 'orange'
+                                    : 'gray'
                       }
                       type={getTypeLabel(item.rescueRequestType)}
                       isEmergency={
@@ -256,7 +264,7 @@ function RequestHistoryItem({
 }: {
   id: string;
   status: string;
-  statusColor: 'green' | 'gray' | 'red';
+  statusColor: 'green' | 'gray' | 'red' | 'yellow' | 'blue' | 'orange';
   type: string;
   isEmergency: boolean;
   date: string;
@@ -269,6 +277,12 @@ function RequestHistoryItem({
       ? isEmergency
         ? { bg: `${colors.status.error}18`, text: colors.status.error }
         : { bg: `${colors.status.pending}18`, text: colors.status.pending }
+      : statusColor === 'yellow'
+        ? { bg: `${colors.status.pending}18`, text: colors.status.pending }
+        : statusColor === 'blue'
+          ? { bg: `${colors.status.incoming}18`, text: colors.status.incoming }
+          : statusColor === 'orange'
+            ? { bg: `${colors.status.inProgress}18`, text: colors.status.inProgress }
       : statusColor === 'green'
         ? { bg: `${colors.status.completed}18`, text: colors.status.completed }
         : statusColor === 'red'
@@ -298,7 +312,7 @@ function RequestHistoryItem({
           </View>
         </View>
         <Text className="font-bold" style={{ color: colors.text }}>
-          {id}
+          Yêu cầu cứu hộ - {id}
         </Text>
         <View className="mt-0.5 flex-row items-center">
           <Text className="text-sm" style={{ color: typeColor }}>

@@ -9,6 +9,7 @@ type CitizenProfileRoute =
   | '/profile/my-volunteer-profile'
   | '/profile/change-password'
   | '/profile/settings'
+  | '/profile/requests'
   | '/profile/help';
 
 type VolunteerProfileRoute =

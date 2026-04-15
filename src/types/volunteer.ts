@@ -20,6 +20,7 @@ export interface CreateVolunteerCertificateRequest {
 }
 
 export interface CreateVolunteerRequest {
+  campaignId: string;
   skillIds: string[];
   descriptions: string;
   teamRolePreference: TeamRolePreference;
@@ -29,6 +30,8 @@ export interface CreateVolunteerRequest {
 
 export interface VolunteerProfileResponse {
   volunteerProfileId: string;
+  campaignId?: string | null;
+  campaignName?: string | null;
   fullName: string | null;
   email: string;
   phoneNumber: string | null;

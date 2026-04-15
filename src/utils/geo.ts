@@ -59,25 +59,42 @@ export function getGoongWebStyleUrl(): string {
 export async function fetchDirectionsPolyline(
   origin: { latitude: number; longitude: number },
   destination: { latitude: number; longitude: number },
-): Promise<{ success: boolean; polyline: string | null }> {
+): Promise<{
+  success: boolean;
+  polyline: string | null;
+  distanceMeters: number | null;
+  durationSeconds: number | null;
+}> {
   if (!GOONG_API_KEY) {
-    return { success: false, polyline: null };
+    return {
+      success: false,
+      polyline: null,
+      distanceMeters: null,
+      durationSeconds: null,
+    };
   }
 
   try {
     const url = `https://rsapi.goong.io/Direction?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&vehicle=car&api_key=${GOONG_API_KEY}`;
     const response = await fetch(url);
     const data = await response.json();
-    const polyline = data?.routes?.[0]?.overview_polyline?.points ?? null;
+    const route = data?.routes?.[0];
+    const polyline = route?.overview_polyline?.points ?? null;
+    const distanceMeters = route?.legs?.[0]?.distance?.value ?? null;
+    const durationSeconds = route?.legs?.[0]?.duration?.value ?? null;
 
     return {
       success: !!polyline,
       polyline,
+      distanceMeters,
+      durationSeconds,
     };
   } catch {
     return {
       success: false,
       polyline: null,
+      distanceMeters: null,
+      durationSeconds: null,
     };
   }
 }

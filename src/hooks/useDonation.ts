@@ -1,27 +1,61 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
+  getCampaignDetail,
   createDonationCheckout,
   DonationStatus,
   getCampaignDonationSummary,
+  getCampaigns,
   getDonationStatus,
   getFundContributions,
   getFundraisingCampaigns,
+  getVolunteerRegistrationCampaigns,
+  type CampaignListParams,
   type DonationCheckoutPayload,
 } from '../services/donationService';
 import { showApiErrorToast } from '../utils/apiToast';
 
 export const donationKeys = {
   all: ['donation'] as const,
+  campaigns: (params?: CampaignListParams) =>
+    ['donation', 'campaigns', params ?? {}] as const,
   fundraisingCampaigns: ['donation', 'fundraising-campaigns'] as const,
+  volunteerRegistrationCampaigns: ['donation', 'volunteer-registration-campaigns'] as const,
+  campaignDetail: (campaignId: string) => ['donation', 'campaign-detail', campaignId] as const,
   contributions: ['donation', 'fund-contributions'] as const,
   campaignSummary: (campaignId: string) => ['donation', 'campaign-summary', campaignId] as const,
   status: (donationId: string) => ['donation', 'status', donationId] as const,
 };
 
+export function useCampaigns(params?: CampaignListParams, enabled = true) {
+  return useQuery({
+    queryKey: donationKeys.campaigns(params),
+    queryFn: () => getCampaigns(params),
+    enabled,
+  });
+}
+
 export function useFundraisingCampaigns() {
   return useQuery({
     queryKey: donationKeys.fundraisingCampaigns,
     queryFn: () => getFundraisingCampaigns(),
+  });
+}
+
+export function useVolunteerRegistrationCampaigns(enabled = true) {
+  return useQuery({
+    queryKey: donationKeys.volunteerRegistrationCampaigns,
+    queryFn: () => getVolunteerRegistrationCampaigns(),
+    enabled,
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
+export function useCampaignDetail(campaignId?: string, enabled = true) {
+  return useQuery({
+    queryKey: donationKeys.campaignDetail(campaignId || ''),
+    queryFn: () => getCampaignDetail(campaignId || ''),
+    enabled: enabled && !!campaignId,
+    staleTime: 0,
   });
 }
 

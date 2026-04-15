@@ -9,9 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SettingsScreenProps {
     onBack?: () => void;
+    onNavigate?: (screen: '/profile/requests') => void;
 }
 
-export default function SettingsScreen({ onBack }: SettingsScreenProps) {
+export default function SettingsScreen({ onBack, onNavigate }: SettingsScreenProps) {
     const { bottom } = useSafeAreaInsets();
     const [notifications, setNotifications] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(true);
@@ -150,6 +151,22 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                     />
                 </View>
 
+                <View className="mt-4" style={{ backgroundColor: colors.card }}>
+                    <View className="px-4 py-3">
+                        <Text className="text-base font-bold" style={{ color: colors.text }}>
+                            Yêu cầu của tôi
+                        </Text>
+                    </View>
+
+                    <SettingItem
+                        icon="time-outline"
+                        title="Lịch sử yêu cầu"
+                        value="Xem danh sách yêu cầu"
+                        showArrow
+                        onPress={() => onNavigate?.('/profile/requests')}
+                    />
+                </View>
+
                 {/* App Info Section */}
                 <View className="mt-4" style={{ backgroundColor: colors.card }}>
                     <View className="px-4 py-3">
@@ -256,16 +273,19 @@ function SettingItem({
     title,
     value,
     showArrow,
+    onPress,
 }: {
     icon: keyof typeof Ionicons.glyphMap;
     title: string;
     value?: string;
     showArrow?: boolean;
+    onPress?: () => void;
 }) {
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
 
     return (
         <TouchableOpacity
+            onPress={onPress}
             className="flex-row items-center justify-between border-b px-4 py-4"
             style={{ borderColor: colors.border }}
         >

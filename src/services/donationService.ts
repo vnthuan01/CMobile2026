@@ -59,9 +59,39 @@ export interface CampaignListItem {
   description?: string | null;
   type: number;
   status: number;
+  completionRule?: number;
   startDate: string;
   endDate: string;
+  allowOverTarget?: boolean;
   overallProgressPercent?: number;
+}
+
+export interface CampaignStation {
+  reliefStationId: string;
+  reliefStationName: string;
+  isActive: boolean;
+  assignedAt?: string;
+}
+
+export interface CampaignDetail {
+  campaignId: string;
+  locationId?: string;
+  createdBy?: string;
+  name: string;
+  description?: string | null;
+  startDate: string;
+  endDate: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  areaRadiusKm?: number | null;
+  addressDetail?: string | null;
+  status: number;
+  type: number;
+  completionRule?: number;
+  allowOverTarget?: boolean;
+  createdAt?: string;
+  goals: CampaignGoal[];
+  stations: CampaignStation[];
 }
 
 export interface CampaignListResponse {
@@ -72,6 +102,16 @@ export interface CampaignListResponse {
   hasPrevious: boolean;
   hasNext: boolean;
   items: CampaignListItem[];
+}
+
+export interface CampaignListParams {
+  PageIndex?: number;
+  PageSize?: number;
+  Keyword?: string;
+  Status?: number;
+  Type?: number;
+  LocationId?: string;
+  ForVolunteerRegistration?: boolean;
 }
 
 export interface DonationCheckoutPayload {
@@ -120,13 +160,30 @@ export async function getCampaignDonationSummary(campaignId: string) {
 }
 
 export async function getFundraisingCampaigns() {
-  const response = await api.get<CampaignListResponse>('/campaigns', {
-    params: {
-      PageIndex: 1,
-      PageSize: 20,
-      Type: CampaignType.Fundraising,
-    },
+  return getCampaigns({
+    PageIndex: 1,
+    PageSize: 20,
+    Type: CampaignType.Fundraising,
   });
+}
+
+export async function getCampaigns(params?: CampaignListParams) {
+  const response = await api.get<CampaignListResponse>('/campaigns', {
+    params,
+  });
+  return response.data;
+}
+
+export async function getVolunteerRegistrationCampaigns() {
+  return getCampaigns({
+    PageIndex: 1,
+    PageSize: 50,
+    ForVolunteerRegistration: true,
+  });
+}
+
+export async function getCampaignDetail(campaignId: string) {
+  const response = await api.get<CampaignDetail>(`/campaigns/${campaignId}`);
   return response.data;
 }
 

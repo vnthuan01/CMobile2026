@@ -1,6 +1,10 @@
 import '@/global.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
+    configureReanimatedLogger,
+    ReanimatedLogLevel,
+} from 'react-native-reanimated';
+import {
     Slot,
     useRootNavigationState,
     useRouter,
@@ -17,6 +21,11 @@ import { useAuthBootstrap } from '../src/hooks/useAuthBootstrap';
 import { queryClient } from '../src/lib/queryClient';
 import type { AuthState } from '../src/store/authStore';
 import { useAuthStore } from '../src/store/authStore';
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: true,
+});
 
 function RootLayoutContent() {
   const router = useRouter();

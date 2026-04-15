@@ -17,7 +17,7 @@ export function useCancelRescueRequest() {
   return useMutation({
     mutationFn: ({ requestId, payload }: CancelRescueRequestMutationInput) =>
       cancelRescueRequest(requestId, payload),
-    onSuccess: (_result, variables) => {
+    onSuccess: (_result: unknown, variables: CancelRescueRequestMutationInput) => {
       queryClient.invalidateQueries({ queryKey: ['rescueRequests'] });
       queryClient.invalidateQueries({
         queryKey: ['rescueRequestDetail', variables.requestId],
@@ -25,12 +25,29 @@ export function useCancelRescueRequest() {
 
       showSuccessToast('Huỷ yêu cầu thành công', 'Yêu cầu cứu hộ đã được huỷ.');
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
+      if (__DEV__) {
+        const axiosError = error as any;
+        console.error('[CancelRequest] Mutation error', {
+          status: axiosError?.response?.status,
+          data: axiosError?.response?.data,
+          message: axiosError?.message,
+        });
+      }
+
       const rawMessage = extractApiErrorMessage(
         error,
         'Không thể huỷ yêu cầu cứu hộ.',
       );
       const normalized = rawMessage.toLowerCase();
+
+      if (normalized.includes('404') || normalized.includes('not found')) {
+        showErrorToast(
+          'Không thể huỷ yêu cầu',
+          'Không tìm thấy API hủy yêu cầu hoặc yêu cầu này không còn tồn tại trên hệ thống. Hãy kiểm tra log debug để xem URL, method và response backend.',
+        );
+        return;
+      }
 
       if (
         normalized.includes('expected to affect 1 row') ||

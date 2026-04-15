@@ -7,9 +7,14 @@ import type { MyRescueRequestItem } from '@/src/types/rescue';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { type ReactNode, useCallback, useMemo } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  DonateQuickActionIcon,
+  TrackingQuickActionIcon,
+  VolunteerQuickActionIcon,
+} from '../icons';
 import UserRescueTrackingMap from '../user/UserRescueTrackingMap';
 
 export default function UserHomeContent() {
@@ -36,16 +41,6 @@ export default function UserHomeContent() {
           r.rescueRequestStatus,
         ),
       ) || null,
-    [requests],
-  );
-
-  const historyRequests = useMemo(
-    () =>
-      requests
-        .filter((r: MyRescueRequestItem) =>
-          ['Completed', 'Cancelled'].includes(r.rescueRequestStatus),
-        )
-        .slice(0, 3),
     [requests],
   );
 
@@ -161,32 +156,42 @@ export default function UserHomeContent() {
         </Text>
         <View className="flex-row gap-3">
           <QuickActionCard
-            icon="person-add"
-            label="Trở thành tình nguyện viên"
-            description="Mở hồ sơ tình nguyện viên"
+            icon={<VolunteerQuickActionIcon size={68} />}
+            label="Tình nguyện"
+            description="Tạo hồ sơ TNV"
             variant="request"
             onPress={() => router.push('/profile/my-volunteer-profile' as any)}
           />
           <QuickActionCard
-            icon="location"
+            icon={<TrackingQuickActionIcon size={68} />}
             label="Theo dõi"
-            description="Xem tiến độ cứu hộ"
+            description="Yêu cầu của tôi"
             variant="tracking"
             onPress={openRequestsScreen}
           />
           <QuickActionCard
-            icon="heart"
+            icon={<DonateQuickActionIcon size={68} />}
             label="Ủng hộ"
-            description="Đóng góp cứu trợ"
+            description="Góp quỹ cứu trợ"
             variant="donate"
             onPress={() => router.push('/fundraising')}
           />
         </View>
       </View>
       <View className="mt-6 px-4">
-        <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>
-          Yêu cầu gần đây
-        </Text>
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-lg font-bold" style={{ color: colors.text }}>
+            Yêu cầu gần đây
+          </Text>
+          <TouchableOpacity onPress={openRequestsScreen} activeOpacity={0.8}>
+            <Text
+              className="text-sm font-semibold"
+              style={{ color: colors.primary }}
+            >
+              Xem thêm
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {loadingRequests ? (
           <View
@@ -312,36 +317,6 @@ export default function UserHomeContent() {
           </View>
         )}
       </View>
-
-      {historyRequests.length > 0 ? (
-        <View className="mt-6 px-4">
-          <Text
-            className="mb-3 text-lg font-bold"
-            style={{ color: colors.text }}
-          >
-            Lịch sử yêu cầu
-          </Text>
-          <View className="gap-3">
-            {historyRequests.map((item: MyRescueRequestItem) => (
-              <RequestHistoryItem
-                key={item.requestId}
-                id={formatRequestId(item.requestId)}
-                status={getStatusUi(item.rescueRequestStatus).label}
-                statusColor={
-                  item.rescueRequestStatus === 'Completed'
-                    ? 'green'
-                    : item.rescueRequestStatus === 'Cancelled'
-                      ? 'red'
-                      : 'gray'
-                }
-                type={getTypeLabel(item.rescueRequestType)}
-                date={new Date(item.createdAt).toLocaleDateString('vi-VN')}
-                onPress={() => openRequestDetail(item.requestId)}
-              />
-            ))}
-          </View>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -353,7 +328,7 @@ function QuickActionCard({
   variant,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: ReactNode;
   label: string;
   description: string;
   variant: 'request' | 'tracking' | 'donate';
@@ -372,107 +347,50 @@ function QuickActionCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
-      className="flex-1 items-center rounded-2xl border p-3"
+      className="relative h-48 flex-1 rounded-2xl px-3 pb-3 pt-3"
       style={{
         backgroundColor: colors.card,
-        borderColor: colors.border,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.06,
-        shadowRadius: 10,
-        elevation: 2,
+        // borderColor: colors.border,
+        // shadowColor: colors.black,
+        // shadowOffset: { width: 0, height: 6 },
+        // shadowOpacity: 0.06,
+        // shadowRadius: 10,
+        // elevation: 2,
       }}
     >
-      <View
-        className="h-11 w-11 items-center justify-center rounded-full"
-        style={{ backgroundColor: `${toneColor}1A` }}
-      >
-        <Ionicons name={icon} size={22} color={toneColor} />
+      <View className=" items-center justify-center overflow-hidden rounded-[22px]">
+        <View className="items-center justify-center bg-transparent">
+          {icon}
+        </View>
       </View>
 
-      <View className="mt-3 items-center">
+      <View
+        className="mt-1 min-h-[56px] items-center justify-start px-1 py-1"
+        style={{ backgroundColor: 'transparent' }}
+      >
         <Text
-          className="text-base font-extrabold"
+          className="text-center text-[15px] font-extrabold leading-5"
           style={{ color: colors.text }}
+          numberOfLines={1}
         >
           {label}
         </Text>
         <Text
-          className="mt-0.5 text-center text-xs"
+          className="text-center text-xs leading-4"
           style={{ color: colors.textSecondary }}
+          numberOfLines={2}
         >
           {description}
         </Text>
       </View>
 
-      <View className="mt-2 flex-row justify-end">
+      <View className="absolute right-4 top-2 justify-end">
         <Ionicons
           name="arrow-forward-circle"
           size={18}
           color={toneColor}
         ></Ionicons>
       </View>
-    </TouchableOpacity>
-  );
-}
-
-function RequestHistoryItem({
-  id,
-  status,
-  statusColor,
-  type,
-  date,
-  onPress,
-}: {
-  id: string;
-  status: string;
-  statusColor: 'green' | 'red' | 'gray';
-  type: string;
-  date: string;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  const badgeBg =
-    statusColor === 'green'
-      ? `${colors.status.completed}22`
-      : statusColor === 'red'
-        ? `${colors.status.error}22`
-        : colors.surface;
-  const badgeText =
-    statusColor === 'green'
-      ? colors.status.completed
-      : statusColor === 'red'
-        ? colors.status.error
-        : colors.textSecondary;
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      className="flex-row items-center justify-between rounded-xl p-4 shadow-sm"
-      style={{ backgroundColor: colors.card }}
-    >
-      <View className="flex-1">
-        <View className="mb-1 flex-row items-center gap-2">
-          <View
-            className="rounded-full px-2 py-0.5"
-            style={{ backgroundColor: badgeBg }}
-          >
-            <Text className="text-xs font-bold" style={{ color: badgeText }}>
-              {status}
-            </Text>
-          </View>
-        </View>
-        <Text className="font-bold" style={{ color: colors.text }}>
-          {id}
-        </Text>
-        <Text
-          className="mt-0.5 text-sm"
-          style={{ color: colors.textSecondary }}
-        >
-          {type} • {date}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
     </TouchableOpacity>
   );
 }

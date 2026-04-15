@@ -5,6 +5,7 @@ import { useUserProfile } from '@/src/hooks/useUserProfile';
 import { useAuthStore } from '@/src/store/authStore';
 import { resolveDisplayName } from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
+import { type ReactNode, useMemo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,6 +29,12 @@ export default function UserProfileViewScreen({
     authUserName: authUser?.user_name,
     email: profile?.email ?? authUser?.email,
   });
+
+  const initial = useMemo(() => {
+    const normalized = displayName?.trim();
+    if (!normalized) return 'U';
+    return normalized.charAt(0).toUpperCase();
+  }, [displayName]);
 
   const formatDate = (date?: string | null) => {
     if (!date) return 'Chưa cập nhật';
@@ -54,84 +61,219 @@ export default function UserProfileViewScreen({
         showsVerticalScrollIndicator={false}
       >
         <View className="px-4 pt-4">
-          <ProfileInfoCard
-            icon="person"
-            label="Họ và tên"
-            value={displayName}
-          />
-          <ProfileInfoCard icon="mail" label="Email" value={profile?.email} />
-          <ProfileInfoCard
-            icon="call"
-            label="Số điện thoại"
-            value={profile?.phoneNumber}
-          />
-          <ProfileInfoCard
-            icon="calendar"
-            label="Ngày sinh"
-            value={formatDate(profile?.dateOfBirth)}
-          />
-          <ProfileInfoCard
-            icon="male-female"
-            label="Giới tính"
-            value={mapGender(profile?.gender)}
-          />
-          <ProfileInfoCard
-            icon="location"
-            label="Địa chỉ"
-            value={profile?.address}
-          />
-
-          <TouchableOpacity
-            onPress={onEdit}
-            className="mt-4 h-12 items-center justify-center rounded-xl"
+          <View
+            className="rounded-[28px] border p-5"
             style={{
-              backgroundColor: colors.primary,
-              opacity: isLoading ? 0.7 : 1,
+              borderColor: `${colors.primary}20`,
+              backgroundColor: `${colors.primary}10`,
             }}
           >
-            <Text className="text-base font-bold text-white">
-              Cập nhật hồ sơ
-            </Text>
-          </TouchableOpacity>
+            <View className="flex-row items-center gap-4">
+              <View
+                className="h-16 w-16 items-center justify-center rounded-full"
+                style={{ backgroundColor: colors.primary }}
+              >
+                <Text className="text-2xl font-extrabold" style={{ color: colors.white }}>
+                  {initial}
+                </Text>
+              </View>
+
+              <View className="flex-1">
+                <Text className="text-[22px] font-extrabold" style={{ color: colors.text }}>
+                  {displayName}
+                </Text>
+                <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                  {profile?.email || authUser?.email || 'Chưa cập nhật email'}
+                </Text>
+                <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                  {profile?.phoneNumber || 'Chưa cập nhật số điện thoại'}
+                </Text>
+              </View>
+            </View>
+
+            <View className="mt-4 flex-row flex-wrap gap-2">
+              <MetaChip
+                icon="male-female-outline"
+                label={mapGender(profile?.gender)}
+              />
+              <MetaChip
+                icon="calendar-outline"
+                label={formatDate(profile?.dateOfBirth)}
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={onEdit}
+              className="mt-5 h-12 items-center justify-center rounded-2xl"
+              style={{
+                backgroundColor: colors.primary,
+                opacity: isLoading ? 0.7 : 1,
+              }}
+            >
+              <Text className="text-base font-bold text-white">
+                Cập nhật hồ sơ
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ProfileSection title="Thông tin cá nhân">
+            <ProfileFieldRow icon="person-outline" label="Họ và tên" value={displayName} />
+            <View className="mt-3 flex-row gap-3">
+              <ProfileFieldCell
+                icon="male-female-outline"
+                label="Giới tính"
+                value={mapGender(profile?.gender)}
+              />
+              <ProfileFieldCell
+                icon="calendar-outline"
+                label="Ngày sinh"
+                value={formatDate(profile?.dateOfBirth)}
+              />
+            </View>
+          </ProfileSection>
+
+          <ProfileSection title="Liên hệ">
+            <View className="flex-row gap-3">
+              <ProfileFieldCell
+                icon="mail-outline"
+                label="Email"
+                value={profile?.email || authUser?.email || 'Chưa cập nhật'}
+              />
+              <ProfileFieldCell
+                icon="call-outline"
+                label="Số điện thoại"
+                value={profile?.phoneNumber || 'Chưa cập nhật'}
+              />
+            </View>
+          </ProfileSection>
+
+          <ProfileSection title="Địa chỉ">
+            <ProfileFieldRow
+              icon="location-outline"
+              label="Nơi ở hiện tại"
+              value={profile?.address || 'Chưa cập nhật'}
+              multiline
+            />
+          </ProfileSection>
         </View>
       </ScrollView>
     </View>
   );
 }
 
-function ProfileInfoCard({
+function ProfileSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      className="mt-5 rounded-[24px] border p-4"
+      style={{ borderColor: colors.border, backgroundColor: colors.card }}
+    >
+      <Text className="text-sm font-bold uppercase tracking-wide" style={{ color: colors.textSecondary }}>
+        {title}
+      </Text>
+      <View className="mt-3">{children}</View>
+    </View>
+  );
+}
+
+function MetaChip({
+  icon,
+  label,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      className="flex-row items-center gap-2 rounded-full px-3 py-2"
+      style={{ backgroundColor: colors.card }}
+    >
+      <Ionicons name={icon} size={14} color={colors.primary} />
+      <Text className="text-xs font-semibold" style={{ color: colors.text }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function ProfileFieldRow({
+  icon,
+  label,
+  value,
+  multiline = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  multiline?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      className="flex-row items-start gap-3 rounded-2xl p-4"
+      style={{ backgroundColor: colors.surface }}
+    >
+      <View
+        className="h-10 w-10 items-center justify-center rounded-full"
+        style={{ backgroundColor: colors.card }}
+      >
+        <Ionicons name={icon} size={18} color={colors.primary} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+          {label}
+        </Text>
+        <Text
+          className="mt-1 text-base font-semibold"
+          style={{ color: colors.text }}
+          numberOfLines={multiline ? undefined : 2}
+        >
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ProfileFieldCell({
   icon,
   label,
   value,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  value?: string | null;
+  value: string;
 }) {
   const { colors } = useTheme();
 
   return (
     <View
-      className="mb-3 flex-row items-center gap-3 rounded-2xl border px-4 py-4"
-      style={{ borderColor: colors.border, backgroundColor: colors.card }}
+      className="flex-1 rounded-2xl p-4"
+      style={{ backgroundColor: colors.surface }}
     >
-      <View
-        className="h-9 w-9 items-center justify-center rounded-full"
-        style={{ backgroundColor: colors.surface }}
-      >
-        <Ionicons name={icon} size={18} color={colors.primary} />
-      </View>
-      <View className="flex-1">
-        <Text className="text-xs" style={{ color: colors.textSecondary }}>
+      <View className="flex-row items-center gap-2">
+        <Ionicons name={icon} size={16} color={colors.primary} />
+        <Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
           {label}
         </Text>
-        <Text
-          className="mt-1 text-base font-semibold"
-          style={{ color: colors.text }}
-        >
-          {value || 'Chưa cập nhật'}
-        </Text>
       </View>
+      <Text
+        className="mt-3 text-sm font-semibold"
+        style={{ color: colors.text }}
+        numberOfLines={2}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
