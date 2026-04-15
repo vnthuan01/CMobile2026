@@ -2,9 +2,12 @@ import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useCurrentTeam } from '@/src/hooks/useTeamOverview';
-import { showErrorToast, showInfoToast } from '@/src/utils/toast';
-import { TeamDetailResponse, TeamSkillResponse } from '@/src/services/teamService';
+import {
+  TeamDetailResponse,
+  TeamSkillResponse,
+} from '@/src/services/teamService';
 import { useAuthStore } from '@/src/store/authStore';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useEffect, useMemo, useState } from 'react';
@@ -34,7 +37,8 @@ export default function MyCurrentTeamScreen({
 
   const [refreshing, setRefreshing] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const team = (currentTeamQuery.data?.team as TeamDetailResponse | null) ?? null;
+  const team =
+    (currentTeamQuery.data?.team as TeamDetailResponse | null) ?? null;
   const loading = currentTeamQuery.isLoading && !refreshing;
   const errorMessage = currentTeamQuery.data?.errorMessage ?? null;
   const emptyState = currentTeamQuery.data?.isEmpty ?? false;
@@ -56,9 +60,20 @@ export default function MyCurrentTeamScreen({
     if (emptyState && refreshing) {
       showInfoToast('Chưa có nhóm', 'Bạn hiện chưa tham gia nhóm nào.');
     } else if (errorMessage && (hasLoadedOnce || refreshing)) {
-      showErrorToast('Không tải được thông tin nhóm', errorMessage || 'Vui lòng thử lại.');
+      showErrorToast(
+        'Không tải được thông tin nhóm',
+        errorMessage || 'Vui lòng thử lại.',
+      );
     }
-  }, [currentTeamQuery.isFetching, currentTeamQuery.isLoading, emptyState, errorMessage, hasLoadedOnce, refreshing, team]);
+  }, [
+    currentTeamQuery.isFetching,
+    currentTeamQuery.isLoading,
+    emptyState,
+    errorMessage,
+    hasLoadedOnce,
+    refreshing,
+    team,
+  ]);
 
   const formatDate = (value?: string | null) => {
     if (!value) return 'Chưa rõ';
@@ -82,9 +97,17 @@ export default function MyCurrentTeamScreen({
 
     switch (normalized) {
       case 'active':
-        return { bg: `${colors.status.completed}22`, text: colors.status.completed, label: 'Đang hoạt động' };
+        return {
+          bg: `${colors.status.completed}22`,
+          text: colors.status.completed,
+          label: 'Đang hoạt động',
+        };
       case 'draft':
-        return { bg: `${colors.status.pending}22`, text: colors.status.pending, label: 'Bản nháp' };
+        return {
+          bg: `${colors.status.pending}22`,
+          text: colors.status.pending,
+          label: 'Bản nháp',
+        };
       default:
         return {
           bg: colors.surface,
@@ -98,12 +121,20 @@ export default function MyCurrentTeamScreen({
     const normalized = String(role ?? '').toLowerCase();
 
     if (normalized === 'leader') {
-      return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Trưởng nhóm' };
+      return {
+        bg: `${colors.status.incoming}22`,
+        text: colors.status.incoming,
+        label: 'Trưởng nhóm',
+      };
     }
     return {
       bg: colors.surface,
       text: colors.textSecondary,
-      label: role ? (normalized === 'member' ? 'Thành viên' : String(role)) : 'Thành viên',
+      label: role
+        ? normalized === 'member'
+          ? 'Thành viên'
+          : String(role)
+        : 'Thành viên',
     };
   };
 
@@ -127,14 +158,23 @@ export default function MyCurrentTeamScreen({
             className="rounded-full px-3 py-1"
             style={{ backgroundColor: colors.surface }}
           >
-            <Text className="text-xs font-medium" style={{ color: colors.text }}>
+            <Text
+              className="text-xs font-medium"
+              style={{ color: colors.text }}
+            >
               {skill.name}
             </Text>
           </View>
         ))}
         {remaining > 0 ? (
-          <View className="rounded-full px-3 py-1" style={{ backgroundColor: colors.surface }}>
-            <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+          <View
+            className="rounded-full px-3 py-1"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <Text
+              className="text-xs font-medium"
+              style={{ color: colors.textSecondary }}
+            >
               +{remaining}
             </Text>
           </View>
@@ -164,29 +204,51 @@ export default function MyCurrentTeamScreen({
       {loading ? (
         <View className="flex-1 items-center justify-center px-6">
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text className="mt-3 text-base" style={{ color: colors.textSecondary }}>
+          <Text
+            className="mt-3 text-base"
+            style={{ color: colors.textSecondary }}
+          >
             Đang tải thông tin nhóm...
           </Text>
         </View>
       ) : emptyState ? (
         <View className="flex-1 items-center justify-center px-6">
-          <View className="h-20 w-20 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
+          <View
+            className="h-20 w-20 items-center justify-center rounded-full"
+            style={{ backgroundColor: colors.surface }}
+          >
             <Ionicons name="people-outline" size={34} color={colors.primary} />
           </View>
-          <Text className="mt-4 text-center text-xl font-bold" style={{ color: colors.text }}>
+          <Text
+            className="mt-4 text-center text-xl font-bold"
+            style={{ color: colors.text }}
+          >
             Bạn hiện chưa tham gia nhóm nào.
           </Text>
-          <Text className="mt-2 text-center text-base" style={{ color: colors.textSecondary }}>
+          <Text
+            className="mt-2 text-center text-base"
+            style={{ color: colors.textSecondary }}
+          >
             Vui lòng liên hệ điều phối viên để được phân vào nhóm phù hợp.
           </Text>
         </View>
       ) : errorMessage ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="alert-circle-outline" size={38} color={colors.status.error} />
-          <Text className="mt-4 text-center text-xl font-bold" style={{ color: colors.text }}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={38}
+            color={colors.status.error}
+          />
+          <Text
+            className="mt-4 text-center text-xl font-bold"
+            style={{ color: colors.text }}
+          >
             Không tải được thông tin nhóm.
           </Text>
-          <Text className="mt-2 text-center text-base" style={{ color: colors.textSecondary }}>
+          <Text
+            className="mt-2 text-center text-base"
+            style={{ color: colors.textSecondary }}
+          >
             {errorMessage}
           </Text>
           <TouchableOpacity
@@ -214,18 +276,33 @@ export default function MyCurrentTeamScreen({
         >
           <View className="px-4 pt-4">
             {isLeader ? (
-              <View className="mb-4 rounded-2xl border p-4" style={{ borderColor: `${colors.status.incoming}33`, backgroundColor: `${colors.status.incoming}14` }}>
-                <Text className="text-base font-bold" style={{ color: colors.status.incoming }}>
+              <View
+                className="mb-4 rounded-2xl border p-4"
+                style={{
+                  borderColor: `${colors.status.incoming}33`,
+                  backgroundColor: `${colors.status.incoming}14`,
+                }}
+              >
+                <Text
+                  className="text-base font-bold"
+                  style={{ color: colors.status.incoming }}
+                >
                   Bạn đang là trưởng nhóm của nhóm này
                 </Text>
-                <Text className="mt-1 text-sm" style={{ color: colors.status.incoming }}>
+                <Text
+                  className="mt-1 text-sm"
+                  style={{ color: colors.status.incoming }}
+                >
                   Theo dõi thành viên, điều phối liên lạc và đi nhanh sang nhiệm
                   vụ hiện tại.
                 </Text>
               </View>
             ) : null}
 
-            <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
+            <View
+              className="rounded-3xl p-5"
+              style={{ backgroundColor: colors.secondary }}
+            >
               <View className="flex-row items-start justify-between gap-3">
                 <View className="flex-1">
                   <Text className="text-2xl font-bold text-white">
@@ -268,7 +345,11 @@ export default function MyCurrentTeamScreen({
                   onPress={() => openPhone(team.contactPhone)}
                   className="bg-white/12 mt-4 flex-row items-center gap-2 rounded-2xl px-3 py-3"
                 >
-                  <Ionicons name="call-outline" size={18} color={colors.white} />
+                  <Ionicons
+                    name="call-outline"
+                    size={18}
+                    color={colors.white}
+                  />
                   <Text className="font-medium text-white">
                     {team.contactPhone}
                   </Text>
@@ -276,9 +357,18 @@ export default function MyCurrentTeamScreen({
               ) : null}
             </View>
 
-            <View className="mt-4 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+            <View
+              className="mt-4 rounded-2xl border p-4"
+              style={{
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              }}
+            >
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                <Text
+                  className="text-lg font-bold"
+                  style={{ color: colors.text }}
+                >
                   Trưởng nhóm hiện tại
                 </Text>
                 <View
@@ -296,10 +386,16 @@ export default function MyCurrentTeamScreen({
 
               {team?.leader ? (
                 <>
-                  <Text className="mt-3 text-xl font-bold" style={{ color: colors.text }}>
+                  <Text
+                    className="mt-3 text-xl font-bold"
+                    style={{ color: colors.text }}
+                  >
                     {team.leader.displayName}
                   </Text>
-                  <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                  <Text
+                    className="mt-1 text-sm"
+                    style={{ color: colors.textSecondary }}
+                  >
                     {team.leader.email}
                   </Text>
                   {renderSkillChips(team.leader.skills)}
@@ -307,14 +403,20 @@ export default function MyCurrentTeamScreen({
                     <TouchableOpacity
                       onPress={() => openEmail(team.leader?.email)}
                       className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
-                      style={{ borderColor: colors.border, backgroundColor: colors.card }}
+                      style={{
+                        borderColor: colors.border,
+                        backgroundColor: colors.card,
+                      }}
                     >
                       <Ionicons
                         name="mail-outline"
                         size={18}
                         color={colors.primary}
                       />
-                      <Text className="font-semibold" style={{ color: colors.text }}>
+                      <Text
+                        className="font-semibold"
+                        style={{ color: colors.text }}
+                      >
                         Gửi email
                       </Text>
                     </TouchableOpacity>
@@ -323,7 +425,11 @@ export default function MyCurrentTeamScreen({
                       className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
                       style={{ backgroundColor: colors.primary }}
                     >
-                      <Ionicons name="map-outline" size={18} color={colors.white} />
+                      <Ionicons
+                        name="map-outline"
+                        size={18}
+                        color={colors.white}
+                      />
                       <Text className="font-semibold text-white">
                         {isLeader ? 'Xem nhiệm vụ hiện tại' : 'Xem nhiệm vụ'}
                       </Text>
@@ -331,19 +437,34 @@ export default function MyCurrentTeamScreen({
                   </View>
                 </>
               ) : (
-                <Text className="mt-3 text-base" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mt-3 text-base"
+                  style={{ color: colors.textSecondary }}
+                >
                   Chưa có trưởng nhóm
                 </Text>
               )}
             </View>
 
-            <View className="mt-4 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+            <View
+              className="mt-4 rounded-2xl border p-4"
+              style={{
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              }}
+            >
+              <Text
+                className="text-lg font-bold"
+                style={{ color: colors.text }}
+              >
                 Điều phối viên phụ trách
               </Text>
               {team?.moderator ? (
                 <>
-                  <Text className="mt-3 text-base font-semibold" style={{ color: colors.text }}>
+                  <Text
+                    className="mt-3 text-base font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     {team.moderator.displayName}
                   </Text>
                   <TouchableOpacity
@@ -355,14 +476,26 @@ export default function MyCurrentTeamScreen({
                   </TouchableOpacity>
                 </>
               ) : (
-                <Text className="mt-3 text-base" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mt-3 text-base"
+                  style={{ color: colors.textSecondary }}
+                >
                   Chưa có điều phối viên
                 </Text>
               )}
             </View>
 
-            <View className="mt-4 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+            <View
+              className="mt-4 rounded-2xl border p-4"
+              style={{
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              }}
+            >
+              <Text
+                className="text-lg font-bold"
+                style={{ color: colors.text }}
+              >
                 Danh sách đồng đội
               </Text>
               {team?.members?.length ? (
@@ -373,10 +506,16 @@ export default function MyCurrentTeamScreen({
                       <View
                         key={member.userId}
                         className="rounded-2xl border p-4"
-                        style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+                        style={{
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                        }}
                       >
                         <View className="flex-row items-start gap-3">
-                          <View className="h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
+                          <View
+                            className="h-12 w-12 items-center justify-center rounded-full"
+                            style={{ backgroundColor: colors.surface }}
+                          >
                             <Ionicons
                               name="person"
                               size={22}
@@ -385,7 +524,10 @@ export default function MyCurrentTeamScreen({
                           </View>
                           <View className="flex-1">
                             <View className="flex-row items-center justify-between gap-3">
-                              <Text className="flex-1 text-base font-bold" style={{ color: colors.text }}>
+                              <Text
+                                className="flex-1 text-base font-bold"
+                                style={{ color: colors.text }}
+                              >
                                 {member.displayName}
                               </Text>
                               <View
@@ -400,10 +542,16 @@ export default function MyCurrentTeamScreen({
                                 </Text>
                               </View>
                             </View>
-                            <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                            <Text
+                              className="mt-1 text-sm"
+                              style={{ color: colors.textSecondary }}
+                            >
                               {member.email}
                             </Text>
-                            <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }}>
+                            <Text
+                              className="mt-2 text-xs"
+                              style={{ color: colors.textSecondary }}
+                            >
                               Tham gia từ {formatDate(member.joinedAt)}
                             </Text>
                             {renderSkillChips(member.skills)}
@@ -414,7 +562,10 @@ export default function MyCurrentTeamScreen({
                   })}
                 </View>
               ) : (
-                <Text className="mt-3 text-base" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mt-3 text-base"
+                  style={{ color: colors.textSecondary }}
+                >
                   Nhóm hiện chưa có thành viên nào
                 </Text>
               )}
@@ -424,7 +575,10 @@ export default function MyCurrentTeamScreen({
               <TouchableOpacity
                 onPress={onOpenTasks}
                 className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
-                style={{ borderColor: colors.border, backgroundColor: colors.card }}
+                style={{
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                }}
               >
                 <Ionicons
                   name="list-outline"

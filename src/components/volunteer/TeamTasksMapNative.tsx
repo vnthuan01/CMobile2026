@@ -1,9 +1,9 @@
+import { useTheme } from '@/src/context/ThemeContext';
 import {
-  rescueTeamService,
   RescueActiveBatchResponse,
   RescueBatchItem,
+  rescueTeamService,
 } from '@/src/services/rescueTeamService';
-import { useTheme } from '@/src/context/ThemeContext';
 import { useEffect, useMemo, useRef } from 'react';
 import { Text, View } from 'react-native';
 
@@ -26,18 +26,19 @@ export default function TeamTasksMapNative({
 }: TeamTasksMapNativeProps) {
   const { colors } = useTheme();
   const cameraRef = useRef<any>(null);
+  const lastCameraTargetRef = useRef<string | null>(null);
 
   const Mapbox = useMemo(() => {
     try {
       // Avoid crashing in Expo Go / web where native code isn't available.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const module = require('@rnmapbox/maps')
-      module.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '')
-      return module
+      const module = require('@rnmapbox/maps');
+      module.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '');
+      return module;
     } catch {
-      return null
+      return null;
     }
-  }, [])
+  }, []);
 
   if (!Mapbox?.MapView) {
     return (
@@ -55,10 +56,20 @@ export default function TeamTasksMapNative({
           Hãy chạy bằng Dev Build / build native để dùng Mapbox.
         </Text>
       </View>
-    )
+    );
   }
 
   useEffect(() => {
+    const selectedMissionId = selectedMission?.rescueBatchItemId ?? 'none';
+    const routeKey =
+      routeCoordinates.length >= 2
+        ? `route:${selectedMissionId}:${routeCoordinates.length}`
+        : `mission:${selectedMissionId}`;
+
+    if (lastCameraTargetRef.current === routeKey) {
+      return;
+    }
+
     const timer = setTimeout(() => {
       if (routeCoordinates.length >= 2 && cameraRef.current?.fitBounds) {
         const lngs = routeCoordinates.map((coord) => coord[0]);
@@ -68,6 +79,7 @@ export default function TeamTasksMapNative({
         const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
 
         cameraRef.current.fitBounds(ne, sw, [60, 40, 280, 40], 800);
+        lastCameraTargetRef.current = routeKey;
         return;
       }
 
@@ -81,6 +93,7 @@ export default function TeamTasksMapNative({
           zoomLevel: 13,
           animationDuration: 800,
         });
+        lastCameraTargetRef.current = routeKey;
       }
     }, 250);
 

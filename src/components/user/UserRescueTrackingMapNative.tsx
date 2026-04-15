@@ -1,4 +1,3 @@
-import { rescueTeamService } from '@/src/services/rescueTeamService';
 import Mapbox from '@rnmapbox/maps';
 import { useEffect, useRef } from 'react';
 import { View } from 'react-native';

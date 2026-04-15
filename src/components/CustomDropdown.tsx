@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { FlatList, Modal, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useState } from 'react';
+import { FlatList, Modal, Text, TouchableOpacity, View } from 'react-native';
 
 interface DropdownItem {
   label: string;
@@ -67,7 +67,10 @@ export default function CustomDropdown({
               {/* Header */}
               <View
                 className="p-5"
-                style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
+                style={{
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                }}
               >
                 <Text
                   className="font-inter text-lg font-bold"
