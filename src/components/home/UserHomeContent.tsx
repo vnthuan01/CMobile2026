@@ -3,6 +3,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
 import { useRescueRequestDetail } from '@/src/hooks/useRescueRequestDetail';
 import { rescueTeamService } from '@/src/services/rescueTeamService';
+import type { MyRescueRequestItem } from '@/src/types/rescue';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -17,8 +18,10 @@ export default function UserHomeContent() {
   const { colors } = useTheme();
 
   const queryClient = useQueryClient();
-  const { data: requests = [], isLoading: loadingRequests } =
-    useMyRescueRequests({ pageSize: 10 });
+  const {
+    data: requests = [] as MyRescueRequestItem[],
+    isLoading: loadingRequests,
+  } = useMyRescueRequests({ pageSize: 10 });
 
   useFocusEffect(
     useCallback(() => {
@@ -28,7 +31,7 @@ export default function UserHomeContent() {
 
   const activeRequest = useMemo(
     () =>
-      requests.find((r) =>
+      requests.find((r: MyRescueRequestItem) =>
         ['Pending', 'Verified', 'Assigned', 'InProgress'].includes(
           r.rescueRequestStatus,
         ),
@@ -39,7 +42,7 @@ export default function UserHomeContent() {
   const historyRequests = useMemo(
     () =>
       requests
-        .filter((r) =>
+        .filter((r: MyRescueRequestItem) =>
           ['Completed', 'Cancelled'].includes(r.rescueRequestStatus),
         )
         .slice(0, 3),
@@ -158,11 +161,11 @@ export default function UserHomeContent() {
         </Text>
         <View className="flex-row gap-3">
           <QuickActionCard
-            icon="alert-circle"
-            label="Gửi yêu cầu"
-            description="Tạo yêu cầu cứu hộ"
+            icon="person-add"
+            label="Trở thành tình nguyện viên"
+            description="Mở hồ sơ tình nguyện viên"
             variant="request"
-            onPress={() => router.push('/create-request')}
+            onPress={() => router.push('/profile/my-volunteer-profile' as any)}
           />
           <QuickActionCard
             icon="location"
@@ -319,7 +322,7 @@ export default function UserHomeContent() {
             Lịch sử yêu cầu
           </Text>
           <View className="gap-3">
-            {historyRequests.map((item) => (
+            {historyRequests.map((item: MyRescueRequestItem) => (
               <RequestHistoryItem
                 key={item.requestId}
                 id={formatRequestId(item.requestId)}

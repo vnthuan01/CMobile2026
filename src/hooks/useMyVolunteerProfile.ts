@@ -7,11 +7,15 @@ export const volunteerProfileKeys = {
   skills: () => [...volunteerProfileKeys.all, 'skills'] as const,
 };
 
-export function useMyVolunteerProfile(enabled = true) {
+export function useMyVolunteerProfile(
+  enabled = true,
+  refetchInterval: number | false = false,
+) {
   return useQuery({
     queryKey: volunteerProfileKeys.myProfile(),
     queryFn: () => volunteerService.getMyVolunteerProfile(),
     enabled,
+    refetchInterval,
     select: (result) => ({
       profile: result.success ? result.data : null,
       errorMessage: result.success ? null : (result.message ?? null),

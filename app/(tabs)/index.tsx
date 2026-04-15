@@ -7,20 +7,20 @@ import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
 import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
 import { useAuthStore } from '@/src/store/authStore';
 import {
-  getTimeGreeting,
-  resolveAvatarUrl,
-  resolveDisplayName,
+    getTimeGreeting,
+    resolveAvatarUrl,
+    resolveDisplayName,
 } from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -118,7 +118,7 @@ export default function IndexScreen() {
                   className="text-sm"
                   style={{ color: colors.textSecondary }}
                 >
-                  {isVolunteer ? 'Tình nguyện viên' : 'Người dùng'}
+                  {isVolunteer ? 'Tình nguyện viên' : 'Người dân'}
                 </Text>
               </View>
             </View>

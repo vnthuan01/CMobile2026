@@ -1,27 +1,25 @@
 import '@/global.css';
 import { AppDialog } from '@/src/components/common/AppDialog';
-import { useTheme } from '@/src/context/ThemeContext';
 import { useRegister } from '@/src/hooks/useAuthActions';
 import { showErrorToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const { height } = useWindowDimensions();
   const registerMutation = useRegister();
 
@@ -41,9 +39,12 @@ export default function RegisterScreen() {
   const loading = registerMutation.isPending;
   const isShortScreen = height < 700;
   const fieldHeight = isShortScreen ? 46 : 52;
-  const fieldRadius = 12;
+  const fieldRadius = 16;
   const fieldFontSize = isShortScreen ? 15 : 16;
   const fieldIconSize = isShortScreen ? 18 : 20;
+
+  const dangerRed = '#E52521';
+  const neutralLine = '#E6E6E6';
 
   const handleRegister = async () => {
     if (
@@ -96,7 +97,7 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView
       edges={['top']}
-      style={{ flex: 1, backgroundColor: colors.bg }}
+      style={{ flex: 1, backgroundColor: '#FFFFFF' }}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -113,7 +114,7 @@ export default function RegisterScreen() {
           <View
             className="w-full self-center px-5"
             style={{
-              paddingTop: isShortScreen ? 16 : 24,
+              paddingTop: isShortScreen ? 8 : 14,
               paddingBottom: isShortScreen ? 8 : 16,
             }}
           >
@@ -123,32 +124,22 @@ export default function RegisterScreen() {
                   className="h-10 w-10 items-center justify-center rounded-full"
                   onPress={() => router.back()}
                 >
-                  <Ionicons
-                    name="chevron-back"
-                    size={20}
-                    color={colors.textPrimary}
-                  />
+                  <Ionicons name="chevron-back" size={20} color="#1F2937" />
                 </TouchableOpacity>
                 <Text
                   className="ml-2 text-2xl font-bold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#1F2937' }}
                 >
-                  Đăng ký
+                  Đăng kí tài khoản
                 </Text>
               </View>
-              <Text
-                className="ml-12 mt-1 text-sm"
-                style={{ color: colors.textSecondary }}
-              >
-                Tạo tài khoản để sử dụng ứng dụng.
-              </Text>
             </View>
 
-            <View className="rounded-xl" style={{ backgroundColor: colors.bg }}>
+            <View className="rounded-xl" style={{ backgroundColor: '#FFFFFF' }}>
               <View className="mb-3">
                 <Text
                   className="mb-2 text-sm font-semibold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#111827' }}
                 >
                   Họ và tên
                 </Text>
@@ -158,22 +149,18 @@ export default function RegisterScreen() {
                     height: fieldHeight,
                     borderRadius: fieldRadius,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F9F9F9',
                   }}
                 >
-                  <Ionicons
-                    name="person-outline"
-                    size={fieldIconSize}
-                    color={colors.textSecondary}
-                  />
                   <TextInput
-                    className="ml-2 flex-1"
+                    className="flex-1"
                     style={{
-                      color: colors.textPrimary,
+                      color: '#111827',
                       fontSize: fieldFontSize,
                     }}
                     placeholder="Nguyễn Văn A"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholderTextColor="#9CA3AF"
                     value={fullName}
                     onChangeText={setFullName}
                     editable={!loading}
@@ -184,7 +171,7 @@ export default function RegisterScreen() {
               <View className="mb-3">
                 <Text
                   className="mb-2 text-sm font-semibold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#111827' }}
                 >
                   Tên tài khoản
                 </Text>
@@ -194,22 +181,18 @@ export default function RegisterScreen() {
                     height: fieldHeight,
                     borderRadius: fieldRadius,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F9F9F9',
                   }}
                 >
-                  <Ionicons
-                    name="person-outline"
-                    size={fieldIconSize}
-                    color={colors.textSecondary}
-                  />
                   <TextInput
-                    className="ml-2 flex-1"
+                    className="flex-1"
                     style={{
-                      color: colors.textPrimary,
+                      color: '#111827',
                       fontSize: fieldFontSize,
                     }}
                     placeholder="Nhập tên tài khoản"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholderTextColor="#9CA3AF"
                     value={username}
                     onChangeText={setUsername}
                     editable={!loading}
@@ -220,7 +203,7 @@ export default function RegisterScreen() {
               <View className="mb-3">
                 <Text
                   className="mb-2 text-sm font-semibold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#111827' }}
                 >
                   Số điện thoại
                 </Text>
@@ -230,22 +213,18 @@ export default function RegisterScreen() {
                     height: fieldHeight,
                     borderRadius: fieldRadius,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F9F9F9',
                   }}
                 >
-                  <Ionicons
-                    name="call-outline"
-                    size={fieldIconSize}
-                    color={colors.textSecondary}
-                  />
                   <TextInput
-                    className="ml-2 flex-1"
+                    className="flex-1"
                     style={{
-                      color: colors.textPrimary,
+                      color: '#111827',
                       fontSize: fieldFontSize,
                     }}
                     placeholder="09xx xxx xxx"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholderTextColor="#9CA3AF"
                     keyboardType="phone-pad"
                     value={phone}
                     onChangeText={setPhone}
@@ -257,7 +236,7 @@ export default function RegisterScreen() {
               <View className="mb-3">
                 <Text
                   className="mb-2 text-sm font-semibold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#111827' }}
                 >
                   Email
                 </Text>
@@ -267,22 +246,18 @@ export default function RegisterScreen() {
                     height: fieldHeight,
                     borderRadius: fieldRadius,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F9F9F9',
                   }}
                 >
-                  <Ionicons
-                    name="mail-outline"
-                    size={fieldIconSize}
-                    color={colors.textSecondary}
-                  />
                   <TextInput
-                    className="ml-2 flex-1"
+                    className="flex-1"
                     style={{
-                      color: colors.textPrimary,
+                      color: '#111827',
                       fontSize: fieldFontSize,
                     }}
                     placeholder="example@email.com"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholderTextColor="#9CA3AF"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     value={email}
@@ -295,7 +270,7 @@ export default function RegisterScreen() {
               <View className="mb-3">
                 <Text
                   className="mb-2 text-sm font-semibold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#111827' }}
                 >
                   Mật khẩu
                 </Text>
@@ -305,22 +280,18 @@ export default function RegisterScreen() {
                     height: fieldHeight,
                     borderRadius: fieldRadius,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F9F9F9',
                   }}
                 >
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={fieldIconSize}
-                    color={colors.textSecondary}
-                  />
                   <TextInput
-                    className="ml-2 flex-1"
+                    className="flex-1"
                     style={{
-                      color: colors.textPrimary,
+                      color: '#111827',
                       fontSize: fieldFontSize,
                     }}
                     placeholder="Nhập mật khẩu"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={setPassword}
@@ -333,7 +304,7 @@ export default function RegisterScreen() {
                     <Ionicons
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={fieldIconSize}
-                      color={colors.textSecondary}
+                      color="#6B7280"
                     />
                   </TouchableOpacity>
                 </View>
@@ -342,7 +313,7 @@ export default function RegisterScreen() {
               <View>
                 <Text
                   className="mb-2 text-sm font-semibold"
-                  style={{ color: colors.textPrimary }}
+                  style={{ color: '#111827' }}
                 >
                   Xác nhận mật khẩu
                 </Text>
@@ -352,22 +323,18 @@ export default function RegisterScreen() {
                     height: fieldHeight,
                     borderRadius: fieldRadius,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F9F9F9',
                   }}
                 >
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={fieldIconSize}
-                    color={colors.textSecondary}
-                  />
                   <TextInput
-                    className="ml-2 flex-1"
+                    className="flex-1"
                     style={{
-                      color: colors.textPrimary,
+                      color: '#111827',
                       fontSize: fieldFontSize,
                     }}
                     placeholder="Nhập lại mật khẩu"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry={!showConfirmPassword}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -382,7 +349,7 @@ export default function RegisterScreen() {
                         showConfirmPassword ? 'eye-off-outline' : 'eye-outline'
                       }
                       size={fieldIconSize}
-                      color={colors.textSecondary}
+                      color="#6B7280"
                     />
                   </TouchableOpacity>
                 </View>
@@ -393,11 +360,11 @@ export default function RegisterScreen() {
                   <Ionicons
                     name="alert-circle-outline"
                     size={16}
-                    color={colors.emergency}
+                    color={dangerRed}
                   />
                   <Text
                     className="ml-1 flex-1 text-sm"
-                    style={{ color: colors.emergency }}
+                    style={{ color: dangerRed }}
                   >
                     {inlineError}
                   </Text>
@@ -410,9 +377,8 @@ export default function RegisterScreen() {
                 disabled={loading}
                 activeOpacity={0.85}
                 style={{
-                  backgroundColor: loading
-                    ? colors.textDisabled
-                    : colors.primary,
+                  borderRadius: 14,
+                  backgroundColor: loading ? '#F4A9A6' : dangerRed,
                 }}
               >
                 {loading ? (
@@ -426,12 +392,12 @@ export default function RegisterScreen() {
             </View>
 
             <View className="mt-8 items-center">
-              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+              <Text className="text-sm" style={{ color: '#6B7280' }}>
                 Đã có tài khoản?
               </Text>
               <Text
                 className="mt-1 font-bold"
-                style={{ color: colors.primary }}
+                style={{ color: dangerRed }}
                 onPress={() => router.replace('/login')}
               >
                 Đăng nhập
