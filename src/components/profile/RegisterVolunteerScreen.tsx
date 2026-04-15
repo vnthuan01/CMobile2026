@@ -2,12 +2,21 @@ import '@/global.css';
 import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import {
+  useCampaignDetail,
+  useVolunteerRegistrationCampaigns,
+} from '@/src/hooks/useDonation';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
   useCreateVolunteerProfile,
   useResubmitVolunteerProfile,
   useVolunteerSkills,
 } from '@/src/hooks/useVolunteerActions';
+import type { CampaignListItem } from '@/src/services/donationService';
+import {
+  CampaignResourceType,
+  getCampaignDetail,
+} from '@/src/services/donationService';
 import {
   CreateVolunteerCertificateRequest,
   CreateVolunteerRequest,
@@ -16,6 +25,7 @@ import {
   TeamRolePreference,
   VolunteerProfileResponse,
 } from '@/src/services/volunteerService';
+import { useProfileFlowStore } from '@/src/store/profileFlowStore';
 import {
   showErrorToast,
   showSuccessToast,
@@ -26,8 +36,10 @@ import DateTimePicker, {
   DateTimePickerAndroid,
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
+import { useQueries } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -103,6 +115,97 @@ const getLocalizedSkillName = (name?: string | null, code?: string | null) => {
   return name || code || 'Kỹ năng';
 };
 
+const getCampaignStatusMeta = (status: number, colors: any) => {
+  switch (Number(status)) {
+    case 0:
+      return {
+        label: 'Nháp',
+        bg: colors.surface,
+        text: colors.textSecondary,
+      };
+    case 1:
+      return {
+        label: 'Đang hoạt động',
+        bg: `${colors.status.completed}18`,
+        text: colors.status.completed,
+      };
+    case 2:
+      return {
+        label: 'Tạm dừng',
+        bg: `${colors.status.incoming}18`,
+        text: colors.status.incoming,
+      };
+    case 3:
+      return {
+        label: 'Hoàn thành',
+        bg: `${colors.status.completed}18`,
+        text: colors.status.completed,
+      };
+    case 4:
+      return {
+        label: 'Đã hủy',
+        bg: `${colors.status.error}18`,
+        text: colors.status.error,
+      };
+    case 5:
+      return {
+        label: 'Đã đủ mục tiêu',
+        bg: `${colors.status.incoming}18`,
+        text: colors.status.incoming,
+      };
+    case 6:
+      return {
+        label: 'Sẵn sàng triển khai',
+        bg: `${colors.status.pending}18`,
+        text: colors.status.pending,
+      };
+    case 7:
+      return {
+        label: 'Đang triển khai',
+        bg: `${colors.status.inProgress}18`,
+        text: colors.status.inProgress,
+      };
+    case 8:
+      return {
+        label: 'Đang đóng',
+        bg: `${colors.status.cancelled}18`,
+        text: colors.status.cancelled,
+      };
+    default:
+      return {
+        label: 'Khả dụng',
+        bg: `${colors.status.pending}18`,
+        text: colors.status.pending,
+      };
+  }
+};
+
+const getVolunteerPriorityMeta = (
+  remainingPeople: number,
+  status: number,
+  colors: any,
+) => {
+  if (![1, 6, 7].includes(Number(status))) {
+    return { label: 'Ưu tiên thấp', color: colors.textSecondary };
+  }
+  if (remainingPeople >= 15) {
+    return { label: 'Ưu tiên tuyển TNV cao', color: colors.status.error };
+  }
+  if (remainingPeople >= 6) {
+    return {
+      label: 'Ưu tiên tuyển TNV trung bình',
+      color: colors.status.pending,
+    };
+  }
+  return { label: 'Ưu tiên tuyển TNV thấp', color: colors.status.completed };
+};
+
+const getProgressColor = (progressPercent: number, colors: any) => {
+  if (progressPercent >= 80) return colors.status.completed;
+  if (progressPercent >= 40) return colors.status.pending;
+  return colors.status.error;
+};
+
 export default function RegisterVolunteerScreen({
   onBack,
   onSuccess,
@@ -110,9 +213,11 @@ export default function RegisterVolunteerScreen({
   initialProfile,
 }: RegisterVolunteerScreenProps) {
   const { bottom } = useSafeAreaInsets();
+  const router = useRouter();
   const { colors } = useTheme();
   const { dialogProps, showDialog } = useDialog();
   const skillsQuery = useVolunteerSkills();
+  const campaignsQuery = useVolunteerRegistrationCampaigns(mode === 'create');
   const uploadImageMutation = useUploadImage();
   const createVolunteerProfileMutation = useCreateVolunteerProfile();
   const resubmitVolunteerProfileMutation = useResubmitVolunteerProfile();
@@ -121,6 +226,7 @@ export default function RegisterVolunteerScreen({
   const [teamRolePreference, setTeamRolePreference] =
     useState<TeamRolePreference | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
   const [skills, setSkills] = useState<SkillResponse[]>([]);
   const [certificates, setCertificates] = useState<
     CreateVolunteerCertificateRequest[]
@@ -136,9 +242,89 @@ export default function RegisterVolunteerScreen({
     field: PickingField;
   } | null>(null);
   const skillsLoading = skillsQuery.isLoading;
+  const campaigns = campaignsQuery.data?.items ?? [];
+  const campaignsLoading = campaignsQuery.isLoading;
+  const campaignSummaryQueries = useQueries({
+    queries: campaigns.map((campaign: CampaignListItem) => ({
+      queryKey: ['donation', 'campaign-detail', campaign.campaignId],
+      queryFn: () => getCampaignDetail(campaign.campaignId),
+      staleTime: 0,
+    })),
+  });
+  const selectedCampaignDetailQuery = useCampaignDetail(
+    selectedCampaignId || undefined,
+    !!selectedCampaignId,
+  );
+  const selectedVolunteerCampaign = useProfileFlowStore(
+    (state) => state.selectedVolunteerCampaign,
+  );
+  const setSelectedVolunteerCampaign = useProfileFlowStore(
+    (state) => state.setSelectedVolunteerCampaign,
+  );
   const loading =
     createVolunteerProfileMutation.isPending ||
     resubmitVolunteerProfileMutation.isPending;
+
+  const campaignSummaryMap = useMemo(() => {
+    const summaryMap: Record<string, any> = {};
+    campaigns.forEach((campaign: CampaignListItem, index: number) => {
+      summaryMap[campaign.campaignId] =
+        campaignSummaryQueries[index]?.data ?? null;
+    });
+    return summaryMap;
+  }, [campaignSummaryQueries, campaigns]);
+
+  const sortedCampaigns = useMemo(() => {
+    const getPriority = (status: number) => {
+      switch (Number(status)) {
+        case 1:
+          return 0;
+        case 7:
+          return 1;
+        case 6:
+          return 2;
+        case 2:
+          return 3;
+        case 5:
+          return 4;
+        case 8:
+          return 5;
+        case 3:
+          return 6;
+        case 4:
+          return 7;
+        case 0:
+          return 8;
+        default:
+          return 9;
+      }
+    };
+
+    return [...campaigns].sort((a, b) => {
+      const priorityDiff = getPriority(a.status) - getPriority(b.status);
+      if (priorityDiff !== 0) return priorityDiff;
+
+      const aSummary = campaignSummaryMap[a.campaignId];
+      const bSummary = campaignSummaryMap[b.campaignId];
+      const aPeopleGoal = (aSummary?.goals || []).find(
+        (goal: any) => goal.resourceType === CampaignResourceType.People,
+      );
+      const bPeopleGoal = (bSummary?.goals || []).find(
+        (goal: any) => goal.resourceType === CampaignResourceType.People,
+      );
+      const aRemaining = Math.max(
+        (aPeopleGoal?.targetAmount ?? 0) - (aPeopleGoal?.receivedAmount ?? 0),
+        0,
+      );
+      const bRemaining = Math.max(
+        (bPeopleGoal?.targetAmount ?? 0) - (bPeopleGoal?.receivedAmount ?? 0),
+        0,
+      );
+
+      if (bRemaining !== aRemaining) return bRemaining - aRemaining;
+      return a.name.localeCompare(b.name, 'vi');
+    });
+  }, [campaignSummaryMap, campaigns]);
 
   const toDateOnlyString = (d: Date) => {
     const year = d.getFullYear();
@@ -148,7 +334,7 @@ export default function RegisterVolunteerScreen({
   };
 
   const formatDisplayDate = (iso?: string | null) => {
-    if (!iso) return 'Chọn ngày';
+    if (!iso) return 'Chọn ngày cấp';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
     return d.toLocaleDateString('vi-VN');
@@ -166,6 +352,7 @@ export default function RegisterVolunteerScreen({
   useEffect(() => {
     if (!initialProfile) return;
 
+    setSelectedCampaignId(initialProfile.campaignId || '');
     setDescriptions(initialProfile.descriptions || '');
     setYearsOfExperience(
       initialProfile.yearsOfExperience != null
@@ -196,6 +383,36 @@ export default function RegisterVolunteerScreen({
         : [{ ...EMPTY_CERT }],
     );
   }, [initialProfile]);
+
+  useEffect(() => {
+    if (mode !== 'create') return;
+    if (selectedVolunteerCampaign?.campaignId) {
+      setSelectedCampaignId(selectedVolunteerCampaign.campaignId);
+    }
+  }, [mode, selectedVolunteerCampaign?.campaignId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (
+        mode === 'create' &&
+        selectedCampaignId &&
+        campaigns.length > 0 &&
+        !selectedVolunteerCampaign
+      ) {
+        const matched = campaigns.find(
+          (campaign: CampaignListItem) =>
+            campaign.campaignId === selectedCampaignId,
+        );
+        if (matched) setSelectedVolunteerCampaign(matched);
+      }
+    }, [
+      mode,
+      selectedCampaignId,
+      campaigns,
+      selectedVolunteerCampaign,
+      setSelectedVolunteerCampaign,
+    ]),
+  );
 
   const toggleSkill = (skillId: string) => {
     setSelectedSkillIds((prev) =>
@@ -312,6 +529,14 @@ export default function RegisterVolunteerScreen({
     const isValidDateOnly = (value: string) =>
       /^\d{4}-\d{2}-\d{2}$/.test(value);
 
+    if (mode === 'create' && !selectedCampaignId) {
+      showWarningToast(
+        'Thiếu thông tin',
+        'Vui lòng chọn chiến dịch để tham gia tình nguyện.',
+      );
+      return false;
+    }
+
     if (!descriptions.trim()) {
       showWarningToast(
         'Thiếu thông tin',
@@ -391,6 +616,7 @@ export default function RegisterVolunteerScreen({
     if (!teamRolePreference) return;
 
     const createPayload: CreateVolunteerRequest = {
+      campaignId: selectedCampaignId,
       descriptions: descriptions.trim(),
       skillIds: selectedSkillIds,
       teamRolePreference,
@@ -513,6 +739,193 @@ export default function RegisterVolunteerScreen({
             >
               Bản nháp đã được lưu trong phiên làm việc hiện tại.
             </Text>
+          </View>
+        ) : null}
+
+        {mode === 'create' ? (
+          <View className="px-4 pt-4">
+            <Text className="mb-2 text-sm font-semibold text-text-secondary">
+              Chọn chiến dịch tham gia
+            </Text>
+            {campaignsLoading ? (
+              <View className="h-16 items-center justify-center">
+                <ActivityIndicator color={colors.primary} />
+                <Text className="mt-2 text-xs text-text-secondary">
+                  Đang tải danh sách chiến dịch...
+                </Text>
+              </View>
+            ) : campaigns.length === 0 ? (
+              <Text className="text-sm" style={{ color: colors.status.error }}>
+                Không có chiến dịch nào đang mở cho đăng ký tình nguyện viên.
+              </Text>
+            ) : (
+              <>
+                <View className="mb-3 flex-row items-center justify-between">
+                  <Text
+                    className="text-xs font-medium"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    {campaigns.length} chiến dịch khả dụng
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push('/profile/select-volunteer-campaign' as any)
+                    }
+                  >
+                    <Text
+                      className="text-sm font-semibold"
+                      style={{ color: colors.primary }}
+                    >
+                      Xem tất cả
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push('/profile/select-volunteer-campaign' as any)
+                  }
+                  className="rounded-2xl border p-4"
+                  style={{
+                    borderColor: selectedCampaignId
+                      ? colors.primary
+                      : colors.border,
+                    backgroundColor: colors.card,
+                  }}
+                >
+                  <View className="flex-row items-center justify-between gap-3">
+                    <View className="flex-1">
+                      <Text
+                        className="text-xs font-semibold uppercase"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Chiến dịch đã chọn
+                      </Text>
+
+                      <Text
+                        className="mt-1 text-base font-bold"
+                        style={{ color: colors.text }}
+                      >
+                        {selectedVolunteerCampaign?.name ||
+                          'Chưa chọn chiến dịch'}
+                      </Text>
+                      <Text
+                        className="mt-1 text-sm"
+                        style={{ color: colors.textSecondary }}
+                        numberOfLines={2}
+                      >
+                        {selectedVolunteerCampaign?.description
+                          ? selectedVolunteerCampaign.description
+                          : 'Bấm để mở danh sách chiến dịch, xem chi tiết rồi chọn chiến dịch tham gia.'}
+                      </Text>
+                      {selectedVolunteerCampaign
+                        ? (() => {
+                            const detail =
+                              selectedCampaignDetailQuery.data ||
+                              campaignSummaryMap[
+                                selectedVolunteerCampaign.campaignId
+                              ];
+                            const peopleGoal = (detail?.goals || []).find(
+                              (goal: any) =>
+                                goal.resourceType ===
+                                CampaignResourceType.People,
+                            );
+                            const peopleTarget = peopleGoal?.targetAmount ?? 0;
+                            const peopleReached =
+                              peopleGoal?.receivedAmount ?? 0;
+                            const remainingPeople = Math.max(
+                              peopleTarget - peopleReached,
+                              0,
+                            );
+                            const progressPercent =
+                              peopleTarget > 0
+                                ? Math.min(
+                                    (peopleReached / peopleTarget) * 100,
+                                    100,
+                                  )
+                                : typeof selectedVolunteerCampaign.overallProgressPercent ===
+                                    'number'
+                                  ? selectedVolunteerCampaign.overallProgressPercent
+                                  : 0;
+
+                            return (
+                              <>
+                                <View className="mt-3">
+                                  <Text
+                                    className="mt-2 text-xs"
+                                    style={{ color: colors.textSecondary }}
+                                    numberOfLines={2}
+                                  >
+                                    Tiến độ:
+                                  </Text>
+                                  <View
+                                    className="h-2 overflow-hidden rounded-full"
+                                    style={{ backgroundColor: colors.border }}
+                                  >
+                                    <View
+                                      className="h-full rounded-full"
+                                      style={{
+                                        width: `${Math.max(progressPercent, 4)}%`,
+                                        backgroundColor:
+                                          progressPercent >= 80
+                                            ? colors.status.completed
+                                            : progressPercent >= 40
+                                              ? colors.status.pending
+                                              : colors.status.error,
+                                      }}
+                                    />
+                                  </View>
+                                  <Text
+                                    className="mt-2 text-xs"
+                                    style={{ color: colors.textSecondary }}
+                                    numberOfLines={2}
+                                  >
+                                    {peopleTarget > 0
+                                      ? `Đã đạt ${peopleReached}/${peopleTarget} người • Còn thiếu ${remainingPeople} người.`
+                                      : typeof selectedVolunteerCampaign.overallProgressPercent ===
+                                          'number'
+                                        ? `Tiến độ tổng quan ${Math.round(selectedVolunteerCampaign.overallProgressPercent)}%.`
+                                        : 'Chưa có dữ liệu số lượng mục tiêu.'}
+                                  </Text>
+                                  <Text
+                                    className="mt-2 text-xs"
+                                    style={{ color: colors.textSecondary }}
+                                    numberOfLines={2}
+                                  >
+                                    Địa chỉ:{' '}
+                                    {selectedCampaignDetailQuery.data
+                                      ?.addressDetail || 'Chưa có'}
+                                  </Text>
+                                </View>
+                              </>
+                            );
+                          })()
+                        : null}
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={22}
+                      color={colors.textSecondary}
+                    />
+                  </View>
+                </TouchableOpacity>
+
+                {selectedVolunteerCampaign ? (
+                  <Text
+                    className="mt-2 text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    {new Date(
+                      selectedVolunteerCampaign.startDate,
+                    ).toLocaleDateString('vi-VN')}{' '}
+                    -{' '}
+                    {new Date(
+                      selectedVolunteerCampaign.endDate,
+                    ).toLocaleDateString('vi-VN')}
+                  </Text>
+                ) : null}
+              </>
+            )}
           </View>
         ) : null}
 
@@ -730,8 +1143,8 @@ export default function RegisterVolunteerScreen({
                 disabled={uploadingCertificateIndex === index}
                 className={`mt-2 h-11 flex-row items-center justify-center gap-2 rounded-lg ${
                   uploadingCertificateIndex === index
-                    ? 'bg-primary/60'
-                    : 'bg-primary'
+                    ? 'bg-secondary/60'
+                    : 'bg-secondary/80'
                 }`}
               >
                 {uploadingCertificateIndex === index ? (
