@@ -458,7 +458,7 @@ export default function ChangePasswordScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Helper text */}
+        {/* Helper text
         <View className="mt-6 px-6">
           <Text
             className="text-center text-xs"
@@ -467,7 +467,7 @@ export default function ChangePasswordScreen({
             Sử dụng ít nhất {MIN_PASSWORD_LENGTH} ký tự bao gồm chữ hoa, chữ
             thường và số.
           </Text>
-        </View>
+        </View> */}
       </ScrollView>
       <AppDialog {...dialogProps} />
     </View>
