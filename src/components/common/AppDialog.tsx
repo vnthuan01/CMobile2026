@@ -8,7 +8,7 @@ import {
     Text,
     TouchableOpacity,
     TouchableWithoutFeedback,
-    View
+    View,
 } from 'react-native';
 
 // ─────────────────────────────────────────────
@@ -147,7 +147,12 @@ export function AppDialog({
           )}
 
           {/* Actions */}
-          <View style={styles.actions}>
+          <View
+            style={[
+              styles.actions,
+              { justifyContent: showCancel ? 'flex-start' : 'center' },
+            ]}
+          >
             {showCancel && (
               <TouchableOpacity
                 style={[

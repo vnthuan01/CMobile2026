@@ -3,10 +3,13 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useUserProfile } from '@/src/hooks/useUserProfile';
 import { useAuthStore } from '@/src/store/authStore';
-import { resolveDisplayName } from '@/src/utils/userPresentation';
+import {
+    resolveAvatarUrl,
+    resolveDisplayName,
+} from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
 import { type ReactNode, useMemo } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface UserProfileViewScreenProps {
@@ -28,6 +31,10 @@ export default function UserProfileViewScreen({
     profileDisplayName: profile?.displayName,
     authUserName: authUser?.user_name,
     email: profile?.email ?? authUser?.email,
+  });
+  const avatarUrl = resolveAvatarUrl({
+    profilePictureUrl: profile?.pictureUrl,
+    authPictureUrl: null,
   });
 
   const initial = useMemo(() => {
@@ -70,22 +77,45 @@ export default function UserProfileViewScreen({
           >
             <View className="flex-row items-center gap-4">
               <View
-                className="h-16 w-16 items-center justify-center rounded-full"
-                style={{ backgroundColor: colors.primary }}
+                className="h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2"
+                style={{
+                  backgroundColor: colors.primary,
+                  borderColor: colors.card,
+                }}
               >
-                <Text className="text-2xl font-extrabold" style={{ color: colors.white }}>
-                  {initial}
-                </Text>
+                {avatarUrl ? (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    className="h-full w-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text
+                    className="text-2xl font-extrabold"
+                    style={{ color: colors.white }}
+                  >
+                    {initial}
+                  </Text>
+                )}
               </View>
 
               <View className="flex-1">
-                <Text className="text-[22px] font-extrabold" style={{ color: colors.text }}>
+                <Text
+                  className="text-[22px] font-extrabold"
+                  style={{ color: colors.text }}
+                >
                   {displayName}
                 </Text>
-                <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mt-1 text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
                   {profile?.email || authUser?.email || 'Chưa cập nhật email'}
                 </Text>
-                <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mt-1 text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
                   {profile?.phoneNumber || 'Chưa cập nhật số điện thoại'}
                 </Text>
               </View>
@@ -117,7 +147,11 @@ export default function UserProfileViewScreen({
           </View>
 
           <ProfileSection title="Thông tin cá nhân">
-            <ProfileFieldRow icon="person-outline" label="Họ và tên" value={displayName} />
+            <ProfileFieldRow
+              icon="person-outline"
+              label="Họ và tên"
+              value={displayName}
+            />
             <View className="mt-3 flex-row gap-3">
               <ProfileFieldCell
                 icon="male-female-outline"
@@ -133,13 +167,14 @@ export default function UserProfileViewScreen({
           </ProfileSection>
 
           <ProfileSection title="Liên hệ">
-            <View className="flex-row gap-3">
-              <ProfileFieldCell
+            <View className="gap-3">
+              <ProfileFieldRow
                 icon="mail-outline"
                 label="Email"
                 value={profile?.email || authUser?.email || 'Chưa cập nhật'}
+                multiline
               />
-              <ProfileFieldCell
+              <ProfileFieldRow
                 icon="call-outline"
                 label="Số điện thoại"
                 value={profile?.phoneNumber || 'Chưa cập nhật'}
@@ -175,7 +210,10 @@ function ProfileSection({
       className="mt-5 rounded-[24px] border p-4"
       style={{ borderColor: colors.border, backgroundColor: colors.card }}
     >
-      <Text className="text-sm font-bold uppercase tracking-wide" style={{ color: colors.textSecondary }}>
+      <Text
+        className="text-sm font-bold uppercase tracking-wide"
+        style={{ color: colors.textSecondary }}
+      >
         {title}
       </Text>
       <View className="mt-3">{children}</View>
@@ -230,7 +268,10 @@ function ProfileFieldRow({
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <View className="flex-1">
-        <Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+        <Text
+          className="text-xs font-semibold uppercase"
+          style={{ color: colors.textSecondary }}
+        >
           {label}
         </Text>
         <Text
@@ -263,7 +304,10 @@ function ProfileFieldCell({
     >
       <View className="flex-row items-center gap-2">
         <Ionicons name={icon} size={16} color={colors.primary} />
-        <Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+        <Text
+          className="text-xs font-semibold uppercase"
+          style={{ color: colors.textSecondary }}
+        >
           {label}
         </Text>
       </View>
