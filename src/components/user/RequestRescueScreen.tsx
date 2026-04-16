@@ -54,17 +54,17 @@ const CRITERIA_CATEGORIES: {
 }[] = [
   {
     key: 'HUMAN',
-    label: 'Nhóm con người (HUMAN)',
+    label: 'Nhóm con người',
     subtitle: 'Chọn 1 tiêu chí',
   },
   {
     key: 'ENV',
-    label: 'Nhóm môi trường (ENV)',
+    label: 'Nhóm môi trường',
     subtitle: 'Chọn 1 tiêu chí',
   },
   {
     key: 'SCALE',
-    label: 'Nhóm quy mô (SCALE)',
+    label: 'Nhóm quy mô',
     subtitle: 'Chọn 1 tiêu chí',
   },
 ];
@@ -595,11 +595,11 @@ export default function RequestRescueScreen({
 
             {/* ── Priority Criteria ──────────────────────────────── */}
             <Section>
-              <SectionTitle
+              {/* <SectionTitle
                 title="Tiêu chí ưu tiên"
                 subtitle="Mỗi nhóm HUMAN / ENV / SCALE chỉ chọn 1 tiêu chí"
                 colors={colors}
-              />
+              /> */}
 
               {loadingCriteria ? (
                 <View className="items-center py-6">
