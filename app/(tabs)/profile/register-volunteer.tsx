@@ -16,7 +16,7 @@ export default function ProfileRegisterVolunteerRoute() {
 
   return (
     <RegisterVolunteerScreen
-      onBack={() => router.replace('/profile')}
+      onBack={() => router.replace('/profile/my-volunteer-profile')}
       onSuccess={() => {
         resetVolunteerDraft();
         router.replace({

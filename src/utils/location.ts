@@ -1,17 +1,61 @@
 import * as Location from 'expo-location';
+import { Alert, Platform } from 'react-native';
 import type { LocationResult } from '../types/rescue';
 
 const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY ?? '';
 const GOONG_REVERSE_GEOCODE = 'https://rsapi.goong.io/Geocode';
+const APP_NAME = 'CMobile-Reliefcare-26';
+
+async function requestLocationConsentInVietnamese(): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+
+  return new Promise((resolve) => {
+    Alert.alert(
+      `${APP_NAME} yêu cầu cấp quyền truy cập vị trí`,
+      'Ứng dụng cần quyền vị trí để xác định vị trí cứu hộ chính xác.',
+      [
+        {
+          text: 'Từ chối',
+          style: 'cancel',
+          onPress: () => resolve(false),
+        },
+        {
+          text: 'Cho phép',
+          onPress: () => resolve(true),
+        },
+      ],
+      {
+        cancelable: true,
+        onDismiss: () => resolve(false),
+      },
+    );
+  });
+}
 
 /**
  * Requests permission and gets the current GPS location, then reverse-geocodes
  * the coordinates using Goong Maps API (preferred) or expo-location fallback.
  */
 export async function getCurrentLocation(): Promise<LocationResult> {
-  const { status } = await Location.requestForegroundPermissionsAsync();
+  const existingPermission = await Location.getForegroundPermissionsAsync();
+  let status = existingPermission.status;
+
   if (status !== 'granted') {
-    throw new Error('Không có quyền truy cập vị trí.');
+    const userAcceptedPrompt = await requestLocationConsentInVietnamese();
+    if (!userAcceptedPrompt) {
+      throw new Error('Bạn đã từ chối cấp quyền vị trí.');
+    }
+
+    const permissionResult = await Location.requestForegroundPermissionsAsync();
+    status = permissionResult.status;
+  }
+
+  if (status !== 'granted') {
+    throw new Error(
+      'Không có quyền truy cập vị trí. Vui lòng bật quyền vị trí trong cài đặt ứng dụng.',
+    );
   }
 
   const loc = await Location.getCurrentPositionAsync({

@@ -6,15 +6,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,6 +45,15 @@ export default function RegisterScreen() {
 
   const dangerRed = '#E52521';
   const neutralLine = '#E6E6E6';
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
+  const passwordRequirementChecks = [
+    { label: 'Có chữ cái viết hoa', passed: hasUppercase },
+    { label: 'Có số', passed: hasNumber },
+    { label: 'Có ký tự đặc biệt', passed: hasSpecial },
+  ];
+  const isPasswordStrongEnough = hasUppercase && hasNumber && hasSpecial;
 
   const handleRegister = async () => {
     if (
@@ -65,6 +74,14 @@ export default function RegisterScreen() {
       const msg = 'Mật khẩu xác nhận không khớp.';
       setInlineError(msg);
       showErrorToast('Mật khẩu không khớp', msg);
+      return;
+    }
+
+    if (!isPasswordStrongEnough) {
+      const msg =
+        'Mật khẩu phải có chữ cái viết hoa, chữ số và ký tự đặc biệt.';
+      setInlineError(msg);
+      showErrorToast('Mật khẩu chưa đủ mạnh', msg);
       return;
     }
 
@@ -308,6 +325,33 @@ export default function RegisterScreen() {
                     />
                   </TouchableOpacity>
                 </View>
+
+                {password.length > 0 && (
+                  <View className="mt-3 gap-2">
+                    {passwordRequirementChecks.map((check, index) => (
+                      <View key={index} className="flex-row items-center">
+                        <Ionicons
+                          name={
+                            check.passed
+                              ? 'checkmark-circle'
+                              : 'ellipse-outline'
+                          }
+                          size={16}
+                          color={check.passed ? '#16A34A' : '#9CA3AF'}
+                        />
+                        <Text
+                          className="ml-2 text-xs"
+                          style={{
+                            color: check.passed ? '#16A34A' : '#6B7280',
+                            fontWeight: check.passed ? '600' : '400',
+                          }}
+                        >
+                          {check.label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
 
               <View>

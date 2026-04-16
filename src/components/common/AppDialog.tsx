@@ -1,16 +1,15 @@
+import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  Animated,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Animated,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native';
-import { useTheme } from '@/src/context/ThemeContext';
 
 // ─────────────────────────────────────────────
 //  Types
@@ -69,7 +68,7 @@ export function AppDialog({
       case 'danger':
         return colors.error;
       case 'success':
-        return colors.success;
+        return colors.error;
       case 'info':
         return colors.info;
       default:
@@ -112,13 +111,13 @@ export function AppDialog({
     >
       {/* Backdrop */}
       <TouchableWithoutFeedback onPress={onCancel}>
-        <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.52)' }]} />
+        <View
+          style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.52)' }]}
+        />
       </TouchableWithoutFeedback>
 
       {/* Card */}
-      <View
-        style={[styles.centeredWrapper, { pointerEvents: 'box-none' }]}
-      >
+      <View style={[styles.centeredWrapper, { pointerEvents: 'box-none' }]}>
         <Animated.View
           style={[
             styles.card,
@@ -131,7 +130,9 @@ export function AppDialog({
           ]}
         >
           {/* Icon */}
-          <View style={[styles.iconCircle, { backgroundColor: `${iconColor}18` }]}>
+          <View
+            style={[styles.iconCircle, { backgroundColor: `${iconColor}18` }]}
+          >
             <Ionicons name={DIALOG_ICON[type]} size={32} color={iconColor} />
           </View>
 
@@ -167,7 +168,12 @@ export function AppDialog({
               style={[
                 styles.btn,
                 styles.confirmBtn,
-                { backgroundColor: confirmColor, flex: showCancel ? 1 : undefined, minWidth: showCancel ? undefined : 160 },
+                {
+                  backgroundColor: confirmColor,
+                  flex: showCancel ? 1 : undefined,
+                  minWidth: showCancel ? undefined : 160,
+                  alignSelf: showCancel ? 'auto' : 'center',
+                },
               ]}
               onPress={onConfirm}
               activeOpacity={0.8}

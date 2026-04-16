@@ -29,6 +29,12 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CMobile-Reliefcare-26 yêu cầu cấp quyền truy cập vị trí"
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "@rnmapbox/maps",
