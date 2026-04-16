@@ -7,28 +7,28 @@ import { usePriorityCriteria } from '@/src/hooks/useRescueMeta';
 import { useSubmitRescueRequest } from '@/src/hooks/useSubmitRescueRequest';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
-    DisasterType,
-    RescueAttachment,
-    RescueType,
+  DisasterType,
+  RescueAttachment,
+  RescueType,
 } from '@/src/services/rescueService';
 import { useAuthStore } from '@/src/store/authStore';
 import type { PriorityCriteria } from '@/src/types/rescue';
 import {
-    showErrorToast,
-    showSuccessToast,
-    showWarningToast,
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RequestRescueMiniMap from './RequestRescueMiniMap';
@@ -455,7 +455,7 @@ export default function RequestRescueScreen({
             />
           ) : (
             <LabeledInput
-              label="Họ và tên (tuỳ chọn)"
+              label="Họ và tên"
               placeholder="Nguyễn Văn A"
               value={reporterFullName}
               onChangeText={setReporterFullName}

@@ -1,9 +1,8 @@
 import { useAuthStore } from '../store/authStore';
 import type { RefreshTokenResponse } from '../types/auth';
-import { decodeJWT } from '../utils/jwt';
-import { isTokenExpired } from '../utils/jwt';
-import api from './api';
 import type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
+import { decodeJWT, isTokenExpired } from '../utils/jwt';
+import api from './api';
 
 export type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
 
@@ -55,6 +54,11 @@ interface ForgotPasswordResetRequest {
   newPassword: string;
 }
 
+interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 const getNoResponseErrorMessage = (error: any) => {
   const code = error?.code;
   const message = String(error?.message || '').toLowerCase();
@@ -68,6 +72,44 @@ const getNoResponseErrorMessage = (error: any) => {
   }
 
   return 'Không thể kết nối đến máy chủ (lỗi mạng/bảo mật). Vui lòng thử lại sau.';
+};
+
+const localizeAuthMessage = (message?: string | null, fallback?: string) => {
+  const raw = String(message ?? '').trim();
+  const normalized = raw.toLowerCase();
+
+  if (!raw) {
+    return fallback ?? '';
+  }
+
+  if (normalized.includes('email verified successfully')) {
+    return 'Xác thực email thành công.';
+  }
+
+  if (
+    normalized.includes('email or password is incorrect') ||
+    normalized.includes('invalid credentials') ||
+    normalized.includes('invalid email or password')
+  ) {
+    return 'Email hoặc mật khẩu không chính xác.';
+  }
+
+  if (
+    normalized.includes('invalid otp') ||
+    normalized.includes('otp is invalid')
+  ) {
+    return 'Mã OTP không hợp lệ.';
+  }
+
+  if (normalized.includes('otp has expired')) {
+    return 'Mã OTP đã hết hạn.';
+  }
+
+  if (normalized.includes('password changed successfully')) {
+    return 'Đổi mật khẩu thành công.';
+  }
+
+  return raw;
 };
 
 export const authService = {
@@ -124,17 +166,18 @@ export const authService = {
 
       return {
         success: response.status === 200,
-        message:
-          response.data?.message ||
+        message: localizeAuthMessage(
+          response.data?.message,
           'Xác thực OTP thành công. Vui lòng đăng nhập.',
+        ),
       };
     } catch (error: any) {
       return {
         success: false,
-        message:
-          error.response?.data?.message ||
-          error.message ||
+        message: localizeAuthMessage(
+          error.response?.data?.message || error.message,
           'Xác thực OTP thất bại',
+        ),
       };
     }
   },
@@ -145,10 +188,10 @@ export const authService = {
         email,
       });
 
-        return {
-          success: response.status === 200,
-          message: response.data?.message || 'Đã gửi lại mã OTP.',
-        };
+      return {
+        success: response.status === 200,
+        message: response.data?.message || 'Đã gửi lại mã OTP.',
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -166,10 +209,10 @@ export const authService = {
         email: data.email,
       });
 
-        return {
-          success: response.status >= 200 && response.status < 300,
-          message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
-        };
+      return {
+        success: response.status >= 200 && response.status < 300,
+        message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -192,11 +235,11 @@ export const authService = {
         },
       );
 
-        return {
-          success: response.status === 200,
-          resetToken: response.data?.resetToken,
-          message: response.data?.message || 'Xác minh OTP thành công.',
-        };
+      return {
+        success: response.status === 200,
+        resetToken: response.data?.resetToken,
+        message: response.data?.message || 'Xác minh OTP thành công.',
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -218,10 +261,10 @@ export const authService = {
         newPassword: data.newPassword,
       });
 
-        return {
-          success: response.status === 204,
-          message: response.data?.message || 'Đặt lại mật khẩu thành công.',
-        };
+      return {
+        success: response.status === 204,
+        message: response.data?.message || 'Đặt lại mật khẩu thành công.',
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -230,6 +273,43 @@ export const authService = {
           error.response?.data?.detail ||
           error.message ||
           'Đặt lại mật khẩu thất bại',
+      };
+    }
+  },
+
+  changePassword: async (data: ChangePasswordRequest) => {
+    try {
+      const response = await api.post('/Auth/change-password', {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+
+      console.log('[Auth/change-password] status:', response.status);
+
+      return {
+        success: response.status >= 200 && response.status < 300,
+        status: response.status,
+        message: localizeAuthMessage(
+          response.data?.message,
+          'Đổi mật khẩu thành công.',
+        ),
+      };
+    } catch (error: any) {
+      const status = error?.response?.status ?? null;
+      console.log('[Auth/change-password] status:', status, {
+        data: error?.response?.data,
+        message: error?.message,
+      });
+
+      return {
+        success: false,
+        status,
+        message: localizeAuthMessage(
+          error.response?.data?.message ||
+            error.response?.data?.detail ||
+            error.message,
+          'Đổi mật khẩu thất bại',
+        ),
       };
     }
   },
@@ -308,10 +388,10 @@ export const authService = {
     } catch (error: any) {
       return {
         success: false,
-        message:
-          error.response?.data?.message ||
-          error.message ||
+        message: localizeAuthMessage(
+          error.response?.data?.message || error.message,
           'Đăng nhập thất bại',
+        ),
       };
     }
   },
@@ -358,7 +438,7 @@ export const authService = {
         return;
       }
 
-       await authService.refreshSession(refreshToken);
+      await authService.refreshSession(refreshToken);
     } catch {
       await authStore.logout();
     } finally {
