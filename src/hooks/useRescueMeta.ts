@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchPriorityCriteria, type DisasterType } from '../services/rescueService';
+import {
+  fetchPriorityCriteria,
+  type DisasterType,
+} from '../services/rescueService';
 
 export const rescueMetaKeys = {
   all: ['rescueMeta'] as const,

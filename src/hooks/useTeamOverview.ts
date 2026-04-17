@@ -14,7 +14,7 @@ export function useCurrentTeam(enabled = true) {
     queryKey: teamOverviewKeys.currentTeam(),
     queryFn: () => teamService.getMyTeam(),
     enabled,
-    select: (result) => ({
+    select: (result: any) => ({
       team: result.success ? result.data : null,
       errorMessage: result.success ? null : (result.message ?? null),
       isEmpty:
@@ -64,7 +64,8 @@ export function useVolunteerHomeOverview(enabled = true) {
         (batchResult.data.items || []).map(async (item) => {
           try {
             const detail = await fetchRescueRequestDetail(item.rescueRequestId);
-            const operationStatus = detail.assignedRescueTeam?.operationStatus || null;
+            const operationStatus =
+              detail.assignedRescueTeam?.operationStatus || null;
             return [item.rescueRequestId, operationStatus] as const;
           } catch {
             return [item.rescueRequestId, null] as const;
@@ -77,7 +78,9 @@ export function useVolunteerHomeOverview(enabled = true) {
         team: teamResult.data,
         batch: batchResult.data,
         operationStatusMap: Object.fromEntries(
-          statusEntries.filter((entry) => Boolean(entry[1])) as Array<readonly [string, string]>,
+          statusEntries.filter((entry) => Boolean(entry[1])) as Array<
+            readonly [string, string]
+          >,
         ),
         message: null,
         isEmpty: false,

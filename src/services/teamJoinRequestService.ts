@@ -1,15 +1,15 @@
-import api from './api';
-import { extractApiErrorMessage } from '../utils/apiError';
 import type {
   CreateTeamJoinRequestPayload,
   TeamJoinRequestItem,
   TeamJoinRequestListResponse,
 } from '../types/joinRequest';
+import { extractApiErrorMessage } from '../utils/apiError';
+import api from './api';
 
 export type {
   CreateTeamJoinRequestPayload,
   TeamJoinRequestItem,
-  TeamJoinRequestListResponse,
+  TeamJoinRequestListResponse
 } from '../types/joinRequest';
 
 function normalizeTeamJoinRequest(raw: any): TeamJoinRequestItem {

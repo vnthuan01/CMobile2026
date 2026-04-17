@@ -1,9 +1,8 @@
 import { useAuthStore } from '../store/authStore';
 import type { RefreshTokenResponse } from '../types/auth';
-import { decodeJWT } from '../utils/jwt';
-import { isTokenExpired } from '../utils/jwt';
-import api from './api';
 import type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
+import { decodeJWT, isTokenExpired } from '../utils/jwt';
+import api from './api';
 
 export type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
 
@@ -145,10 +144,10 @@ export const authService = {
         email,
       });
 
-        return {
-          success: response.status === 200,
-          message: response.data?.message || 'Đã gửi lại mã OTP.',
-        };
+      return {
+        success: response.status === 200,
+        message: response.data?.message || 'Đã gửi lại mã OTP.',
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -166,10 +165,10 @@ export const authService = {
         email: data.email,
       });
 
-        return {
-          success: response.status >= 200 && response.status < 300,
-          message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
-        };
+      return {
+        success: response.status >= 200 && response.status < 300,
+        message: response.data?.message || 'Đã gửi mã OTP khôi phục mật khẩu.',
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -192,11 +191,11 @@ export const authService = {
         },
       );
 
-        return {
-          success: response.status === 200,
-          resetToken: response.data?.resetToken,
-          message: response.data?.message || 'Xác minh OTP thành công.',
-        };
+      return {
+        success: response.status === 200,
+        resetToken: response.data?.resetToken,
+        message: response.data?.message || 'Xác minh OTP thành công.',
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -218,10 +217,10 @@ export const authService = {
         newPassword: data.newPassword,
       });
 
-        return {
-          success: response.status === 204,
-          message: response.data?.message || 'Đặt lại mật khẩu thành công.',
-        };
+      return {
+        success: response.status === 204,
+        message: response.data?.message || 'Đặt lại mật khẩu thành công.',
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -358,7 +357,7 @@ export const authService = {
         return;
       }
 
-       await authService.refreshSession(refreshToken);
+      await authService.refreshSession(refreshToken);
     } catch {
       await authStore.logout();
     } finally {

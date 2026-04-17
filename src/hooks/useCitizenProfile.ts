@@ -16,7 +16,7 @@ export function useCitizenProfile(
     enabled,
     refetchInterval,
     refetchOnMount: 'always',
-    select: (result) => ({
+    select: (result: any) => ({
       profile: result.success ? result.data : null,
       errorMessage: result.success ? null : (result.message ?? null),
     }),

@@ -1,17 +1,19 @@
 import type {
-    CreateVolunteerRequest,
-    ResubmitVolunteerProfileRequest,
-    SkillResponse,
-    VolunteerProfileResponse,
+  CreateVolunteerRequest,
+  ResubmitVolunteerProfileRequest,
+  SkillResponse,
+  VolunteerProfileResponse,
 } from '../types/volunteer';
 import { extractApiErrorMessage } from '../utils/apiError';
 import api from './api';
 import { uploadService } from './uploadService';
 
 export type {
-    CreateVolunteerCertificateRequest,
-    CreateVolunteerRequest, ResubmitVolunteerProfileRequest, SkillResponse,
-    VolunteerProfileResponse
+  CreateVolunteerCertificateRequest,
+  CreateVolunteerRequest,
+  ResubmitVolunteerProfileRequest,
+  SkillResponse,
+  VolunteerProfileResponse
 } from '../types/volunteer';
 
 export { TeamRolePreference } from '../types/volunteer';

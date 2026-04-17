@@ -11,7 +11,7 @@ export function useMyTeam(enabled = true) {
     queryKey: teamKeys.myTeam(),
     queryFn: () => teamService.getMyTeam(),
     enabled,
-    select: (result) => ({
+    select: (result: any) => ({
       team: result.success ? result.data : null,
       errorMessage: result.success ? null : (result.message ?? null),
       isEmpty:

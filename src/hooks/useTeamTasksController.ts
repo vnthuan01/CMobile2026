@@ -151,6 +151,7 @@ export function useTeamTasksController() {
   const [lastHeartbeatError, setLastHeartbeatError] = useState<string | null>(
     null,
   );
+  const [routeDebugReason, setRouteDebugReason] = useState<string | null>(null);
   const [lastHeartbeatSuccessAt, setLastHeartbeatSuccessAt] = useState<
     string | null
   >(null);
@@ -478,16 +479,62 @@ export function useTeamTasksController() {
 
   useEffect(() => {
     const loadRoute = async () => {
-      if (
-        !selectedMission ||
-        selectedMission.latitude == null ||
-        selectedMission.longitude == null
-      ) {
+      if (!selectedMission) {
+        setRouteDebugReason('Chưa chọn nhiệm vụ');
         setRouteCoordinates([]);
         return;
       }
 
+      let destination = {
+        latitude: selectedMission.latitude,
+        longitude: selectedMission.longitude,
+      };
+
+      if (destination.latitude == null || destination.longitude == null) {
+        if (!selectedMission.rescueRequestId) {
+          setRouteDebugReason(
+            `Thiếu tọa độ mission (${destination.latitude ?? '---'}, ${destination.longitude ?? '---'})`,
+          );
+          setRouteCoordinates([]);
+          return;
+        }
+
+        try {
+          const detail = await fetchRescueRequestDetail(
+            selectedMission.rescueRequestId,
+          );
+          destination = {
+            latitude: detail.latitude,
+            longitude: detail.longitude,
+          };
+
+          if (destination.latitude != null && destination.longitude != null) {
+            setSelectedMission((prev) =>
+              prev?.rescueBatchItemId === selectedMission.rescueBatchItemId
+                ? {
+                    ...prev,
+                    latitude: destination.latitude,
+                    longitude: destination.longitude,
+                  }
+                : prev,
+            );
+            setRouteDebugReason('Đã lấy tọa độ mission từ detail API');
+          }
+        } catch {
+          setRouteDebugReason('Không lấy được tọa độ mission từ detail API');
+        }
+
+        if (destination.latitude == null || destination.longitude == null) {
+          setRouteDebugReason(
+            `Thiếu tọa độ mission (${destination.latitude ?? '---'}, ${destination.longitude ?? '---'})`,
+          );
+          setRouteCoordinates([]);
+          return;
+        }
+      }
+
       if (batch?.routePolyline) {
+        setRouteDebugReason('Dùng routePolyline từ batch');
         setRouteCoordinates(
           rescueTeamService.decodePolyline(batch.routePolyline),
         );
@@ -495,6 +542,7 @@ export function useTeamTasksController() {
       }
 
       if (!userLocation) {
+        setRouteDebugReason('Chưa có vị trí hiện tại của user');
         setRouteCoordinates([]);
         return;
       }
@@ -502,14 +550,16 @@ export function useTeamTasksController() {
       const route = await rescueTeamService.fetchDirectionsPolyline(
         userLocation,
         {
-          latitude: selectedMission.latitude,
-          longitude: selectedMission.longitude,
+          latitude: destination.latitude,
+          longitude: destination.longitude,
         },
       );
 
       if (route.success && route.polyline) {
+        setRouteDebugReason('Đã lấy polyline từ API directions');
         setRouteCoordinates(rescueTeamService.decodePolyline(route.polyline));
       } else {
+        setRouteDebugReason('API directions không trả về polyline');
         setRouteCoordinates([]);
       }
     };
@@ -866,8 +916,11 @@ export function useTeamTasksController() {
       `hướng di chuyển: ${userLocation?.headingDegree ?? '---'}`,
       `nhiệm vụ hiện tại: ${currentMission?.rescueBatchItemId || '---'}`,
       `nhiệm vụ đang chọn: ${selectedMission?.rescueBatchItemId || '---'}`,
+      `mission lat: ${selectedMission?.latitude ?? '---'}`,
+      `mission lng: ${selectedMission?.longitude ?? '---'}`,
       `eta: ${selectedMission?.estimatedMinutes ?? '---'} phút`,
       `khoảng cách: ${selectedMission?.distanceKm ?? '---'} km`,
+      `route: ${routeDebugReason || '---'}`,
     ],
     [
       batch?.rescueBatchId,
@@ -880,8 +933,11 @@ export function useTeamTasksController() {
       screen,
       selectedMission?.distanceKm,
       selectedMission?.estimatedMinutes,
+      selectedMission?.latitude,
+      selectedMission?.longitude,
       selectedMission?.rescueBatchItemId,
       teamId,
+      routeDebugReason,
       userLocation?.accuracy,
       userLocation?.headingDegree,
       userLocation?.latitude,

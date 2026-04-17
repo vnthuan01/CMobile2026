@@ -32,15 +32,18 @@ export default function OTPScreen() {
   const verifyEmailOtpMutation = useVerifyEmailOtp();
   const sendForgotPasswordOtpMutation = useSendForgotPasswordOtp();
   const resendEmailOtpMutation = useResendEmailOtp();
-  const params = useLocalSearchParams<{ email?: string; mode?: string }>();
+  const params = useLocalSearchParams();
 
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const [counter, setCounter] = useState(30);
   const [successVisible, setSuccessVisible] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('Xác thực OTP thành công.');
+  const [successMessage, setSuccessMessage] = useState(
+    'Xác thực OTP thành công.',
+  );
   const inputsRef = useRef<TextInput[]>([]);
   const verifying =
-    verifyForgotPasswordOtpMutation.isPending || verifyEmailOtpMutation.isPending;
+    verifyForgotPasswordOtpMutation.isPending ||
+    verifyEmailOtpMutation.isPending;
   const resending =
     sendForgotPasswordOtpMutation.isPending || resendEmailOtpMutation.isPending;
 
@@ -97,11 +100,17 @@ export default function OTPScreen() {
         });
 
         if (!forgotResult.success || !forgotResult.resetToken) {
-          showErrorToast('Xác thực OTP thất bại', forgotResult.message || 'Xác thực OTP thất bại.');
+          showErrorToast(
+            'Xác thực OTP thất bại',
+            forgotResult.message || 'Xác thực OTP thất bại.',
+          );
           return;
         }
 
-        showSuccessToast('Xác minh thành công', forgotResult.message || 'Bạn có thể đặt lại mật khẩu mới.');
+        showSuccessToast(
+          'Xác minh thành công',
+          forgotResult.message || 'Bạn có thể đặt lại mật khẩu mới.',
+        );
         router.replace({
           pathname: '/(auth)/reset-password',
           params: {
@@ -114,7 +123,10 @@ export default function OTPScreen() {
 
       const result = await verifyEmailOtpMutation.mutateAsync({ email, code });
       if (!result.success) {
-        showErrorToast('Xác thực OTP thất bại', result.message || 'Xác thực OTP thất bại.');
+        showErrorToast(
+          'Xác thực OTP thất bại',
+          result.message || 'Xác thực OTP thất bại.',
+        );
         return;
       }
 
@@ -132,150 +144,193 @@ export default function OTPScreen() {
 
     try {
       if (isForgotPasswordMode) {
-        const forgotResend = await sendForgotPasswordOtpMutation.mutateAsync({ email });
+        const forgotResend = await sendForgotPasswordOtpMutation.mutateAsync({
+          email,
+        });
         if (!forgotResend.success) {
-          showErrorToast('Không thể gửi lại OTP', forgotResend.message || 'Không thể gửi lại OTP.');
+          showErrorToast(
+            'Không thể gửi lại OTP',
+            forgotResend.message || 'Không thể gửi lại OTP.',
+          );
           return;
         }
 
         setCounter(30);
         setOtp(Array(6).fill(''));
         inputsRef.current[0]?.focus();
-        showSuccessToast('Đã gửi lại OTP', forgotResend.message || 'Đã gửi lại mã OTP.');
+        showSuccessToast(
+          'Đã gửi lại OTP',
+          forgotResend.message || 'Đã gửi lại mã OTP.',
+        );
         return;
       }
 
       const result = await resendEmailOtpMutation.mutateAsync(email);
       if (!result.success) {
-        showErrorToast('Không thể gửi lại OTP', result.message || 'Không thể gửi lại OTP.');
+        showErrorToast(
+          'Không thể gửi lại OTP',
+          result.message || 'Không thể gửi lại OTP.',
+        );
         return;
       }
 
       setCounter(30);
       setOtp(Array(6).fill(''));
       inputsRef.current[0]?.focus();
-      showSuccessToast('Đã gửi lại OTP', result.message || 'Đã gửi lại mã OTP.');
+      showSuccessToast(
+        'Đã gửi lại OTP',
+        result.message || 'Đã gửi lại mã OTP.',
+      );
     } catch {
       // toast được xử lý ở mutation onError hoặc các nhánh result.success = false
     }
   };
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView
+      edges={['top']}
+      style={{ flex: 1, backgroundColor: colors.background }}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
         style={{ backgroundColor: colors.background }}
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="w-full max-w-md flex-1 self-center" style={{ backgroundColor: colors.background }}>
-          <View className="sticky top-0 z-10 flex-row items-center px-4 py-3">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              className="h-10 w-10 items-center justify-center rounded-full"
-            >
-              <Ionicons name="chevron-back" size={22} color={colors.text} />
-            </TouchableOpacity>
-
-            <Text
-              className="flex-1 pr-10 text-center text-lg font-bold"
-              style={{ color: colors.text }}
-            >
-              {isForgotPasswordMode ? 'Xác minh OTP khôi phục' : 'Xác minh OTP'}
-            </Text>
-          </View>
-
-          <View className="flex-1 items-center px-6 pt-10">
-            <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-              <Ionicons name="mail-outline" size={40} color={colors.secondary} />
-            </View>
-
-            <Text
-              className="mb-3 text-center text-2xl font-bold"
-              style={{ color: colors.text }}
-            >
-              {isForgotPasswordMode
-                ? 'Nhập mã OTP khôi phục'
-                : 'Nhập mã xác thực'}
-            </Text>
-
-            <Text
-              className="mb-8 max-w-xs text-center text-base leading-relaxed"
-              style={{ color: colors.textSecondary }}
-            >
-              {isForgotPasswordMode
-                ? 'Chúng tôi đã gửi một mã OTP 6 số để khôi phục mật khẩu, mã này sẽ có tác dụng trong 10p.'
-                : 'Chúng tôi đã gửi một mã OTP 6 số đến gmail của bạn, mã này sẽ có tác dụng trong 10p.'}
-              {`\n`}
-              <Text className="font-bold" style={{ color: colors.text }}>
-                {email || 'email của bạn'}
-              </Text>
-            </Text>
-
-            <View className="mb-8 flex-row gap-2">
-              {otp.map((value, index) => (
-                <TextInput
-                  key={index}
-                  ref={(el: TextInput | null) => {
-                    if (el) inputsRef.current[index] = el;
-                  }}
-                  value={value}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  onChangeText={(v: string) => handleChange(v, index)}
-                  onKeyPress={(event: any) => handleKeyPress(event.nativeEvent.key, index)}
-                  className="h-14 w-12 rounded-xl text-center text-xl font-bold"
-                  style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, color: colors.text }}
-                />
-              ))}
-            </View>
-
-            <View className="mb-8 flex-row items-center gap-2">
-              <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                Chưa nhận được mã?
-              </Text>
+          <View
+            className="w-full max-w-md flex-1 self-center"
+            style={{ backgroundColor: colors.background }}
+          >
+            <View className="sticky top-0 z-10 flex-row items-center px-4 py-3">
               <TouchableOpacity
-                disabled={counter > 0 || resending}
-                onPress={handleResend}
+                onPress={() => router.back()}
+                className="h-10 w-10 items-center justify-center rounded-full"
               >
-                <Text
-                  className="text-sm font-medium"
-                  style={{
-                    color:
-                      counter > 0 || resending
-                        ? colors.textSecondary
-                        : colors.primary,
-                  }}
-                >
-                  {resending
-                    ? 'Đang gửi lại...'
-                    : `Gửi lại ${counter > 0 ? `(00:${String(counter).padStart(2, '0')})` : ''}`}
-                </Text>
+                <Ionicons name="chevron-back" size={22} color={colors.text} />
               </TouchableOpacity>
-            </View>
 
-            <TouchableOpacity
-              onPress={handleVerify}
-              disabled={verifying}
-              className={`h-14 w-full items-center justify-center rounded-xl shadow-lg shadow-primary/30 ${
-                verifying ? 'bg-primary/60' : 'bg-primary'
-              }`}
-            >
-              {verifying ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text className="text-lg font-bold text-white">Xác minh</Text>
-              )}
-            </TouchableOpacity>
-
-            <View className="mt-8 flex-row items-center gap-2">
-              <Ionicons name="help-circle-outline" size={18} color={colors.textSecondary} />
-              <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                Cần trợ giúp?
+              <Text
+                className="flex-1 pr-10 text-center text-lg font-bold"
+                style={{ color: colors.text }}
+              >
+                {isForgotPasswordMode
+                  ? 'Xác minh OTP khôi phục'
+                  : 'Xác minh OTP'}
               </Text>
             </View>
+
+            <View className="flex-1 items-center px-6 pt-10">
+              <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+                <Ionicons
+                  name="mail-outline"
+                  size={40}
+                  color={colors.secondary}
+                />
+              </View>
+
+              <Text
+                className="mb-3 text-center text-2xl font-bold"
+                style={{ color: colors.text }}
+              >
+                {isForgotPasswordMode
+                  ? 'Nhập mã OTP khôi phục'
+                  : 'Nhập mã xác thực'}
+              </Text>
+
+              <Text
+                className="mb-8 max-w-xs text-center text-base leading-relaxed"
+                style={{ color: colors.textSecondary }}
+              >
+                {isForgotPasswordMode
+                  ? 'Chúng tôi đã gửi một mã OTP 6 số để khôi phục mật khẩu, mã này sẽ có tác dụng trong 10p.'
+                  : 'Chúng tôi đã gửi một mã OTP 6 số đến gmail của bạn, mã này sẽ có tác dụng trong 10p.'}
+                {`\n`}
+                <Text className="font-bold" style={{ color: colors.text }}>
+                  {email || 'email của bạn'}
+                </Text>
+              </Text>
+
+              <View className="mb-8 flex-row gap-2">
+                {otp.map((value, index) => (
+                  <TextInput
+                    key={index}
+                    ref={(el: TextInput | null) => {
+                      if (el) inputsRef.current[index] = el;
+                    }}
+                    value={value}
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    onChangeText={(v: string) => handleChange(v, index)}
+                    onKeyPress={(event: any) =>
+                      handleKeyPress(event.nativeEvent.key, index)
+                    }
+                    className="h-14 w-12 rounded-xl text-center text-xl font-bold"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.card,
+                      color: colors.text,
+                    }}
+                  />
+                ))}
+              </View>
+
+              <View className="mb-8 flex-row items-center gap-2">
+                <Text
+                  className="text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Chưa nhận được mã?
+                </Text>
+                <TouchableOpacity
+                  disabled={counter > 0 || resending}
+                  onPress={handleResend}
+                >
+                  <Text
+                    className="text-sm font-medium"
+                    style={{
+                      color:
+                        counter > 0 || resending
+                          ? colors.textSecondary
+                          : colors.primary,
+                    }}
+                  >
+                    {resending
+                      ? 'Đang gửi lại...'
+                      : `Gửi lại ${counter > 0 ? `(00:${String(counter).padStart(2, '0')})` : ''}`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleVerify}
+                disabled={verifying}
+                className={`h-14 w-full items-center justify-center rounded-xl shadow-lg shadow-primary/30 ${
+                  verifying ? 'bg-primary/60' : 'bg-primary'
+                }`}
+              >
+                {verifying ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text className="text-lg font-bold text-white">Xác minh</Text>
+                )}
+              </TouchableOpacity>
+
+              <View className="mt-8 flex-row items-center gap-2">
+                <Ionicons
+                  name="help-circle-outline"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+                <Text
+                  className="text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Cần trợ giúp?
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
         </ScrollView>
       </KeyboardAvoidingView>
       <AppDialog

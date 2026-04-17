@@ -1,15 +1,15 @@
-import api from './api';
-import { extractApiErrorMessage } from '../utils/apiError';
 import type {
   CreateStationJoinRequestPayload,
   StationJoinRequestItem,
   StationJoinRequestListResponse,
 } from '../types/joinRequest';
+import { extractApiErrorMessage } from '../utils/apiError';
+import api from './api';
 
 export type {
   CreateStationJoinRequestPayload,
   StationJoinRequestItem,
-  StationJoinRequestListResponse,
+  StationJoinRequestListResponse
 } from '../types/joinRequest';
 
 function normalizeStationJoinRequest(raw: any): StationJoinRequestItem {
@@ -17,7 +17,10 @@ function normalizeStationJoinRequest(raw: any): StationJoinRequestItem {
     stationJoinRequestId: raw?.stationJoinRequestId ?? raw?.id ?? '',
     reliefStationId: raw?.reliefStationId ?? raw?.stationId ?? '',
     reliefStationName:
-      raw?.reliefStationName ?? raw?.stationName ?? raw?.reliefStation?.name ?? null,
+      raw?.reliefStationName ??
+      raw?.stationName ??
+      raw?.reliefStation?.name ??
+      null,
     teamId: raw?.teamId ?? null,
     teamName: raw?.teamName ?? raw?.team?.name ?? null,
     status: String(raw?.status ?? 'Pending'),
@@ -27,7 +30,9 @@ function normalizeStationJoinRequest(raw: any): StationJoinRequestItem {
   };
 }
 
-function normalizeStationJoinRequestList(raw: any): StationJoinRequestListResponse {
+function normalizeStationJoinRequestList(
+  raw: any,
+): StationJoinRequestListResponse {
   const items = Array.isArray(raw?.data)
     ? raw.data
     : Array.isArray(raw?.items)

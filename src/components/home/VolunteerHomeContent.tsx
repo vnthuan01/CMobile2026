@@ -1,7 +1,10 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useVolunteerHomeOverview } from '@/src/hooks/useTeamOverview';
-import { rescueTeamService } from '@/src/services/rescueTeamService';
+import {
+  rescueTeamService,
+  type RescueBatchItem,
+} from '@/src/services/rescueTeamService';
 import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -90,8 +93,12 @@ export default function VolunteerHomeContent() {
 
   const currentMission = useMemo(
     () =>
-      items.find((item) => getEffectiveStatus(item) === 'InProgress') ||
-      items.find((item) => getEffectiveStatus(item) !== 'Done') ||
+      items.find(
+        (item: RescueBatchItem) => getEffectiveStatus(item) === 'InProgress',
+      ) ||
+      items.find(
+        (item: RescueBatchItem) => getEffectiveStatus(item) !== 'Done',
+      ) ||
       null,
     [getEffectiveStatus, items],
   );
@@ -100,7 +107,7 @@ export default function VolunteerHomeContent() {
     () =>
       items
         .filter(
-          (item) =>
+          (item: RescueBatchItem) =>
             item.rescueBatchItemId !== currentMission?.rescueBatchItemId &&
             getEffectiveStatus(item) !== 'Done' &&
             getEffectiveStatus(item) !== 'Cancelled',
@@ -111,16 +118,16 @@ export default function VolunteerHomeContent() {
 
   const stats = useMemo(() => {
     const done = items.filter(
-      (item) => getEffectiveStatus(item) === 'Done',
+      (item: RescueBatchItem) => getEffectiveStatus(item) === 'Done',
     ).length;
     const inProgress = items.filter(
-      (item) => getEffectiveStatus(item) === 'InProgress',
+      (item: RescueBatchItem) => getEffectiveStatus(item) === 'InProgress',
     ).length;
     const pending = items.filter(
-      (item) => getEffectiveStatus(item) === 'Pending',
+      (item: RescueBatchItem) => getEffectiveStatus(item) === 'Pending',
     ).length;
     const emergency = items.filter(
-      (item) => item.rescueRequestType === 'Emergency',
+      (item: RescueBatchItem) => item.rescueRequestType === 'Emergency',
     ).length;
 
     return { done, inProgress, pending, emergency, total: items.length };
@@ -129,12 +136,12 @@ export default function VolunteerHomeContent() {
   const batchProgress =
     stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
 
-  const getPriorityLevelLabel = (value?: number | null) => {
+  const getPriorityLevelLabel = (value?: number | string | null) => {
     if (value == null) return 'Không có mức ưu tiên';
-    if (value === 0) return 'Thấp';
-    if (value === 1) return 'Trung bình';
-    if (value === 2) return 'Cao';
-    if (value === 3) return 'Khẩn cấp';
+    if (value === 0 || value === '0') return 'Thấp';
+    if (value === 1 || value === '1') return 'Trung bình';
+    if (value === 2 || value === '2') return 'Cao';
+    if (value === 3 || value === '3') return 'Khẩn cấp';
     return 'Không hợp lệ';
   };
 
@@ -532,7 +539,7 @@ export default function VolunteerHomeContent() {
 
                 {upcomingMissions.length > 0 ? (
                   <View className="gap-3">
-                    {upcomingMissions.map((mission) => (
+                    {upcomingMissions.map((mission: RescueBatchItem) => (
                       <Card
                         key={mission.rescueBatchItemId}
                         colors={colors.border}

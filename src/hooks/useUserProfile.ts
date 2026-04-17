@@ -14,7 +14,7 @@ export function useUserProfile(enabled = true) {
     queryKey: userProfileKeys.me(),
     queryFn: () => userService.getProfile(),
     enabled,
-    select: (result) => ({
+    select: (result: any) => ({
       profile: result.success ? result.data : null,
       errorMessage: result.success ? null : (result.message ?? null),
     }),
@@ -27,7 +27,7 @@ export function useUpdateUserProfile() {
   return useMutation({
     mutationFn: (payload: UpdateUserProfilePayload) =>
       userService.updateProfile(payload),
-    onSuccess: async (result) => {
+    onSuccess: async (result: any) => {
       if (result?.success) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: userProfileKeys.all }),
@@ -47,7 +47,7 @@ export function useUpdateUserProfile() {
         errorMessage: 'Không thể cập nhật thông tin cá nhân.',
       });
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể cập nhật',
         errorMessage: 'Không thể cập nhật thông tin cá nhân.',

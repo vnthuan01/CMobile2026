@@ -1,5 +1,6 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { useAuthStore } from '@/src/store/authStore';
+import { useNotificationStore } from '@/src/store/notificationStore';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
@@ -8,6 +9,43 @@ import { Animated, Platform, Text, View } from 'react-native';
 type TabIconProps = {
   color: string;
 };
+
+/** Icon chuông với badge unread count */
+function NotificationBell({ color }: TabIconProps) {
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  return (
+    <View style={{ width: 26, height: 26 }}>
+      <Ionicons name="notifications-outline" size={24} color={color} />
+      {unreadCount > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -3,
+            right: -5,
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: '#EF4444',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 3,
+          }}
+        >
+          <Text
+            style={{
+              color: '#fff',
+              fontSize: 9,
+              fontWeight: '700',
+              lineHeight: 13,
+            }}
+          >
+            {unreadCount > 99 ? '99+' : String(unreadCount)}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 const TAB_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
 const ICON_SIZE = 24;
@@ -142,6 +180,16 @@ export default function TabsLayout() {
         />
 
         <Tabs.Screen
+          name="notifications"
+          options={{
+            title: 'Thông báo',
+            tabBarIcon: ({ color }: TabIconProps) => (
+              <NotificationBell color={color} />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
           name="profile"
           options={{
             title: 'Hồ sơ',
@@ -264,6 +312,16 @@ export default function TabsLayout() {
                 </Text>
               </Animated.View>
             </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Thông báo',
+          tabBarIcon: ({ color }: TabIconProps) => (
+            <NotificationBell color={color} />
           ),
         }}
       />

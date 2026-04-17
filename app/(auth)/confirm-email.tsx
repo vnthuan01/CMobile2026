@@ -12,7 +12,7 @@ export default function ConfirmEmailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const confirmEmailMutation = useConfirmEmail();
-  const params = useLocalSearchParams<{ email?: string; token?: string }>();
+  const params = useLocalSearchParams();
 
   const [status, setStatus] = useState<VerifyStatus>('loading');
   const [message, setMessage] = useState('Đang xác thực email của bạn...');
@@ -51,8 +51,14 @@ export default function ConfirmEmailScreen() {
   }, [params.email, params.token]);
 
   return (
-    <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: colors.background }}>
-      <View className="w-full max-w-[420px] items-center rounded-2xl border p-6" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+    <View
+      className="flex-1 items-center justify-center px-6"
+      style={{ backgroundColor: colors.background }}
+    >
+      <View
+        className="w-full max-w-[420px] items-center rounded-2xl border p-6"
+        style={{ borderColor: colors.border, backgroundColor: colors.card }}
+      >
         {status === 'loading' ? (
           <>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -69,14 +75,23 @@ export default function ConfirmEmailScreen() {
               className={`h-16 w-16 items-center justify-center rounded-full ${
                 status === 'success' ? '' : ''
               }`}
-              style={{ backgroundColor: status === 'success' ? `${colors.status.completed}20` : `${colors.status.error}20` }}
+              style={{
+                backgroundColor:
+                  status === 'success'
+                    ? `${colors.status.completed}20`
+                    : `${colors.status.error}20`,
+              }}
             >
               <Ionicons
                 name={
                   status === 'success' ? 'checkmark-circle' : 'close-circle'
                 }
                 size={40}
-                color={status === 'success' ? colors.status.completed : colors.status.error}
+                color={
+                  status === 'success'
+                    ? colors.status.completed
+                    : colors.status.error
+                }
               />
             </View>
 

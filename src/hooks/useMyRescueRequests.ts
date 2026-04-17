@@ -23,6 +23,6 @@ export function useMyRescueRequests({
     queryKey: rescueRequestKeys.myList(pageNumber, pageSize),
     queryFn: () => fetchMyRescueRequests({ pageNumber, pageSize }),
     enabled,
-    select: (data) => data.data ?? ([] as MyRescueRequestItem[]),
+    select: (data: any) => data.data ?? ([] as MyRescueRequestItem[]),
   });
 }

@@ -14,6 +14,7 @@ import Toast from 'react-native-toast-message';
 import { appToastConfig } from '../src/components/common/AppToast';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { useAuthBootstrap } from '../src/hooks/useAuthBootstrap';
+import { useCentrifugoConnection } from '../src/hooks/useCentrifugoConnection';
 import { queryClient } from '../src/lib/queryClient';
 import type { AuthState } from '../src/store/authStore';
 import { useAuthStore } from '../src/store/authStore';
@@ -24,6 +25,7 @@ function RootLayoutContent() {
   const rootNavigationState = useRootNavigationState();
   const { isDark, colors } = useTheme();
   useAuthBootstrap();
+  useCentrifugoConnection();
 
   const isAuthenticated = useAuthStore(
     (state: AuthState) => state.isAuthenticated,

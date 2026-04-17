@@ -1,13 +1,13 @@
 import type {
-    UpdateUserProfilePayload,
-    UserProfileResponse,
+  UpdateUserProfilePayload,
+  UserProfileResponse,
 } from '../types/user';
 import { extractApiErrorMessage } from '../utils/apiError';
 import api from './api';
 
 export type {
-    UpdateUserProfilePayload,
-    UserProfileResponse
+  UpdateUserProfilePayload,
+  UserProfileResponse
 } from '../types/user';
 
 function normalizeUserProfile(raw: any): UserProfileResponse {

@@ -3,8 +3,7 @@ import { fetchRescueRequestDetail } from '../services/rescueService';
 
 export const rescueDetailKeys = {
   all: ['rescueRequestDetail'] as const,
-  detail: (requestId: string) =>
-    [...rescueDetailKeys.all, requestId] as const,
+  detail: (requestId: string) => [...rescueDetailKeys.all, requestId] as const,
 };
 
 export function useRescueRequestDetail(requestId: string | null) {

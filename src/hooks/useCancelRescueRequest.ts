@@ -17,7 +17,10 @@ export function useCancelRescueRequest() {
   return useMutation({
     mutationFn: ({ requestId, payload }: CancelRescueRequestMutationInput) =>
       cancelRescueRequest(requestId, payload),
-    onSuccess: (_result, variables) => {
+    onSuccess: (
+      _result: unknown,
+      variables: CancelRescueRequestMutationInput,
+    ) => {
       queryClient.invalidateQueries({ queryKey: ['rescueRequests'] });
       queryClient.invalidateQueries({
         queryKey: ['rescueRequestDetail', variables.requestId],
@@ -25,7 +28,7 @@ export function useCancelRescueRequest() {
 
       showSuccessToast('Huỷ yêu cầu thành công', 'Yêu cầu cứu hộ đã được huỷ.');
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       const rawMessage = extractApiErrorMessage(
         error,
         'Không thể huỷ yêu cầu cứu hộ.',

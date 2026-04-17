@@ -1,7 +1,6 @@
-import api from './api';
 import type {
-  RescueBatchItem,
   RescueActiveBatchResponse,
+  RescueBatchItem,
   RescueTeamHistoryResponse,
 } from '../types/team';
 import {
@@ -11,13 +10,14 @@ import {
   toMapCoordinate,
 } from '../utils/geo';
 import { openCallReporter, openExternalNavigation } from '../utils/linking';
+import api from './api';
 
 export type {
-  RescueBatchItem,
   RescueActiveBatchResponse,
-  RescueTeamHistoryRequestItem,
+  RescueBatchItem,
   RescueTeamHistoryBatch,
-  RescueTeamHistoryResponse,
+  RescueTeamHistoryRequestItem,
+  RescueTeamHistoryResponse
 } from '../types/team';
 
 export const rescueTeamService = {

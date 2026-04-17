@@ -14,7 +14,8 @@ export const donationKeys = {
   all: ['donation'] as const,
   fundraisingCampaigns: ['donation', 'fundraising-campaigns'] as const,
   contributions: ['donation', 'fund-contributions'] as const,
-  campaignSummary: (campaignId: string) => ['donation', 'campaign-summary', campaignId] as const,
+  campaignSummary: (campaignId: string) =>
+    ['donation', 'campaign-summary', campaignId] as const,
   status: (donationId: string) => ['donation', 'status', donationId] as const,
 };
 
@@ -42,7 +43,8 @@ export function useCampaignDonationSummary(campaignId?: string) {
 
 export function useCreateDonationCheckout() {
   return useMutation({
-      mutationFn: (payload: DonationCheckoutPayload) => createDonationCheckout(payload),
+    mutationFn: (payload: DonationCheckoutPayload) =>
+      createDonationCheckout(payload),
     onError: (error: any) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể tạo thanh toán',

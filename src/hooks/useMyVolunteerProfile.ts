@@ -16,7 +16,7 @@ export function useMyVolunteerProfile(
     queryFn: () => volunteerService.getMyVolunteerProfile(),
     enabled,
     refetchInterval,
-    select: (result) => ({
+    select: (result: any) => ({
       profile: result.success ? result.data : null,
       errorMessage: result.success ? null : (result.message ?? null),
     }),
@@ -29,6 +29,6 @@ export function useAllSkills(enabled = true) {
     queryFn: () => volunteerService.getAllSkills(),
     enabled,
     staleTime: 1000 * 60 * 10, // skills rarely change: 10 min
-    select: (result) => (result.success ? result.data : []),
+    select: (result: any) => (result.success ? result.data : []),
   });
 }

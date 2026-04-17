@@ -67,10 +67,12 @@ export default function MyVolunteerProfileScreen({
   const skills = skillsQuery.data ?? [];
   const loading = profileQuery.isLoading || skillsQuery.isLoading;
   const backendRoles = citizenProfileQuery.data?.profile?.roles ?? [];
-  const backendHasVolunteerRole = backendRoles.some((role) => {
-    const normalized = String(role).toLowerCase();
-    return normalized === 'volunteer' || normalized === 'leader';
-  });
+  const backendHasVolunteerRole = backendRoles.some(
+    (role: TeamRolePreference) => {
+      const normalized = String(role).toLowerCase();
+      return normalized === 'volunteer' || normalized === 'leader';
+    },
+  );
 
   useFocusEffect(
     useCallback(() => {

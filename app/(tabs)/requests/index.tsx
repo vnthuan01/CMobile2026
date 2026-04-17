@@ -2,16 +2,17 @@ import Header from '@/src/components/header/header';
 import { useTheme } from '@/src/context/ThemeContext';
 import ViewRequestRescueScreen from '@/src/features/rescue/screens/ViewRequestRescueScreen';
 import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
+import type { MyRescueRequestItem } from '@/src/types/rescue';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -59,15 +60,19 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
       'InProgress',
     ];
     if (filter === 'processing') {
-      return requests.filter((r) =>
+      return requests.filter((r: MyRescueRequestItem) =>
         processingStatuses.includes(r.rescueRequestStatus),
       );
     }
     if (filter === 'completed') {
-      return requests.filter((r) => r.rescueRequestStatus === 'Completed');
+      return requests.filter(
+        (r: MyRescueRequestItem) => r.rescueRequestStatus === 'Completed',
+      );
     }
     if (filter === 'cancelled') {
-      return requests.filter((r) => r.rescueRequestStatus === 'Cancelled');
+      return requests.filter(
+        (r: MyRescueRequestItem) => r.rescueRequestStatus === 'Cancelled',
+      );
     }
     return requests;
   }, [filter, requests]);
@@ -208,7 +213,7 @@ export default function RequestsScreen({ onBack }: RequestsScreenProps) {
                     </Text>
                   </View>
                 ) : (
-                  filteredRequests.map((item) => (
+                  filteredRequests.map((item: MyRescueRequestItem) => (
                     <RequestHistoryItem
                       key={item.requestId}
                       id={`#${item.requestId.slice(0, 8)}`}
