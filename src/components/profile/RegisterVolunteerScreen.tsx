@@ -3,52 +3,52 @@ import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
-    useCampaignDetail,
-    useVolunteerRegistrationCampaigns,
+  useCampaignDetail,
+  useVolunteerRegistrationCampaigns,
 } from '@/src/hooks/useDonation';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
-    useCreateVolunteerProfile,
-    useResubmitVolunteerProfile,
-    useVolunteerSkills,
+  useCreateVolunteerProfile,
+  useResubmitVolunteerProfile,
+  useVolunteerSkills,
 } from '@/src/hooks/useVolunteerActions';
 import type { CampaignListItem } from '@/src/services/donationService';
 import {
-    CampaignResourceType,
-    getCampaignDetail,
+  CampaignResourceType,
+  getCampaignDetail,
 } from '@/src/services/donationService';
 import {
-    CreateVolunteerCertificateRequest,
-    CreateVolunteerRequest,
-    ResubmitVolunteerProfileRequest,
-    SkillResponse,
-    TeamRolePreference,
-    VolunteerProfileResponse,
+  CreateVolunteerCertificateRequest,
+  CreateVolunteerRequest,
+  ResubmitVolunteerProfileRequest,
+  SkillResponse,
+  TeamRolePreference,
+  VolunteerProfileResponse,
 } from '@/src/services/volunteerService';
 import { useProfileFlowStore } from '@/src/store/profileFlowStore';
 import {
-    showErrorToast,
-    showSuccessToast,
-    showWarningToast,
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, {
-    DateTimePickerAndroid,
-    DateTimePickerEvent,
+  DateTimePickerAndroid,
+  DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { useQueries } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -446,16 +446,54 @@ export default function RegisterVolunteerScreen({
     setCertificates((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const toDateOnly = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const getTodayDateOnly = () => toDateOnly(new Date());
+
+  const getTomorrowDateOnly = () => {
+    const today = getTodayDateOnly();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    return tomorrow;
+  };
+
+  const getDatePickerBounds = (field: PickingField) => {
+    if (field === 'issuedDate') {
+      return {
+        minimumDate: undefined as Date | undefined,
+        maximumDate: getTodayDateOnly(),
+      };
+    }
+
+    return {
+      minimumDate: getTomorrowDateOnly(),
+      maximumDate: undefined as Date | undefined,
+    };
+  };
+
   const openDateTimePicker = (index: number, field: PickingField) => {
     const current = certificates[index]?.[field];
     const parsed = current ? new Date(current) : new Date();
-    const initialDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+    const baseDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+    const { minimumDate, maximumDate } = getDatePickerBounds(field);
+    let initialDate = toDateOnly(baseDate);
+
+    if (minimumDate && initialDate < minimumDate) {
+      initialDate = minimumDate;
+    }
+
+    if (maximumDate && initialDate > maximumDate) {
+      initialDate = maximumDate;
+    }
 
     if (Platform.OS === 'android') {
       DateTimePickerAndroid.open({
         value: initialDate,
         mode: 'date',
         is24Hour: true,
+        minimumDate,
+        maximumDate,
         onChange: (dateEvent, selectedDate) => {
           if (dateEvent.type === 'dismissed' || !selectedDate) return;
           updateCertificate(index, field, toDateOnlyString(selectedDate));
@@ -1140,7 +1178,7 @@ export default function RegisterVolunteerScreen({
                 <Text className="text-sm font-medium text-text-primary">
                   {cert.expiryDate
                     ? formatDisplayDate(cert.expiryDate)
-                    : 'Chọn ngày hết hạn (optional)'}
+                    : 'Chọn ngày hết hạn'}
                 </Text>
               </TouchableOpacity>
 
@@ -1241,6 +1279,8 @@ export default function RegisterVolunteerScreen({
           value={pickerDate}
           mode="date"
           display="default"
+          minimumDate={getDatePickerBounds(pickingTarget.field).minimumDate}
+          maximumDate={getDatePickerBounds(pickingTarget.field).maximumDate}
           onChange={onDateTimeChange}
         />
       ) : null}
