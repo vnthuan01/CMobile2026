@@ -57,7 +57,6 @@ const DONATION_STATUS_UI: Record<number, { label: string; color: string; icon: k
 };
 
 const Touchable = TouchableOpacity as any;
-const Press = Pressable as any;
 
 export default function DonateScreen({ onBack }: DonateScreenProps) {
   const router = useRouter();
@@ -498,11 +497,18 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
                         </View>
                         <Text className="text-xs" style={{ color: colors.textSecondary }}>Điều khoản & Chính sách</Text>
                     </View>
-                    <Press
+                    <Pressable
                         onPress={() => void handleDonate()}
                         disabled={isCreatingCheckout || isLoadingCampaignSummary || isLoadingFundraisingCampaigns || !campaignSummary?.campaignId}
-                        className="flex h-12 w-full flex-row items-center justify-center gap-2 rounded-lg bg-primary shadow-lg shadow-primary/30 transition-all active:scale-[0.98]"
-                        style={{ opacity: isCreatingCheckout || isLoadingCampaignSummary || isLoadingFundraisingCampaigns || !campaignSummary?.campaignId ? 0.7 : 1 }}
+                        className="flex h-12 w-full flex-row items-center justify-center gap-2 rounded-lg bg-primary"
+                        style={({ pressed }) => ({
+                            opacity: isCreatingCheckout || isLoadingCampaignSummary || isLoadingFundraisingCampaigns || !campaignSummary?.campaignId
+                                ? 0.7
+                                : pressed
+                                    ? 0.92
+                                    : 1,
+                            transform: [{ scale: pressed ? 0.98 : 1 }],
+                        })}
                     >
                         {isCreatingCheckout || isPollingDonationStatus ? (
                             <ActivityIndicator color={colors.white} />
@@ -514,7 +520,7 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
                                 <Ionicons name="heart" size={20} color={colors.white} />
                             </>
                         )}
-                    </Press>
+                    </Pressable>
                 </View>
             </View>
         </View>
