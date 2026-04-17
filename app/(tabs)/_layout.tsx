@@ -156,6 +156,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="home/volunteer" options={{ href: null }} />
         <Tabs.Screen name="create-request" options={{ href: null }} />
         <Tabs.Screen name="requests" options={{ href: null }} />
+        <Tabs.Screen name="notifications/index" options={{ href: null }} />
       </Tabs>
     );
   }
@@ -283,6 +284,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="home/volunteer" options={{ href: null }} />
       <Tabs.Screen name="tasks" options={{ href: null }} />
       <Tabs.Screen name="requests" options={{ href: null }} />
+      <Tabs.Screen name="notifications/index" options={{ href: null }} />
     </Tabs>
   );
 }

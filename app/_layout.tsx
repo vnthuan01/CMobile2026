@@ -1,10 +1,6 @@
 import '@/global.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
-    configureReanimatedLogger,
-    ReanimatedLogLevel,
-} from 'react-native-reanimated';
-import {
     Slot,
     useRootNavigationState,
     useRouter,
@@ -13,11 +9,16 @@ import {
 import { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+    configureReanimatedLogger,
+    ReanimatedLogLevel,
+} from 'react-native-reanimated';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { appToastConfig } from '../src/components/common/AppToast';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { useAuthBootstrap } from '../src/hooks/useAuthBootstrap';
+import { useNotificationRealtime } from '../src/hooks/useNotificationRealtime';
 import { queryClient } from '../src/lib/queryClient';
 import type { AuthState } from '../src/store/authStore';
 import { useAuthStore } from '../src/store/authStore';
@@ -33,6 +34,7 @@ function RootLayoutContent() {
   const rootNavigationState = useRootNavigationState();
   const { isDark, colors } = useTheme();
   useAuthBootstrap();
+  useNotificationRealtime();
 
   const isAuthenticated = useAuthStore(
     (state: AuthState) => state.isAuthenticated,

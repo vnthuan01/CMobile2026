@@ -6,12 +6,14 @@ import VolunteerHomeContent from '@/src/features/volunteer/containers/VolunteerH
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
 import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
 import { useAuthStore } from '@/src/store/authStore';
+import { useNotificationStore } from '@/src/store/notificationStore';
 import {
     getTimeGreeting,
     resolveAvatarUrl,
     resolveDisplayName,
 } from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -25,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function IndexScreen() {
+  const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const user = useAuthStore((s) => s.user);
@@ -32,6 +35,7 @@ export default function IndexScreen() {
   const isVolunteer = role === 'volunteer' || role === 'leader';
   const profileQuery = useCitizenProfile(Boolean(user));
   const profile = profileQuery.data?.profile ?? null;
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   const { colors, isDark } = useTheme();
   const iconWrapperBg = isDark ? colors.border : colors.surface;
@@ -125,6 +129,7 @@ export default function IndexScreen() {
 
             {/* Icon */}
             <TouchableOpacity
+              onPress={() => router.push('/notifications')}
               className="h-10 w-10 items-center justify-center rounded-full"
               style={{ backgroundColor: iconWrapperBg }}
             >
@@ -133,6 +138,13 @@ export default function IndexScreen() {
                 size={22}
                 color={colors.text}
               />
+
+              {unreadCount > 0 ? (
+                <View
+                  className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: colors.status.error }}
+                />
+              ) : null}
             </TouchableOpacity>
           </View>
         </View>
