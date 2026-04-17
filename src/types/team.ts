@@ -74,6 +74,8 @@ export interface RescueBatchItem {
   rescueRequestId: string;
   disasterType: string;
   rescueRequestType: 'Normal' | 'Emergency' | string;
+  priorityPoint?: number | null;
+  priorityLevel?: number | string | null;
   rescueRequestStatus: string;
   description: string;
   address: string;
@@ -106,6 +108,10 @@ export interface RescueTeamHistoryRequestItem {
   requestId: string;
   address: string;
   disasterType: string;
+  rescueRequestType?: string | number | null;
+  priority?: number | null;
+  priorityPoint?: number | null;
+  priorityLevel?: string | number | null;
   rescueRequestStatus: string;
   reporterFullName: string;
   reporterPhone: string;
