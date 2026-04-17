@@ -1,14 +1,15 @@
 import '@/global.css';
 import UpdateTaskStatusScreen from '@/src/components/volunteer/UpdateTaskStatusScreen';
 import ViewTasksScreen from '@/src/components/volunteer/ViewTasksScreen';
+import type { ThemeColors } from '@/src/constants/theme';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useAuthStore } from '@/src/store/authStore';
+import { useNotificationStore } from '@/src/store/notificationStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { ThemeColors } from '@/src/constants/theme';
 
 type VolunteerScreen = 'home' | 'tasks' | 'update';
 
@@ -17,6 +18,7 @@ export default function VolunteerHome() {
   const { top, bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
   const [currentScreen, setCurrentScreen] = useState<VolunteerScreen>('home');
 
   if (currentScreen === 'tasks') {
@@ -31,10 +33,17 @@ export default function VolunteerHome() {
     <ScrollView
       style={{ paddingTop: top, paddingBottom: bottom + 96 }}
       className=""
-      contentContainerStyle={{ paddingTop: top, paddingBottom: bottom + 96, backgroundColor: colors.background }}
+      contentContainerStyle={{
+        paddingTop: top,
+        paddingBottom: bottom + 96,
+        backgroundColor: colors.background,
+      }}
     >
       {/* HEADER */}
-      <View className="flex-row items-center justify-between px-4 py-3 shadow-sm" style={{ backgroundColor: colors.card }}>
+      <View
+        className="flex-row items-center justify-between px-4 py-3 shadow-sm"
+        style={{ backgroundColor: colors.card }}
+      >
         <View className="flex-row items-center gap-3">
           <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
             <Ionicons name="person" size={20} color={colors.primary} />
@@ -49,7 +58,23 @@ export default function VolunteerHome() {
           </View>
         </View>
 
-        <Ionicons name="notifications-outline" size={22} color={colors.text} />
+        <TouchableOpacity
+          onPress={() => router.push('/notifications')}
+          className="h-10 w-10 items-center justify-center rounded-full"
+          style={{ backgroundColor: colors.surface }}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={22}
+            color={colors.text}
+          />
+          {unreadCount > 0 ? (
+            <View
+              className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: colors.status.error }}
+            />
+          ) : null}
+        </TouchableOpacity>
       </View>
 
       {/* STATUS */}
@@ -62,10 +87,18 @@ export default function VolunteerHome() {
 
       {/* CURRENT MISSION */}
       <View className="mt-6 px-4">
-        <Text className="mb-2 text-xl font-bold" style={{ color: colors.text }}>Nhiệm vụ hiện tại</Text>
+        <Text className="mb-2 text-xl font-bold" style={{ color: colors.text }}>
+          Nhiệm vụ hiện tại
+        </Text>
 
-        <View className="overflow-hidden rounded-xl shadow-sm" style={{ backgroundColor: colors.card }}>
-          <View className="h-40 items-center justify-center" style={{ backgroundColor: colors.surface }}>
+        <View
+          className="overflow-hidden rounded-xl shadow-sm"
+          style={{ backgroundColor: colors.card }}
+        >
+          <View
+            className="h-40 items-center justify-center"
+            style={{ backgroundColor: colors.surface }}
+          >
             <Ionicons name="map" size={32} color={colors.textSecondary} />
           </View>
 
@@ -90,10 +123,16 @@ export default function VolunteerHome() {
 
       {/* QUICK ACTIONS */}
       <View className="mt-6 px-4">
-        <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>Thao tác nhanh</Text>
+        <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>
+          Thao tác nhanh
+        </Text>
 
         <View className="flex-row flex-wrap gap-3">
-          <QuickAction icon="alert-circle" label="Báo cáo sự cố" colors={colors} />
+          <QuickAction
+            icon="alert-circle"
+            label="Báo cáo sự cố"
+            colors={colors}
+          />
           <QuickAction icon="call" label="Gọi chỉ huy" colors={colors} />
           <QuickAction icon="map" label="Bản đồ" colors={colors} />
           <QuickAction
@@ -114,13 +153,24 @@ export default function VolunteerHome() {
   );
 }
 
-function StatusButton({ label, active, colors }: { label: string; active?: boolean; colors: any }) {
+function StatusButton({
+  label,
+  active,
+  colors,
+}: {
+  label: string;
+  active?: boolean;
+  colors: any;
+}) {
   return (
     <View
       className="h-10 flex-1 items-center justify-center rounded-lg"
       style={{ backgroundColor: active ? colors.card : 'transparent' }}
     >
-      <Text className={active ? 'font-bold' : ''} style={{ color: active ? colors.primary : colors.textSecondary }}>
+      <Text
+        className={active ? 'font-bold' : ''}
+        style={{ color: active ? colors.primary : colors.textSecondary }}
+      >
         {label}
       </Text>
     </View>
@@ -145,7 +195,9 @@ function QuickAction({
       style={{ backgroundColor: colors.card }}
     >
       <Ionicons name={icon} size={24} color={colors.primary} />
-      <Text className="text-sm font-semibold" style={{ color: colors.text }}>{label}</Text>
+      <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
