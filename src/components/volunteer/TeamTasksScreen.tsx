@@ -103,7 +103,6 @@ export default function TeamTasksScreen({
     submitProgressUpdate,
     submitCompleteMission,
     heartbeatStatusLabel,
-    debugTrackingLines,
   } = useTeamTasksController();
 
   const filteredItemsWithPriority = filteredItems as RescueBatchItem[];
@@ -448,38 +447,40 @@ export default function TeamTasksScreen({
         <ScreenHeader
           title="Dẫn đường"
           onBack={() => setScreen('list')}
-          rightAction={
-            selectedMission ? (
-              <View className="items-end">
-                {heartbeatStatusLabel ? (
-                  <View
-                    className="mb-1 rounded-full px-3 py-1"
-                    style={{
-                      backgroundColor: lastHeartbeatError
-                        ? `${colors.error}22`
-                        : isSyncingEta
-                          ? `${colors.info}22`
-                          : `${colors.success}22`,
-                    }}
-                  >
-                    <Text
-                      className="text-[10px] font-semibold"
-                      style={{
-                        color: lastHeartbeatError
-                          ? colors.error
-                          : isSyncingEta
-                            ? colors.info
-                            : colors.success,
-                      }}
-                    >
-                      {heartbeatStatusLabel}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : undefined
-          }
+          showBottomBorder={false}
+          showShadow={false}
         />
+
+        {selectedMission && heartbeatStatusLabel ? (
+          <View className="items-end px-4 pb-2">
+            <View
+              className="self-end rounded-full px-3 py-1"
+              style={{
+                minWidth: 140,
+                maxWidth: 320,
+                backgroundColor: lastHeartbeatError
+                  ? `${colors.error}22`
+                  : isSyncingEta
+                    ? `${colors.info}22`
+                    : `${colors.success}22`,
+              }}
+            >
+              <Text
+                className="text-xs font-semibold"
+                numberOfLines={1}
+                style={{
+                  color: lastHeartbeatError
+                    ? colors.error
+                    : isSyncingEta
+                      ? colors.info
+                      : colors.success,
+                }}
+              >
+                {heartbeatStatusLabel}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         {mapStyle ? (
           <View className="flex-1">
@@ -502,7 +503,11 @@ export default function TeamTasksScreen({
             )}
 
             {selectedMission ? (
-              <AppBottomSheet open snapPoints={['50%', '82%']}>
+              <AppBottomSheet
+                open
+                snapPoints={['52%', '76%']}
+                allowCloseByPanDown={false}
+              >
                 <Text
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
@@ -586,21 +591,6 @@ export default function TeamTasksScreen({
                 {isLeader && isCurrentMissionSelected
                   ? renderLeaderMissionActions(selectedMission)
                   : null}
-
-                <View
-                  className="mt-4 rounded-2xl p-3"
-                  style={{ backgroundColor: colors.text }}
-                >
-                  {debugTrackingLines.map((line) => (
-                    <Text
-                      key={line}
-                      className="text-[11px] leading-5"
-                      style={{ color: colors.background }}
-                    >
-                      {line}
-                    </Text>
-                  ))}
-                </View>
               </AppBottomSheet>
             ) : null}
           </View>
@@ -982,7 +972,9 @@ export default function TeamTasksScreen({
               </View>
             ) : null}
 
-            {historyBatchesWithPriority.length > 0 ? (
+            {historyBatchesWithPriority.length > 0 &&
+            filter !== 'in-progress' &&
+            filter !== 'pending' ? (
               <View className={displayBatch ? 'mt-6 gap-5' : 'mt-4 gap-5'}>
                 <Text
                   className="text-base font-bold"
@@ -1100,13 +1092,6 @@ export default function TeamTasksScreen({
                               >
                                 Địa chỉ: {item.address || 'Chưa có địa chỉ'}
                               </Text>
-                              <Text
-                                className="mt-2 text-sm font-medium"
-                                style={{ color: colors.text }}
-                              >
-                                Khoảng cách: {formatDistanceKm(item.distanceKm)}{' '}
-                                km • {formatMinutes(item.estimatedMinutes)} phút
-                              </Text>
 
                               <View className="mt-2 gap-1.5">
                                 <Text
@@ -1218,14 +1203,14 @@ function StepGroup({
   const steps = [
     {
       status: 2 as const,
-      short: 'Đi',
-      label: 'Đang di chuyển',
+      short: 'Đang di chuyển',
+      label: '',
       icon: 'navigate-outline' as const,
     },
     {
       status: 3 as const,
-      short: 'Làm',
-      label: 'Đang cứu hộ',
+      short: 'Đang cứu hộ',
+      label: '',
       icon: 'medkit-outline' as const,
     },
   ];
