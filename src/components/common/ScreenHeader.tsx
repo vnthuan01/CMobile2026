@@ -11,6 +11,8 @@ interface ScreenHeaderProps {
   rightAction?: React.ReactNode;
   backgroundColor?: string;
   titleColor?: string;
+  showBottomBorder?: boolean;
+  showShadow?: boolean;
   // Legacy aliases for backward compatibility with Header
   center?: boolean;
   rightComponent?: React.ReactNode;
@@ -23,6 +25,8 @@ export default function ScreenHeader({
   rightAction,
   backgroundColor,
   titleColor,
+  showBottomBorder = true,
+  showShadow = true,
   center: _center,
   rightComponent,
 }: ScreenHeaderProps) {
@@ -42,11 +46,12 @@ export default function ScreenHeader({
           paddingBottom: 10,
           paddingHorizontal: 16,
           backgroundColor: bgColor,
-          borderBottomColor: colors.border,
+          borderBottomColor: showBottomBorder ? colors.border : 'transparent',
+          borderBottomWidth: showBottomBorder ? 1 : 0,
         },
-        !isDark && styles.shadow,
+        !isDark && showShadow && styles.shadow,
       ]}
-      className="border-b"
+      className={showBottomBorder ? 'border-b' : ''}
     >
       <View className="flex-row items-center">
         {onBack ? (

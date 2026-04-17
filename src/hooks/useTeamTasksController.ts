@@ -199,6 +199,14 @@ export function useTeamTasksController() {
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(
     null,
   );
+  const sendHeartbeatAsyncRef = useRef(sendHeartbeatMutation.mutateAsync);
+  const userLocationRef = useRef<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number | null;
+    speedKph?: number | null;
+    headingDegree?: number | null;
+  } | null>(null);
   const heartbeatInFlightRef = useRef(false);
   const actionSubmittingRef = useRef(false);
 
@@ -221,6 +229,7 @@ export function useTeamTasksController() {
           teamResult.message || 'Không xác định được team hiện tại.',
         );
         setBatch(null);
+        setCachedBatch(null);
         return;
       }
 
@@ -232,6 +241,7 @@ export function useTeamTasksController() {
           batchResult.message || 'Không tải được dữ liệu nhiệm vụ.',
         );
         setBatch(null);
+        setCachedBatch(null);
         return;
       }
 
@@ -283,6 +293,7 @@ export function useTeamTasksController() {
         });
 
         setBatch(null);
+        setCachedBatch(null);
         setMissionDescriptionMap(historyDescriptionMap);
         setCurrentMission(null);
         setSelectedMission(mappedHistoryBatches[0]?.items?.[0] || null);
@@ -457,8 +468,17 @@ export function useTeamTasksController() {
   }, []);
 
   useEffect(() => {
+    sendHeartbeatAsyncRef.current = sendHeartbeatMutation.mutateAsync;
+  }, [sendHeartbeatMutation.mutateAsync]);
+
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
+
+  useEffect(() => {
     const sendHeartbeat = async () => {
-      if (!teamId || !userLocation || !batch?.rescueBatchId) return;
+      const latestLocation = userLocationRef.current;
+      if (!teamId || !latestLocation || !batch?.rescueBatchId) return;
       if (heartbeatInFlightRef.current) return;
       if (actionSubmittingRef.current) return;
 
@@ -466,11 +486,11 @@ export function useTeamTasksController() {
       setIsSyncingEta(true);
       try {
         const payload: TeamTrackingHeartbeatRequest = {
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          accuracyMeters: userLocation.accuracy ?? null,
-          speedKph: userLocation.speedKph ?? null,
-          headingDegree: userLocation.headingDegree ?? null,
+          latitude: latestLocation.latitude,
+          longitude: latestLocation.longitude,
+          accuracyMeters: latestLocation.accuracy ?? null,
+          speedKph: latestLocation.speedKph ?? null,
+          headingDegree: latestLocation.headingDegree ?? null,
           source: 0,
           capturedAtUtc: new Date().toISOString(),
           rescueBatchId: batch.rescueBatchId,
@@ -478,7 +498,7 @@ export function useTeamTasksController() {
           note: 'Cập nhật vị trí từ ứng dụng di động',
         };
 
-        const heartbeat = await sendHeartbeatMutation.mutateAsync({
+        const heartbeat = await sendHeartbeatAsyncRef.current({
           teamId,
           payload,
         });
@@ -498,6 +518,7 @@ export function useTeamTasksController() {
         if (!refreshedBatch.success) return;
         if (!refreshedBatch.data) {
           setBatch(null);
+          setCachedBatch(null);
           setCurrentMission(null);
           setSelectedMission(null);
           return;
@@ -529,7 +550,7 @@ export function useTeamTasksController() {
       }
     };
 
-    if (!teamId || !userLocation || !batch?.rescueBatchId || actionSubmitting) {
+    if (!teamId || !batch?.rescueBatchId || actionSubmitting) {
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
         heartbeatIntervalRef.current = null;
@@ -557,13 +578,7 @@ export function useTeamTasksController() {
         heartbeatIntervalRef.current = null;
       }
     };
-  }, [
-    actionSubmitting,
-    batch?.rescueBatchId,
-    sendHeartbeatMutation,
-    teamId,
-    userLocation,
-  ]);
+  }, [actionSubmitting, batch?.rescueBatchId, teamId]);
 
   useEffect(() => {
     const loadRoute = async () => {
@@ -902,6 +917,8 @@ export function useTeamTasksController() {
           'Hoàn thành nhiệm vụ',
           'Đã xác nhận hoàn thành nhiệm vụ thành công.',
         );
+        setFilter('all');
+        setScreen('list');
         setSelectedMission(null);
         resetLeaderForms();
         await loadData(true);
@@ -929,17 +946,24 @@ export function useTeamTasksController() {
   const heartbeatStatusLabel = useMemo(() => {
     if (isSyncingEta) return 'Đang tự động cập nhật...';
     if (lastHeartbeatError) return `Lỗi đồng bộ vị trí: ${lastHeartbeatError}`;
-    if (!lastHeartbeatAt) return null;
+    const latestSuccessAt = lastHeartbeatSuccessAt || lastHeartbeatAt;
+    if (!latestSuccessAt) return null;
 
-    const date = new Date(lastHeartbeatAt);
+    const date = new Date(latestSuccessAt);
     if (Number.isNaN(date.getTime())) return null;
 
-    return `Đã đồng bộ vị trí lúc ${date.toLocaleTimeString('vi-VN', {
+    return `Đã cập nhật vào lúc ${date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
+      hour12: false,
     })}`;
-  }, [isSyncingEta, lastHeartbeatAt, lastHeartbeatError]);
+  }, [
+    isSyncingEta,
+    lastHeartbeatAt,
+    lastHeartbeatError,
+    lastHeartbeatSuccessAt,
+  ]);
 
   const debugTrackingLines = useMemo(
     () => [

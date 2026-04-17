@@ -447,41 +447,40 @@ export default function TeamTasksScreen({
         <ScreenHeader
           title="Dẫn đường"
           onBack={() => setScreen('list')}
-          rightAction={
-            selectedMission ? (
-              <View className="items-end">
-                {heartbeatStatusLabel ? (
-                  <View
-                    className="mb-1 rounded-full px-3 py-1"
-                    style={{
-                      minWidth: 140,
-                      maxWidth: 220,
-                      backgroundColor: lastHeartbeatError
-                        ? `${colors.error}22`
-                        : isSyncingEta
-                          ? `${colors.info}22`
-                          : `${colors.success}22`,
-                    }}
-                  >
-                    <Text
-                      className="text-xs font-semibold"
-                      numberOfLines={1}
-                      style={{
-                        color: lastHeartbeatError
-                          ? colors.error
-                          : isSyncingEta
-                            ? colors.info
-                            : colors.success,
-                      }}
-                    >
-                      {heartbeatStatusLabel}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : undefined
-          }
+          showBottomBorder={false}
+          showShadow={false}
         />
+
+        {selectedMission && heartbeatStatusLabel ? (
+          <View className="items-end px-4 pb-2">
+            <View
+              className="self-end rounded-full px-3 py-1"
+              style={{
+                minWidth: 140,
+                maxWidth: 320,
+                backgroundColor: lastHeartbeatError
+                  ? `${colors.error}22`
+                  : isSyncingEta
+                    ? `${colors.info}22`
+                    : `${colors.success}22`,
+              }}
+            >
+              <Text
+                className="text-xs font-semibold"
+                numberOfLines={1}
+                style={{
+                  color: lastHeartbeatError
+                    ? colors.error
+                    : isSyncingEta
+                      ? colors.info
+                      : colors.success,
+                }}
+              >
+                {heartbeatStatusLabel}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         {mapStyle ? (
           <View className="flex-1">
@@ -973,7 +972,9 @@ export default function TeamTasksScreen({
               </View>
             ) : null}
 
-            {historyBatchesWithPriority.length > 0 ? (
+            {historyBatchesWithPriority.length > 0 &&
+            filter !== 'in-progress' &&
+            filter !== 'pending' ? (
               <View className={displayBatch ? 'mt-6 gap-5' : 'mt-4 gap-5'}>
                 <Text
                   className="text-base font-bold"
