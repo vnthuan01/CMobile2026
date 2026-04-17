@@ -1,25 +1,26 @@
 import { useSendTeamTrackingHeartbeat } from '@/src/hooks/useTeamTracking';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
-    completeRescueOperation,
-    fetchRescueRequestDetail,
-    updateRescueOperationStatus,
+  completeRescueOperation,
+  fetchRescueRequestDetail,
+  updateRescueOperationStatus,
 } from '@/src/services/rescueService';
 import {
-    RescueActiveBatchResponse,
-    RescueBatchItem,
-    rescueTeamService,
+  RescueActiveBatchResponse,
+  RescueBatchItem,
+  RescueTeamHistoryBatch,
+  rescueTeamService,
 } from '@/src/services/rescueTeamService';
 import {
-    TeamDetailResponse,
-    TeamTrackingHeartbeatRequest,
-    teamService,
+  TeamDetailResponse,
+  TeamTrackingHeartbeatRequest,
+  teamService,
 } from '@/src/services/teamService';
 import { useAuthStore } from '@/src/store/authStore';
 import {
-    showErrorToast,
-    showSuccessToast,
-    showWarningToast,
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
 } from '@/src/utils/toast';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -79,6 +80,59 @@ const normalizePriorityLevel = (
   return null;
 };
 
+const mapHistoryBatches = (
+  historyData: RescueTeamHistoryBatch[] | undefined,
+  teamId: string,
+): RescueActiveBatchResponse[] => {
+  return (historyData || []).map((historyBatch) => ({
+    rescueBatchId: historyBatch.rescueBatchId,
+    teamId,
+    isActive: false,
+    status: 'Closed',
+    routePolyline: null,
+    totalDistanceKm: null,
+    estimatedMinutes: null,
+    createdAt: historyBatch.createdAt,
+    closedAt: historyBatch.closedAt,
+    items: (historyBatch.requests || [])
+      .map(
+        (
+          request: RescueTeamHistoryBatch['requests'][number],
+        ): RescueBatchItem => ({
+          rescueBatchItemId: `${historyBatch.rescueBatchId}-${request.requestId}`,
+          rescueRequestId: request.requestId,
+          disasterType: request.disasterType,
+          rescueRequestType: normalizeRescueRequestType(
+            request.rescueRequestType,
+          ),
+          priorityPoint: request.priorityPoint ?? request.priority ?? null,
+          priorityLevel: normalizePriorityLevel(request.priorityLevel),
+          rescueRequestStatus: request.rescueRequestStatus,
+          description:
+            request.description ||
+            request.note ||
+            request.address ||
+            'Nhiệm vụ cứu hộ',
+          address: request.address,
+          latitude: null,
+          longitude: null,
+          reporterFullName: request.reporterFullName,
+          reporterPhone: request.reporterPhone,
+          sequenceOrder: request.sequenceOrder,
+          isAutoAssigned: false,
+          distanceKm: null,
+          estimatedMinutes: null,
+          status: request.batchItemStatus,
+          createdAt: request.createdAt,
+        }),
+      )
+      .sort(
+        (a: RescueBatchItem, b: RescueBatchItem) =>
+          a.sequenceOrder - b.sequenceOrder,
+      ),
+  }));
+};
+
 export function useTeamTasksController() {
   const user = useAuthStore((s) => s.user);
   const sendHeartbeatMutation = useSendTeamTrackingHeartbeat();
@@ -135,6 +189,9 @@ export function useTeamTasksController() {
     speedKph?: number | null;
     headingDegree?: number | null;
   } | null>(null);
+  const [missionDescriptionMap, setMissionDescriptionMap] = useState<
+    Record<string, string>
+  >({});
 
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
@@ -178,55 +235,55 @@ export function useTeamTasksController() {
         return;
       }
 
-      if (!batchResult.data) {
-        const historyResult =
-          await rescueTeamService.getHistoryByTeam(nextTeamId);
-        const mappedHistoryBatches: RescueActiveBatchResponse[] = (
-          historyResult.data?.data || []
-        ).map((historyBatch) => ({
-          rescueBatchId: historyBatch.rescueBatchId,
-          teamId: nextTeamId,
-          isActive: false,
-          status: 'Closed',
-          routePolyline: null,
-          totalDistanceKm: null,
-          estimatedMinutes: null,
-          createdAt: historyBatch.createdAt,
-          closedAt: historyBatch.closedAt,
-          items: (historyBatch.requests || [])
-            .map(
-              (request): RescueBatchItem => ({
-                rescueBatchItemId: `${historyBatch.rescueBatchId}-${request.requestId}`,
-                rescueRequestId: request.requestId,
-                disasterType: request.disasterType,
-                rescueRequestType: normalizeRescueRequestType(
-                  request.rescueRequestType,
-                ),
-                priorityPoint:
-                  request.priorityPoint ?? request.priority ?? null,
-                priorityLevel: normalizePriorityLevel(request.priorityLevel),
-                rescueRequestStatus: request.rescueRequestStatus,
-                description: request.address || 'Nhiệm vụ cứu hộ',
-                address: request.address,
-                latitude: null,
-                longitude: null,
-                reporterFullName: request.reporterFullName,
-                reporterPhone: request.reporterPhone,
-                sequenceOrder: request.sequenceOrder,
-                isAutoAssigned: false,
-                distanceKm: null,
-                estimatedMinutes: null,
-                status: request.batchItemStatus,
-                createdAt: request.createdAt,
-              }),
-            )
-            .sort((a, b) => a.sequenceOrder - b.sequenceOrder),
-        }));
+      const historyResult =
+        await rescueTeamService.getHistoryByTeam(nextTeamId);
+      const mappedHistoryBatches = mapHistoryBatches(
+        historyResult.data?.data,
+        nextTeamId,
+      );
+      const historyRequestIds = Array.from(
+        new Set(
+          mappedHistoryBatches
+            .flatMap((batchItem) => batchItem.items)
+            .map((item) => item.rescueRequestId)
+            .filter((id): id is string => !!id),
+        ),
+      );
 
-        setTeamId(nextTeamId);
-        setTeamName(nextTeamName || null);
+      setTeamId(nextTeamId);
+      setTeamName(nextTeamName || null);
+      setHistoryBatches(mappedHistoryBatches);
+
+      if (!batchResult.data) {
+        const historyDescriptionMap = mappedHistoryBatches
+          .flatMap((batchItem) => batchItem.items)
+          .reduce<Record<string, string>>((acc, item) => {
+            const message = String(item.description ?? '').trim();
+            if (message) {
+              acc[item.rescueRequestId] = message;
+            }
+            return acc;
+          }, {});
+
+        const detailResults = await Promise.allSettled(
+          historyRequestIds.map((requestId) =>
+            fetchRescueRequestDetail(requestId),
+          ),
+        );
+
+        detailResults.forEach((result, index) => {
+          if (result.status !== 'fulfilled') return;
+          const requestId = historyRequestIds[index];
+          const detailDescription = String(
+            result.value?.description ?? '',
+          ).trim();
+          if (detailDescription) {
+            historyDescriptionMap[requestId] = detailDescription;
+          }
+        });
+
         setBatch(null);
-        setHistoryBatches(mappedHistoryBatches);
+        setMissionDescriptionMap(historyDescriptionMap);
         setCurrentMission(null);
         setSelectedMission(mappedHistoryBatches[0]?.items?.[0] || null);
         return;
@@ -237,11 +294,54 @@ export function useTeamTasksController() {
         nextBatch.items,
       );
 
-      setTeamId(nextTeamId);
-      setTeamName(nextTeamName || null);
+      const nextDescriptionMap = nextBatch.items.reduce<Record<string, string>>(
+        (acc, item) => {
+          const message = String(item.description ?? '').trim();
+          if (message) {
+            acc[item.rescueRequestId] = message;
+          }
+          return acc;
+        },
+        {},
+      );
+
+      mappedHistoryBatches
+        .flatMap((batchItem) => batchItem.items)
+        .forEach((item) => {
+          const message = String(item.description ?? '').trim();
+          if (message) {
+            nextDescriptionMap[item.rescueRequestId] = message;
+          }
+        });
+
+      const requestIds = Array.from(
+        new Set(
+          [
+            ...nextBatch.items.map((item) => item.rescueRequestId),
+            ...historyRequestIds,
+          ].filter((id): id is string => !!id),
+        ),
+      );
+
+      const detailResults = await Promise.allSettled(
+        requestIds.map((requestId) => fetchRescueRequestDetail(requestId)),
+      );
+
+      detailResults.forEach((result, index) => {
+        if (result.status !== 'fulfilled') return;
+        const requestId = requestIds[index];
+        const detailDescription = String(
+          result.value?.description ?? '',
+        ).trim();
+        if (detailDescription) {
+          nextDescriptionMap[requestId] = detailDescription;
+        }
+      });
+
+      setMissionDescriptionMap(nextDescriptionMap);
+
       setBatch(nextBatch);
       setCachedBatch(nextBatch);
-      setHistoryBatches([]);
       setCurrentMission(nextCurrentMission);
       if (nextCurrentMission?.rescueRequestId) {
         try {
@@ -529,7 +629,8 @@ export function useTeamTasksController() {
       displayBatch?.items?.filter(
         (item: RescueBatchItem) => item.rescueRequestType === 'Emergency',
       ).length || 0;
-    return { total, emergencyCount };
+    const normalCount = Math.max(total - emergencyCount, 0);
+    return { total, emergencyCount, normalCount };
   }, [displayBatch?.items]);
 
   const mapStyle = rescueTeamService.getMapStyleUrl();
@@ -540,6 +641,25 @@ export function useTeamTasksController() {
       return operationStatusMap[item.rescueRequestId] || item.status || null;
     },
     [operationStatusMap],
+  );
+
+  const getMissionMessage = useCallback(
+    (item?: RescueBatchItem | null) => {
+      if (!item) return 'Nhiệm vụ cứu hộ';
+
+      const detailDescription = missionDescriptionMap[item.rescueRequestId];
+      if (detailDescription?.trim()) {
+        return detailDescription;
+      }
+
+      const fallbackDescription = String(item.description ?? '').trim();
+      if (fallbackDescription) {
+        return fallbackDescription;
+      }
+
+      return 'Nhiệm vụ cứu hộ';
+    },
+    [missionDescriptionMap],
   );
 
   const openMapScreen = (item?: RescueBatchItem | null) => {
@@ -808,7 +928,7 @@ export function useTeamTasksController() {
   );
 
   const heartbeatStatusLabel = useMemo(() => {
-    if (isSyncingEta) return 'Đang cập nhật ETA...';
+    if (isSyncingEta) return 'Đang tự động cập nhật...';
     if (lastHeartbeatError) return `Lỗi đồng bộ vị trí: ${lastHeartbeatError}`;
     if (!lastHeartbeatAt) return null;
 
@@ -908,6 +1028,7 @@ export function useTeamTasksController() {
     summary,
     mapStyle,
     getMissionDisplayStatus,
+    getMissionMessage,
     openMapScreen,
     resetLeaderForms,
     getEffectiveMissionState,

@@ -107,6 +107,8 @@ export interface RescueActiveBatchResponse {
 export interface RescueTeamHistoryRequestItem {
   requestId: string;
   address: string;
+  description?: string | null;
+  note?: string | null;
   disasterType: string;
   rescueRequestType?: string | number | null;
   priority?: number | null;

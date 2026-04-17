@@ -489,11 +489,11 @@ export default function VolunteerHomeContent() {
                 ) : (
                   <Card colors={colors.border} bg={colors.card}>
                     <View className="items-center py-4">
-                      <Ionicons
+                      {/* <Ionicons
                         name="checkmark-done-circle-outline"
                         size={36}
                         color={colors.primary}
-                      />
+                      /> */}
                       <Text
                         className="mt-3 text-base font-bold"
                         style={{ color: colors.text }}
@@ -607,7 +607,13 @@ export default function VolunteerHomeContent() {
                   <QuickAction
                     icon="map"
                     label="Bản đồ điều phối"
-                    onPress={() => router.push('/tasks')}
+                    onPress={() =>
+                      router.push(
+                        currentMission
+                          ? { pathname: '/tasks', params: { openMap: '1' } }
+                          : '/tasks',
+                      )
+                    }
                   />
                   <QuickAction
                     icon="heart"
