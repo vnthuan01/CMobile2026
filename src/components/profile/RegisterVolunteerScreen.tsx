@@ -344,10 +344,10 @@ export default function RegisterVolunteerScreen({
     setSkills(
       Array.isArray(skillsQuery.data?.skills) ? skillsQuery.data.skills : [],
     );
-    if (skillsQuery.data?.errorMessage) {
-      showErrorToast('Không thể tải kỹ năng', skillsQuery.data.errorMessage);
+    if (skillsQuery.error) {
+      showErrorToast('Không thể tải kỹ năng', skillsQuery.error.message);
     }
-  }, [skillsQuery.data?.errorMessage, skillsQuery.data?.skills]);
+  }, [skillsQuery.data?.skills, skillsQuery.error]);
 
   useEffect(() => {
     if (!initialProfile) return;

@@ -1,4 +1,5 @@
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
 import {
   useAllSkills,
@@ -12,8 +13,9 @@ import {
   resolveAvatarUrl,
   resolveDisplayName,
 } from '@/src/utils/userPresentation';
+import { showErrorToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
@@ -44,7 +46,8 @@ export default function VolunteerProfile({
   onLogout,
   onNavigate,
 }: VolunteerProfileProps) {
-  const { top, bottom } = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const profileQuery = useCitizenProfile(Boolean(user));
@@ -90,6 +93,27 @@ export default function VolunteerProfile({
   const volunteerCertificates: VolunteerProfileResponse['certificates'] =
     volunteerProfile?.certificates ?? [];
 
+  useEffect(() => {
+    if (profileQuery.error) {
+      showErrorToast('Không tải được hồ sơ', profileQuery.error.message);
+    }
+  }, [profileQuery.error]);
+
+  useEffect(() => {
+    if (volunteerProfileQuery.error) {
+      showErrorToast(
+        'Không tải được hồ sơ tình nguyện viên',
+        volunteerProfileQuery.error.message,
+      );
+    }
+  }, [volunteerProfileQuery.error]);
+
+  useEffect(() => {
+    if (allSkillsQuery.error) {
+      showErrorToast('Không tải được kỹ năng', allSkillsQuery.error.message);
+    }
+  }, [allSkillsQuery.error]);
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       {/* Header Section */}
@@ -105,7 +129,7 @@ export default function VolunteerProfile({
             {onBack && (
               <TouchableOpacity
                 onPress={onBack}
-                className="rounded-full p-2 transition-colors hover:bg-white/10"
+                className="rounded-full p-2"
               >
                 <Ionicons name="chevron-back" size={24} color={colors.white} />
               </TouchableOpacity>
@@ -118,7 +142,7 @@ export default function VolunteerProfile({
             {onEdit && (
               <TouchableOpacity
                 onPress={onEdit}
-                className="items-center justify-center rounded-full bg-white/20 px-3 transition-colors hover:bg-white/30"
+                className="items-center justify-center rounded-full bg-white/20 px-3"
                 style={{ minWidth: 44, height: 36 }}
               >
                 <Text
@@ -135,7 +159,7 @@ export default function VolunteerProfile({
 
         {/* Profile Info */}
         <View className="z-20 mt-2 items-center">
-          <View className="group relative mb-3 cursor-pointer">
+          <View className="relative mb-3">
             <View
               className="h-24 w-24 rounded-full border-4 border-white/20 shadow-lg"
               style={{ backgroundColor: subtleBg }}
@@ -156,7 +180,7 @@ export default function VolunteerProfile({
               )}
             </View>
             <View
-              className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow-sm transition-transform hover:scale-110"
+              className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow-sm"
               style={{
                 borderColor: colors.secondary,
                 backgroundColor: colors.status.completed,
@@ -192,7 +216,7 @@ export default function VolunteerProfile({
       {/* Scrollable Content */}
       <ScrollView
         className="z-10 -mt-2 flex-1 px-4"
-        contentContainerStyle={{ paddingBottom: bottom + 120 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-col gap-4">

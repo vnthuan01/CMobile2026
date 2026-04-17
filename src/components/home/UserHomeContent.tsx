@@ -345,9 +345,9 @@ function QuickActionCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
-      className="relative h-48 flex-1 rounded-2xl px-3 pb-3 pt-3"
+      className="relative h-32 flex-1 rounded-2xl px-3 pb-3 pt-3"
       style={{
-        backgroundColor: colors.card,
+        backgroundColor: 'bg-transparent',
         // borderColor: colors.border,
         // shadowColor: colors.black,
         // shadowOffset: { width: 0, height: 6 },

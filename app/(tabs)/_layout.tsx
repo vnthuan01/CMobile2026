@@ -1,16 +1,19 @@
 import { useTheme } from '@/src/context/ThemeContext';
+import {
+  getTabBarBottomPadding,
+  getTabBarHeight,
+} from '@/src/hooks/useBottomContentInset';
 import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Animated, Platform, Text, View } from 'react-native';
+import { Animated, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TabIconProps = {
   color: string;
 };
 
-const BASE_TAB_HEIGHT = Platform.OS === 'ios' ? 74 : 56;
 const ICON_SIZE = 24;
 
 export default function TabsLayout() {
@@ -29,8 +32,8 @@ export default function TabsLayout() {
   const inactiveColor = colors.textSecondary;
   const tabBgColor = colors.card;
   const borderColor = colors.border;
-  const tabBarBottomPadding = Platform.OS === 'ios' ? Math.max(bottom, 14) : Math.max(bottom, 10);
-  const tabBarHeight = BASE_TAB_HEIGHT + tabBarBottomPadding;
+  const tabBarBottomPadding = getTabBarBottomPadding(bottom);
+  const tabBarHeight = getTabBarHeight(bottom);
 
   /* ================= COMMON OPTIONS ================= */
   const screenOptions = {
@@ -43,7 +46,7 @@ export default function TabsLayout() {
 
     tabBarStyle: {
       height: tabBarHeight,
-      paddingTop: 6,
+      paddingTop: 2,
       paddingBottom: tabBarBottomPadding,
       borderTopWidth: 0.5,
       borderTopColor: borderColor,
@@ -52,7 +55,8 @@ export default function TabsLayout() {
     },
 
     tabBarItemStyle: {
-      paddingVertical: 4,
+      paddingTop: 2,
+      paddingBottom: 2,
     },
 
     tabBarLabelStyle: {
@@ -189,7 +193,7 @@ export default function TabsLayout() {
               style={{
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: -28,
+                marginTop: -20,
               }}
             >
               <Animated.View

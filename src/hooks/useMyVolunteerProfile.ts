@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { volunteerService } from '../services/volunteerService';
 
+type VolunteerProfileResult = Awaited<
+  ReturnType<typeof volunteerService.getMyVolunteerProfile>
+>;
+
 export const volunteerProfileKeys = {
   all: ['volunteerProfile'] as const,
   myProfile: () => [...volunteerProfileKeys.all, 'myProfile'] as const,
@@ -13,12 +17,20 @@ export function useMyVolunteerProfile(
 ) {
   return useQuery({
     queryKey: volunteerProfileKeys.myProfile(),
-    queryFn: () => volunteerService.getMyVolunteerProfile(),
+    queryFn: async () => {
+      const result = await volunteerService.getMyVolunteerProfile();
+
+      if (!result.success) {
+        throw new Error(result.message ?? 'Không thể tải hồ sơ volunteer.');
+      }
+
+      return result;
+    },
     enabled,
     refetchInterval,
-    select: (result) => ({
-      profile: result.success ? result.data : null,
-      errorMessage: result.success ? null : (result.message ?? null),
+    select: (result: VolunteerProfileResult) => ({
+      profile: result.data,
+      errorMessage: null,
     }),
   });
 }
@@ -26,9 +38,16 @@ export function useMyVolunteerProfile(
 export function useAllSkills(enabled = true) {
   return useQuery({
     queryKey: volunteerProfileKeys.skills(),
-    queryFn: () => volunteerService.getAllSkills(),
+    queryFn: async () => {
+      const result = await volunteerService.getAllSkills();
+
+      if (!result.success) {
+        throw new Error(result.message ?? 'Không thể lấy danh sách kỹ năng.');
+      }
+
+      return result.data;
+    },
     enabled,
     staleTime: 1000 * 60 * 10, // skills rarely change: 10 min
-    select: (result) => (result.success ? result.data : []),
   });
 }

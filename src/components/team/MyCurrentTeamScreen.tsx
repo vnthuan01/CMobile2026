@@ -36,7 +36,7 @@ export default function MyCurrentTeamScreen({
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const team = (currentTeamQuery.data?.team as TeamDetailResponse | null) ?? null;
   const loading = currentTeamQuery.isLoading && !refreshing;
-  const errorMessage = currentTeamQuery.data?.errorMessage ?? null;
+  const errorMessage = currentTeamQuery.error?.message ?? null;
   const emptyState = currentTeamQuery.data?.isEmpty ?? false;
 
   const isLeader = useMemo(() => {

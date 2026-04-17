@@ -23,6 +23,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useEffect } from 'react';
+import { showErrorToast } from '@/src/utils/toast';
 
 const getCampaignPriority = (status: number) => {
   switch (Number(status)) {
@@ -138,6 +140,24 @@ export default function VolunteerCampaignPickerScreen() {
     expandedCampaignId || undefined,
     !!expandedCampaignId,
   );
+
+  useEffect(() => {
+    if (isError && (data as any) == null) {
+      showErrorToast(
+        'Không tải được danh sách chiến dịch',
+        'Vui lòng thử lại sau.',
+      );
+    }
+  }, [data, isError]);
+
+  useEffect(() => {
+    if (expandedCampaignDetailQuery.error) {
+      showErrorToast(
+        'Không tải được chi tiết chiến dịch',
+        expandedCampaignDetailQuery.error.message,
+      );
+    }
+  }, [expandedCampaignDetailQuery.error]);
 
   const filteredCampaigns = useMemo(() => {
     const normalizedKeyword = searchKeyword.trim().toLowerCase();

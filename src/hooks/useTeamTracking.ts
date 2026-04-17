@@ -16,14 +16,21 @@ export function useTeamTrackingLatest(
 ) {
   return useQuery({
     queryKey: teamTrackingKeys.latest(teamId ?? '', limit),
-    queryFn: () => teamService.getLatestTracking(teamId!, limit),
+    queryFn: async () => {
+      const result = await teamService.getLatestTracking(teamId!, limit);
+
+      if (!result.success) {
+        throw new Error(result.message ?? 'Không thể tải lịch sử tracking team.');
+      }
+
+      return {
+        points: result.data ?? [],
+        errorMessage: null,
+      };
+    },
     enabled: enabled && !!teamId,
     staleTime: 1000 * 10,
     refetchInterval: 1000 * 15,
-    select: (result) => ({
-      points: result.success ? (result.data ?? []) : [],
-      errorMessage: result.success ? null : (result.message ?? null),
-    }),
   });
 }
 
@@ -36,7 +43,7 @@ export function useSendTeamTrackingHeartbeat() {
       teamId: string;
       payload: TeamTrackingHeartbeatRequest;
     }) => teamService.sendTrackingHeartbeat(teamId, payload),
-    onSuccess: (result) => {
+    onSuccess: (result: Awaited<ReturnType<typeof teamService.sendTrackingHeartbeat>>) => {
       if (!result?.success) {
         showApiResultToast(result, {
           showSuccess: false,
@@ -45,7 +52,7 @@ export function useSendTeamTrackingHeartbeat() {
         });
       }
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể đồng bộ vị trí',
         errorMessage: 'Không thể đồng bộ vị trí đội cứu hộ.',

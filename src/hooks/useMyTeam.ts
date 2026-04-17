@@ -9,15 +9,31 @@ export const teamKeys = {
 export function useMyTeam(enabled = true) {
   return useQuery({
     queryKey: teamKeys.myTeam(),
-    queryFn: () => teamService.getMyTeam(),
+    queryFn: async () => {
+      const result = await teamService.getMyTeam();
+
+      if (!result.success) {
+        const isEmpty =
+          result.status === 404 ||
+          /chưa|not found|không thuộc team/i.test(result.message ?? '');
+
+        if (isEmpty) {
+          return {
+            team: null,
+            isEmpty: true,
+            errorMessage: null,
+          };
+        }
+
+        throw new Error(result.message ?? 'Không tải được thông tin team.');
+      }
+
+      return {
+        team: result.data,
+        isEmpty: false,
+        errorMessage: null,
+      };
+    },
     enabled,
-    select: (result) => ({
-      team: result.success ? result.data : null,
-      errorMessage: result.success ? null : (result.message ?? null),
-      isEmpty:
-        !result.success &&
-        (result.status === 404 ||
-          /chưa|not found|không thuộc team/i.test(result.message ?? '')),
-    }),
   });
 }

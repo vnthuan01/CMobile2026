@@ -5,7 +5,7 @@ import { showApiErrorToast } from '../utils/apiToast';
 export function useLogin() {
   return useMutation({
     mutationFn: authService.login,
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Đăng nhập thất bại',
         errorMessage: 'Vui lòng thử lại.',
@@ -17,7 +17,7 @@ export function useLogin() {
 export function useRegister() {
   return useMutation({
     mutationFn: authService.register,
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Đăng ký thất bại',
         errorMessage: 'Vui lòng thử lại.',
@@ -29,7 +29,7 @@ export function useRegister() {
 export function useConfirmEmail() {
   return useMutation({
     mutationFn: authService.confirmEmail,
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Xác thực email thất bại',
         errorMessage: 'Không thể xác thực email.',
@@ -41,7 +41,7 @@ export function useConfirmEmail() {
 export function useVerifyEmailOtp() {
   return useMutation({
     mutationFn: authService.verifyEmailOtp,
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Xác thực OTP thất bại',
         errorMessage: 'Không thể xác thực OTP.',
@@ -53,7 +53,7 @@ export function useVerifyEmailOtp() {
 export function useResendEmailOtp() {
   return useMutation({
     mutationFn: authService.resendEmailOtp,
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể gửi lại OTP',
         errorMessage: 'Không thể gửi lại OTP.',
@@ -65,7 +65,7 @@ export function useResendEmailOtp() {
 export function useSendForgotPasswordOtp() {
   return useMutation({
     mutationFn: authService.sendForgotPasswordOtp,
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể gửi mã',
         errorMessage: 'Không thể gửi mã xác thực.',
@@ -77,7 +77,7 @@ export function useSendForgotPasswordOtp() {
 export function useVerifyForgotPasswordOtp() {
   return useMutation({
     mutationFn: authService.verifyForgotPasswordOtp,
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Xác thực OTP thất bại',
         errorMessage: 'Không thể xác thực OTP khôi phục.',
@@ -89,7 +89,7 @@ export function useVerifyForgotPasswordOtp() {
 export function useResetForgotPassword() {
   return useMutation({
     mutationFn: authService.resetForgotPassword,
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể đặt lại mật khẩu',
         errorMessage: 'Không thể đặt lại mật khẩu.',

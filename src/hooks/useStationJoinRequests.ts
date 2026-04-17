@@ -12,14 +12,25 @@ export const stationJoinRequestKeys = {
 export function useStationJoinRequests(pageIndex = 1, pageSize = 10, enabled = true) {
   return useQuery({
     queryKey: stationJoinRequestKeys.myList(pageIndex, pageSize),
-    queryFn: () =>
-      stationJoinRequestService.getMyRequests({ pageIndex, pageSize }),
+    queryFn: async () => {
+      const result = await stationJoinRequestService.getMyRequests({
+        pageIndex,
+        pageSize,
+      });
+
+      if (!result.success) {
+        throw new Error(
+          result.message ?? 'Không thể tải danh sách yêu cầu tham gia trạm.',
+        );
+      }
+
+      return {
+        requests: result.data?.data ?? [],
+        pagination: result.data,
+        errorMessage: null,
+      };
+    },
     enabled,
-    select: (result) => ({
-      requests: result.success ? (result.data?.data ?? []) : [],
-      pagination: result.success ? result.data : null,
-      errorMessage: result.success ? null : (result.message ?? null),
-    }),
   });
 }
 
@@ -29,7 +40,7 @@ export function useCreateStationJoinRequest() {
   return useMutation({
     mutationFn: (payload: CreateStationJoinRequestPayload) =>
       stationJoinRequestService.create(payload),
-    onSuccess: (result) => {
+    onSuccess: (result: Awaited<ReturnType<typeof stationJoinRequestService.create>>) => {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: stationJoinRequestKeys.all });
       }
@@ -41,7 +52,7 @@ export function useCreateStationJoinRequest() {
         errorMessage: 'Không thể gửi yêu cầu tham gia trạm.',
       });
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể gửi yêu cầu',
         errorMessage: 'Không thể gửi yêu cầu tham gia trạm.',
@@ -56,7 +67,7 @@ export function useCancelStationJoinRequest() {
   return useMutation({
     mutationFn: (requestId: string) =>
       stationJoinRequestService.cancel(requestId),
-    onSuccess: (result) => {
+    onSuccess: (result: Awaited<ReturnType<typeof stationJoinRequestService.cancel>>) => {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: stationJoinRequestKeys.all });
       }
@@ -68,7 +79,7 @@ export function useCancelStationJoinRequest() {
         errorMessage: 'Không thể huỷ yêu cầu tham gia trạm.',
       });
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể huỷ yêu cầu',
         errorMessage: 'Không thể huỷ yêu cầu tham gia trạm.',

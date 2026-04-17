@@ -1,6 +1,6 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { View } from 'react-native';
 
 interface AppBottomSheetProps {
@@ -21,14 +21,6 @@ export default function AppBottomSheet({
   const ref = useRef<BottomSheet>(null);
   const { colors } = useTheme();
   const points = useMemo(() => snapPoints || ['48%', '78%'], [snapPoints]);
-
-  useEffect(() => {
-    if (open) {
-      ref.current?.snapToIndex(0);
-    } else {
-      ref.current?.close();
-    }
-  }, [open]);
 
   return (
     <BottomSheet

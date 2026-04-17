@@ -68,6 +68,7 @@ export function useNotificationRealtime() {
   const reset = useNotificationStore((state) => state.reset);
 
   const clientRef = useRef<Centrifuge | null>(null);
+  const isConnectedRef = useRef(false);
   const subscriptionRef = useRef<Subscription | null>(null);
   const renewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,6 +109,7 @@ export function useNotificationRealtime() {
 
   const teardownConnection = () => {
     clearRenewTimer();
+    isConnectedRef.current = false;
     setConnected(false);
 
     subscriptionRef.current?.unsubscribe();
@@ -175,15 +177,18 @@ export function useNotificationRealtime() {
       });
 
       client.on('connected', () => {
+        isConnectedRef.current = true;
         setConnected(true);
         void syncNotificationState();
       });
 
       client.on('disconnected', () => {
+        isConnectedRef.current = false;
         setConnected(false);
       });
 
       client.on('error', () => {
+        isConnectedRef.current = false;
         setConnected(false);
       });
 
@@ -202,6 +207,7 @@ export function useNotificationRealtime() {
       subscriptionRef.current = subscription;
       clientRef.current = client;
     } catch {
+      isConnectedRef.current = false;
       setConnected(false);
     }
   };
@@ -233,7 +239,7 @@ export function useNotificationRealtime() {
         return;
       }
 
-      if (!clientRef.current.connected) {
+      if (!isConnectedRef.current) {
         clientRef.current.connect();
       }
 

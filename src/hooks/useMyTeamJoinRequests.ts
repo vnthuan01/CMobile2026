@@ -12,13 +12,22 @@ export const teamJoinRequestKeys = {
 export function useMyTeamJoinRequests(pageIndex = 1, pageSize = 10, enabled = true) {
   return useQuery({
     queryKey: teamJoinRequestKeys.myList(pageIndex, pageSize),
-    queryFn: () => teamJoinRequestService.getMyRequests({ pageIndex, pageSize }),
+    queryFn: async () => {
+      const result = await teamJoinRequestService.getMyRequests({ pageIndex, pageSize });
+
+      if (!result.success) {
+        throw new Error(
+          result.message ?? 'Không thể tải danh sách yêu cầu tham gia team.',
+        );
+      }
+
+      return {
+        requests: result.data?.data ?? [],
+        pagination: result.data,
+        errorMessage: null,
+      };
+    },
     enabled,
-    select: (result) => ({
-      requests: result.success ? (result.data?.data ?? []) : [],
-      pagination: result.success ? result.data : null,
-      errorMessage: result.success ? null : (result.message ?? null),
-    }),
   });
 }
 
@@ -28,7 +37,7 @@ export function useCreateTeamJoinRequest() {
   return useMutation({
     mutationFn: (payload: CreateTeamJoinRequestPayload) =>
       teamJoinRequestService.create(payload),
-    onSuccess: (result) => {
+    onSuccess: (result: Awaited<ReturnType<typeof teamJoinRequestService.create>>) => {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: teamJoinRequestKeys.all });
       }
@@ -40,7 +49,7 @@ export function useCreateTeamJoinRequest() {
         errorMessage: 'Không thể gửi yêu cầu tham gia đội.',
       });
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể gửi yêu cầu',
         errorMessage: 'Không thể gửi yêu cầu tham gia đội.',
@@ -54,7 +63,7 @@ export function useCancelTeamJoinRequest() {
 
   return useMutation({
     mutationFn: (requestId: string) => teamJoinRequestService.cancel(requestId),
-    onSuccess: (result) => {
+    onSuccess: (result: Awaited<ReturnType<typeof teamJoinRequestService.cancel>>) => {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: teamJoinRequestKeys.all });
       }
@@ -66,7 +75,7 @@ export function useCancelTeamJoinRequest() {
         errorMessage: 'Không thể huỷ yêu cầu tham gia đội.',
       });
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể huỷ yêu cầu',
         errorMessage: 'Không thể huỷ yêu cầu tham gia đội.',

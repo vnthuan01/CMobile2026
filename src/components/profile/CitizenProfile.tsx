@@ -1,4 +1,5 @@
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
 import { useAuthStore } from '@/src/store/authStore';
 import { showErrorToast } from '@/src/utils/toast';
@@ -30,14 +31,14 @@ export default function CitizenProfile({
   onLogout,
   onNavigate,
 }: CitizenProfileProps) {
-  const { top, bottom } = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const profileQuery = useCitizenProfile();
   const profile = profileQuery.data?.profile ?? null;
-  const loading = profileQuery.isLoading;
-  const headerRed = '#E52521';
-  const iconRed = '#D73A34';
+  const headerBg = colors.primary;
+  const iconAccent = colors.primary;
   const roleLabel =
     (user?.role ?? '').toLowerCase() === 'user' ? 'Người dân' : 'Người dùng';
   const displayName = resolveDisplayName({
@@ -51,10 +52,10 @@ export default function CitizenProfile({
   });
 
   useEffect(() => {
-    if (profileQuery.data?.errorMessage) {
-      showErrorToast('Không tải được hồ sơ', profileQuery.data.errorMessage);
+    if (profileQuery.error) {
+      showErrorToast('Không tải được hồ sơ', profileQuery.error.message);
     }
-  }, [profileQuery.data?.errorMessage]);
+  }, [profileQuery.error]);
 
   const formatDate = (date?: string | null) => {
     if (!date) return 'Chưa cập nhật';
@@ -108,7 +109,7 @@ export default function CitizenProfile({
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <View
         className="px-4 pb-10"
-        style={{ backgroundColor: headerRed, paddingTop: top + 8 }}
+        style={{ backgroundColor: headerBg, paddingTop: top + 8 }}
       >
         <View className="mb-4 flex-row items-center justify-between">
           <View className="w-10">
@@ -128,6 +129,11 @@ export default function CitizenProfile({
         </View>
 
         <View className="items-center">
+          {profileQuery.isLoading ? (
+            <Text className="text-sm" style={{ color: colors.white }}>
+              Đang tải hồ sơ...
+            </Text>
+          ) : null}
           {avatarUrl ? (
             <Image
               source={{ uri: avatarUrl }}
@@ -161,23 +167,23 @@ export default function CitizenProfile({
 
       <ScrollView
         className="flex-1 px-2"
-        contentContainerStyle={{ paddingBottom: bottom + 120 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         <View
           className="mt-4 overflow-hidden rounded-2xl border"
-          style={{ borderColor: '#EFEFF0', backgroundColor: '#FFFFFF' }}
+          style={{ borderColor: colors.border, backgroundColor: colors.card }}
         >
           <TouchableOpacity
             onPress={() => onNavigate?.('/profile/user-profile')}
             className="flex-row items-center justify-between border-b px-4 py-4"
-            style={{ borderBottomColor: '#EFEFF0' }}
+            style={{ borderBottomColor: colors.border }}
           >
             <View className="flex-row items-center gap-3">
               <Ionicons
                 name="person-circle-outline"
                 size={20}
-                color={iconRed}
+                color={iconAccent}
               />
               <View>
                 <Text
@@ -198,10 +204,10 @@ export default function CitizenProfile({
           <TouchableOpacity
             onPress={() => onNavigate?.('/profile/my-volunteer-profile')}
             className="flex-row items-center justify-between border-b px-4 py-4"
-            style={{ borderBottomColor: '#EFEFF0' }}
+            style={{ borderBottomColor: colors.border }}
           >
             <View className="flex-row items-center gap-3">
-              <Ionicons name="heart-outline" size={20} color={iconRed} />
+              <Ionicons name="heart-outline" size={20} color={iconAccent} />
               <View>
                 <Text
                   className="text-base font-medium"
@@ -221,10 +227,14 @@ export default function CitizenProfile({
           <TouchableOpacity
             onPress={() => onNavigate?.('/profile/change-password')}
             className="flex-row items-center justify-between border-b px-4 py-4"
-            style={{ borderBottomColor: '#EFEFF0' }}
+            style={{ borderBottomColor: colors.border }}
           >
             <View className="flex-row items-center gap-3">
-              <Ionicons name="lock-closed-outline" size={20} color={iconRed} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color={iconAccent}
+              />
               <Text
                 className="text-base font-medium"
                 style={{ color: colors.text }}
@@ -242,10 +252,10 @@ export default function CitizenProfile({
           <TouchableOpacity
             onPress={() => onNavigate?.('/profile/settings')}
             className="flex-row items-center justify-between border-b px-4 py-4"
-            style={{ borderBottomColor: '#EFEFF0' }}
+            style={{ borderBottomColor: colors.border }}
           >
             <View className="flex-row items-center gap-3">
-              <Ionicons name="settings-outline" size={20} color={iconRed} />
+              <Ionicons name="settings-outline" size={20} color={iconAccent} />
               <Text
                 className="text-base font-medium"
                 style={{ color: colors.text }}
@@ -265,7 +275,11 @@ export default function CitizenProfile({
             className="flex-row items-center justify-between px-4 py-4"
           >
             <View className="flex-row items-center gap-3">
-              <Ionicons name="help-circle-outline" size={20} color={iconRed} />
+              <Ionicons
+                name="help-circle-outline"
+                size={20}
+                color={iconAccent}
+              />
               <Text
                 className="text-base font-medium"
                 style={{ color: colors.text }}
@@ -285,12 +299,16 @@ export default function CitizenProfile({
           onPress={onLogout}
           className="mt-4 flex-row items-center justify-center gap-2 rounded-xl border py-4"
           style={{
-            borderColor: '#F2B8B5',
-            backgroundColor: '#FFFFFF',
+            borderColor: `${colors.status.error}45`,
+            backgroundColor: colors.card,
           }}
         >
-          <Ionicons name="log-out-outline" size={20} color={headerRed} />
-          <Text className="font-bold" style={{ color: headerRed }}>
+          <Ionicons
+            name="log-out-outline"
+            size={20}
+            color={colors.status.error}
+          />
+          <Text className="font-bold" style={{ color: colors.status.error }}>
             Đăng xuất
           </Text>
         </TouchableOpacity>

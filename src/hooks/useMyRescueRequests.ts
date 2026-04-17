@@ -14,6 +14,8 @@ interface UseMyRescueRequestsOptions {
   enabled?: boolean;
 }
 
+type MyRescueRequestsResult = Awaited<ReturnType<typeof fetchMyRescueRequests>>;
+
 export function useMyRescueRequests({
   pageNumber = 1,
   pageSize = 20,
@@ -23,6 +25,7 @@ export function useMyRescueRequests({
     queryKey: rescueRequestKeys.myList(pageNumber, pageSize),
     queryFn: () => fetchMyRescueRequests({ pageNumber, pageSize }),
     enabled,
-    select: (data) => data.data ?? ([] as MyRescueRequestItem[]),
+    select: (data: MyRescueRequestsResult) =>
+      data.data ?? ([] as MyRescueRequestItem[]),
   });
 }

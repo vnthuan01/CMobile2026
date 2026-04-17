@@ -18,7 +18,7 @@ export default function VolunteerHomeContent() {
   const batch = volunteerHomeQuery.data?.batch ?? null;
   const operationStatusMap = volunteerHomeQuery.data?.operationStatusMap ?? {};
   const loading = volunteerHomeQuery.isLoading || volunteerHomeQuery.isFetching;
-  const errorMessage = volunteerHomeQuery.data?.message ?? null;
+  const errorMessage = volunteerHomeQuery.error?.message ?? null;
 
   useEffect(() => {
     volunteerHomeQuery.refetch();
@@ -34,13 +34,9 @@ export default function VolunteerHomeContent() {
       volunteerHomeQuery.data?.isEmpty &&
       hasLoadedOnce
     ) {
-      showInfoToast(
-        'Chưa có đội',
-        volunteerHomeQuery.data.message || 'Bạn chưa thuộc đội nào.',
-      );
+      showInfoToast('Chưa có đội', 'Bạn chưa thuộc đội nào.');
     } else if (
       !volunteerHomeQuery.isLoading &&
-      !volunteerHomeQuery.data?.success &&
       errorMessage &&
       hasLoadedOnce
     ) {
@@ -52,8 +48,6 @@ export default function VolunteerHomeContent() {
     hasLoadedOnce,
     team,
     volunteerHomeQuery.data?.isEmpty,
-    volunteerHomeQuery.data?.message,
-    volunteerHomeQuery.data?.success,
     volunteerHomeQuery.isLoading,
   ]);
 

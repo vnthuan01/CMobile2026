@@ -1,8 +1,10 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useFundraisingCampaigns } from '@/src/hooks/useDonation';
+import { showErrorToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -20,9 +22,18 @@ export default function FundraisingCampaignListScreen() {
   const { top } = useSafeAreaInsets();
   const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
-  const { data, isLoading, isError, refetch } = useFundraisingCampaigns();
+  const { data, error, isLoading, isError, refetch } = useFundraisingCampaigns();
 
   const campaigns = data?.items || [];
+
+  useEffect(() => {
+    if (error) {
+      showErrorToast(
+        'Không tải được chiến dịch gây quỹ',
+        error.message,
+      );
+    }
+  }, [error]);
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>

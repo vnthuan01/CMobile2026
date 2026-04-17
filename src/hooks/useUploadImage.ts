@@ -13,7 +13,7 @@ export function useUploadImage() {
       fileName?: string;
       mimeType?: string;
     }) => uploadService.uploadImageToCloudinary(localUri, fileName, mimeType),
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Upload thất bại',
         errorMessage: 'Không thể upload ảnh.',

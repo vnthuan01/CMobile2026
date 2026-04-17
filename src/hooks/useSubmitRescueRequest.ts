@@ -19,7 +19,7 @@ export function useSubmitRescueRequest() {
       queryClient.invalidateQueries({ queryKey: rescueRequestKeys.all });
       showSuccessToast('Gửi yêu cầu thành công', 'Yêu cầu cứu hộ đã được gửi.');
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, {
         errorTitle: 'Không thể gửi yêu cầu',
         errorMessage: 'Không thể gửi yêu cầu cứu hộ.',

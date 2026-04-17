@@ -12,16 +12,30 @@ export const teamOverviewKeys = {
 export function useCurrentTeam(enabled = true) {
   return useQuery({
     queryKey: teamOverviewKeys.currentTeam(),
-    queryFn: () => teamService.getMyTeam(),
+    queryFn: async () => {
+      const result = await teamService.getMyTeam();
+
+      if (!result.success) {
+        const isEmpty =
+          result.status === 404 ||
+          /chưa|not found|không thuộc team/i.test(result.message ?? '');
+
+        if (isEmpty) {
+          return {
+            team: null,
+            isEmpty: true,
+          };
+        }
+
+        throw new Error(result.message ?? 'Không tải được thông tin đội.');
+      }
+
+      return {
+        team: result.data,
+        isEmpty: false,
+      };
+    },
     enabled,
-    select: (result) => ({
-      team: result.success ? result.data : null,
-      errorMessage: result.success ? null : (result.message ?? null),
-      isEmpty:
-        !result.success &&
-        (result.status === 404 ||
-          /chưa|not found|không thuộc team/i.test(result.message ?? '')),
-    }),
   });
 }
 
@@ -32,16 +46,29 @@ export function useVolunteerHomeOverview(enabled = true) {
     queryFn: async () => {
       const teamResult = await teamService.getMyTeam();
 
-      if (!teamResult.success || !teamResult.data?.teamId) {
+      if (!teamResult.success) {
+        const isEmpty =
+          teamResult.status === 404 ||
+          /chưa|not found|không thuộc team/i.test(teamResult.message ?? '');
+
+        if (isEmpty) {
+          return {
+            team: null,
+            batch: null,
+            operationStatusMap: {} as Record<string, string>,
+            isEmpty: true,
+          };
+        }
+
+        throw new Error(teamResult.message || 'Không tải được thông tin đội.');
+      }
+
+      if (!teamResult.data?.teamId) {
         return {
-          success: false,
           team: null,
           batch: null,
           operationStatusMap: {} as Record<string, string>,
-          message: teamResult.message || 'Không tải được thông tin đội.',
-          isEmpty:
-            teamResult.status === 404 ||
-            /chưa|not found|không thuộc team/i.test(teamResult.message ?? ''),
+          isEmpty: true,
         };
       }
 
@@ -49,13 +76,15 @@ export function useVolunteerHomeOverview(enabled = true) {
         teamResult.data.teamId,
       );
 
-      if (!batchResult.success || !batchResult.data) {
+      if (!batchResult.success) {
+        throw new Error(batchResult.message || 'Không tải được nhiệm vụ.');
+      }
+
+      if (!batchResult.data) {
         return {
-          success: false,
           team: teamResult.data,
           batch: null,
           operationStatusMap: {} as Record<string, string>,
-          message: batchResult.message || 'Không tải được nhiệm vụ.',
           isEmpty: false,
         };
       }
@@ -73,13 +102,11 @@ export function useVolunteerHomeOverview(enabled = true) {
       );
 
       return {
-        success: true,
         team: teamResult.data,
         batch: batchResult.data,
         operationStatusMap: Object.fromEntries(
           statusEntries.filter((entry) => Boolean(entry[1])) as Array<readonly [string, string]>,
         ),
-        message: null,
         isEmpty: false,
       };
     },
