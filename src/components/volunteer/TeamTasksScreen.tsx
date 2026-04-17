@@ -6,21 +6,20 @@ import WebViewMap from '@/src/components/common/WebViewMap';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useTeamTasksController } from '@/src/hooks/useTeamTasksController';
 import {
-  RescueActiveBatchResponse,
-  RescueBatchItem as BaseRescueBatchItem,
-  rescueTeamService,
+    RescueBatchItem as BaseRescueBatchItem,
+    RescueActiveBatchResponse,
+    rescueTeamService,
 } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import React from 'react';
 import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TeamTasksMap from './TeamTasksMap';
@@ -35,7 +34,7 @@ type MissionFilter =
 
 type RescueBatchItem = BaseRescueBatchItem & {
   priorityPoint?: number | null;
-  priorityLevel?: number | null;
+  priorityLevel?: number | string | null;
 };
 
 interface TeamTasksScreenProps {
@@ -110,66 +109,133 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   const statusBadge = (status?: string) => {
     const normalized = String(status ?? '').toLowerCase();
     if (normalized === 'inprogress') {
-      return { bg: `${colors.status.inProgress}22`, text: colors.status.inProgress, label: 'Đang làm' };
+      return {
+        bg: `${colors.status.inProgress}22`,
+        text: colors.status.inProgress,
+        label: 'Đang làm',
+      };
     }
     if (normalized === 'pending') {
-      return { bg: `${colors.status.pending}22`, text: colors.status.pending, label: 'Chờ xử lý' };
+      return {
+        bg: `${colors.status.pending}22`,
+        text: colors.status.pending,
+        label: 'Chờ xử lý',
+      };
     }
     if (normalized === 'done' || normalized === 'rescuecompleted') {
-      return { bg: `${colors.status.completed}22`, text: colors.status.completed, label: 'Đã xong' };
+      return {
+        bg: `${colors.status.completed}22`,
+        text: colors.status.completed,
+        label: 'Đã xong',
+      };
     }
     if (normalized === 'enroute') {
-      return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Đang di chuyển' };
+      return {
+        bg: `${colors.status.incoming}22`,
+        text: colors.status.incoming,
+        label: 'Đang di chuyển',
+      };
     }
     if (normalized === 'rescuing') {
-      return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Đang cứu hộ' };
+      return {
+        bg: `${colors.status.incoming}22`,
+        text: colors.status.incoming,
+        label: 'Đang cứu hộ',
+      };
     }
     if (normalized === 'closed' || normalized === 'cancelled') {
-      return { bg: `${colors.status.cancelled}22`, text: colors.status.cancelled, label: 'Đã đóng' };
+      return {
+        bg: `${colors.status.cancelled}22`,
+        text: colors.status.cancelled,
+        label: 'Đã đóng',
+      };
     }
-    return { bg: colors.surface, text: colors.textSecondary, label: status || 'Khác' };
+    return {
+      bg: colors.surface,
+      text: colors.textSecondary,
+      label: status || 'Khác',
+    };
   };
 
   const typeBadge = (type?: string | null) => {
     const normalized = String(type ?? '').toLowerCase();
-    if (normalized === 'emergency') {
-      return { bg: `${colors.status.error}22`, text: colors.status.error, label: 'Khẩn cấp' };
+    if (
+      normalized === 'emergency' ||
+      normalized === '1' ||
+      normalized === 'khẩn cấp'
+    ) {
+      return {
+        bg: `${colors.status.error}22`,
+        text: colors.status.error,
+        label: 'Khẩn cấp',
+      };
     }
-    return { bg: `${colors.status.incoming}22`, text: colors.status.incoming, label: 'Bình thường' };
+    return {
+      bg: `${colors.status.incoming}22`,
+      text: colors.status.incoming,
+      label: 'Bình thường',
+    };
   };
 
-  const priorityBadge = (point?: number | null, level?: number | null) => ({
-    pointLabel: `Điểm ưu tiên: ${point ?? 0}`,
-    levelLabel: `Mức ưu tiên: ${getPriorityLevelLabel(level)}`,
-    levelBg:
-      level === 3
-        ? '#FEE2E2'
-        : level === 2
-          ? '#FDE68A'
-          : level === 1
-            ? '#DBEAFE'
-            : '#ECFCCB',
-    levelText:
-      level === 3
-        ? '#B91C1C'
-        : level === 2
-          ? '#92400E'
-          : level === 1
-            ? '#1D4ED8'
-            : '#3F6212',
-    pointBg:
-      (point ?? 0) >= 80
-        ? '#FEE2E2'
-        : (point ?? 0) >= 50
-          ? '#FEF3C7'
-          : '#F1F5F9',
-    pointText:
-      (point ?? 0) >= 80
-        ? '#B91C1C'
-        : (point ?? 0) >= 50
-          ? '#92400E'
-          : '#334155',
-  });
+  const normalizePriorityLevel = (value?: number | string | null) => {
+    if (value == null) return null;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized) return null;
+    if (normalized === '0' || normalized === 'low' || normalized === 'thấp')
+      return 0;
+    if (
+      normalized === '1' ||
+      normalized === 'medium' ||
+      normalized === 'normal' ||
+      normalized === 'trung bình'
+    )
+      return 1;
+    if (normalized === '2' || normalized === 'high' || normalized === 'cao')
+      return 2;
+    if (
+      normalized === '3' ||
+      normalized === 'critical' ||
+      normalized === 'emergency' ||
+      normalized === 'khẩn cấp'
+    )
+      return 3;
+    return null;
+  };
+
+  const priorityBadge = (
+    point?: number | null,
+    level?: number | string | null,
+  ) => {
+    const normalizedLevel = normalizePriorityLevel(level);
+    const safePoint = point ?? 0;
+
+    return {
+      pointLabel: `Điểm ưu tiên: ${safePoint}`,
+      levelLabel: `Mức ưu tiên: ${getPriorityLevelLabel(normalizedLevel)}`,
+      levelBg:
+        normalizedLevel === 3
+          ? '#FEE2E2'
+          : normalizedLevel === 2
+            ? '#FDE68A'
+            : normalizedLevel === 1
+              ? '#DBEAFE'
+              : '#ECFCCB',
+      levelText:
+        normalizedLevel === 3
+          ? '#B91C1C'
+          : normalizedLevel === 2
+            ? '#92400E'
+            : normalizedLevel === 1
+              ? '#1D4ED8'
+              : '#3F6212',
+      pointBg:
+        safePoint >= 80 ? '#FEE2E2' : safePoint >= 50 ? '#FEF3C7' : '#F1F5F9',
+      pointText:
+        safePoint >= 80 ? '#B91C1C' : safePoint >= 50 ? '#92400E' : '#334155',
+    };
+  };
 
   const getPriorityLevelLabel = (value?: number | null) => {
     if (value == null) return 'Không có mức ưu tiên';
@@ -227,7 +293,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
             className="flex-1 rounded-xl px-4 py-3"
             style={{ backgroundColor: colors.primary }}
           >
-            <Text className="text-center font-bold text-white">Cập nhật tiến độ</Text>
+            <Text className="text-center font-bold text-white">
+              Cập nhật tiến độ
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -239,15 +307,24 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
             className="flex-1 rounded-xl border px-4 py-3"
             style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
-            <Text className="text-center font-bold" style={{ color: colors.text }}>
+            <Text
+              className="text-center font-bold"
+              style={{ color: colors.text }}
+            >
               Hoàn thành
             </Text>
           </TouchableOpacity>
         </View>
 
         {leaderActionMode ? (
-          <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+          <View
+            className="mt-4 rounded-2xl p-4"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <Text
+              className="text-sm font-semibold"
+              style={{ color: colors.text }}
+            >
               {leaderActionMode === 'progress'
                 ? 'Ghi chú cập nhật tiến độ'
                 : 'Ghi chú hoàn thành nhiệm vụ'}
@@ -292,7 +369,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                 {uploadingImages ? (
                   <View className="mt-3 flex-row items-center gap-2">
                     <ActivityIndicator size="small" color={colors.primary} />
-                    <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                    <Text
+                      className="text-sm"
+                      style={{ color: colors.textSecondary }}
+                    >
                       Đang upload ảnh minh chứng...
                     </Text>
                   </View>
@@ -300,12 +380,18 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
                 <TouchableOpacity
                   onPress={() => submitCompleteMission(mission)}
-                  disabled={actionSubmitting || uploadingImages || leaderImages.length === 0}
+                  disabled={
+                    actionSubmitting ||
+                    uploadingImages ||
+                    leaderImages.length === 0
+                  }
                   className="mt-4 rounded-xl px-4 py-3"
                   style={{
                     backgroundColor: colors.primary,
                     opacity:
-                      actionSubmitting || uploadingImages || leaderImages.length === 0
+                      actionSubmitting ||
+                      uploadingImages ||
+                      leaderImages.length === 0
                         ? 0.55
                         : 1,
                   }}
@@ -317,8 +403,14 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
               </View>
             )}
 
-            <TouchableOpacity onPress={resetLeaderForms} className="mt-3 self-end">
-              <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
+            <TouchableOpacity
+              onPress={resetLeaderForms}
+              className="mt-3 self-end"
+            >
+              <Text
+                className="text-sm font-semibold"
+                style={{ color: colors.primary }}
+              >
                 Đóng panel
               </Text>
             </TouchableOpacity>
@@ -389,7 +481,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
             {selectedMission ? (
               <AppBottomSheet open snapPoints={['50%', '82%']}>
-                <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                <Text
+                  className="text-xl font-bold"
+                  style={{ color: colors.text }}
+                >
                   {selectedMission.description}
                 </Text>
 
@@ -414,27 +509,50 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   />
                   <MetaBadge
                     icon="flag-outline"
-                    label={statusBadge(getMissionDisplayStatus(selectedMission) || undefined).label}
-                    bg={statusBadge(getMissionDisplayStatus(selectedMission) || undefined).bg}
-                    text={statusBadge(getMissionDisplayStatus(selectedMission) || undefined).text}
+                    label={
+                      statusBadge(
+                        getMissionDisplayStatus(selectedMission) || undefined,
+                      ).label
+                    }
+                    bg={
+                      statusBadge(
+                        getMissionDisplayStatus(selectedMission) || undefined,
+                      ).bg
+                    }
+                    text={
+                      statusBadge(
+                        getMissionDisplayStatus(selectedMission) || undefined,
+                      ).text
+                    }
                   />
                 </View>
 
                 <View className="mt-4 flex-row gap-3">
                   <TouchableOpacity
                     onPress={() =>
-                      rescueTeamService.openCallReporter(selectedMission.reporterPhone)
+                      rescueTeamService.openCallReporter(
+                        selectedMission.reporterPhone,
+                      )
                     }
                     className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
                     style={{ borderColor: colors.border }}
                   >
-                    <Ionicons name="call-outline" size={18} color={colors.primary} />
-                    <Text className="font-semibold" style={{ color: colors.text }}>
+                    <Ionicons
+                      name="call-outline"
+                      size={18}
+                      color={colors.primary}
+                    />
+                    <Text
+                      className="font-semibold"
+                      style={{ color: colors.text }}
+                    >
                       Gọi người báo tin
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => rescueTeamService.openExternalNavigation(selectedMission)}
+                    onPress={() =>
+                      rescueTeamService.openExternalNavigation(selectedMission)
+                    }
                     className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
                     style={{ backgroundColor: colors.primary }}
                   >
@@ -447,7 +565,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   ? renderLeaderMissionActions(selectedMission)
                   : null}
 
-                <View className="mt-4 rounded-2xl p-3" style={{ backgroundColor: colors.text }}>
+                <View
+                  className="mt-4 rounded-2xl p-3"
+                  style={{ backgroundColor: colors.text }}
+                >
                   {debugTrackingLines.map((line) => (
                     <Text
                       key={line}
@@ -463,8 +584,15 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           </View>
         ) : (
           <View className="flex-1 items-center justify-center px-6">
-            <Ionicons name="map-outline" size={34} color={colors.textSecondary} />
-            <Text className="mt-4 text-center text-base" style={{ color: colors.textSecondary }}>
+            <Ionicons
+              name="map-outline"
+              size={34}
+              color={colors.textSecondary}
+            />
+            <Text
+              className="mt-4 text-center text-base"
+              style={{ color: colors.textSecondary }}
+            >
               Thiếu cấu hình bản đồ Goong.
             </Text>
           </View>
@@ -480,7 +608,9 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
         onBack={onBack}
         rightAction={
           <TouchableOpacity
-            onPress={() => openMapScreen(selectedMission || currentMissionForUi)}
+            onPress={() =>
+              openMapScreen(selectedMission || currentMissionForUi)
+            }
             className="h-10 w-10 items-center justify-center rounded-full"
           >
             <Ionicons name="map-outline" size={22} color={colors.text} />
@@ -497,11 +627,21 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
         </View>
       ) : errorMessage ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="alert-circle-outline" size={34} color={colors.error} />
-          <Text className="mt-4 text-center text-xl font-bold" style={{ color: colors.text }}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={34}
+            color={colors.error}
+          />
+          <Text
+            className="mt-4 text-center text-xl font-bold"
+            style={{ color: colors.text }}
+          >
             Không tải được dữ liệu nhiệm vụ.
           </Text>
-          <Text className="mt-2 text-center text-base" style={{ color: colors.textSecondary }}>
+          <Text
+            className="mt-2 text-center text-base"
+            style={{ color: colors.textSecondary }}
+          >
             {errorMessage}
           </Text>
           <TouchableOpacity
@@ -514,8 +654,15 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
         </View>
       ) : !displayBatch && historyBatches.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Ionicons name="file-tray-outline" size={34} color={colors.textSecondary} />
-          <Text className="mt-4 text-center text-xl font-bold" style={{ color: colors.text }}>
+          <Ionicons
+            name="file-tray-outline"
+            size={34}
+            color={colors.textSecondary}
+          />
+          <Text
+            className="mt-4 text-center text-xl font-bold"
+            style={{ color: colors.text }}
+          >
             Hiện chưa có nhiệm vụ hoạt động.
           </Text>
           <TouchableOpacity
@@ -532,11 +679,17 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
           contentContainerStyle={{ paddingBottom: bottom + 24 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => loadData(true)} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadData(true)}
+            />
           }
         >
           <View className="px-4 pt-4">
-            <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
+            <View
+              className="rounded-3xl p-5"
+              style={{ backgroundColor: colors.secondary }}
+            >
               <Text className="text-2xl font-bold text-white">
                 {teamName || team?.name || 'Nhóm hiện tại'}
               </Text>
@@ -570,7 +723,11 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
               ) : null}
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mt-4"
+            >
               <View className="flex-row gap-2">
                 {FILTER_OPTIONS.map((option) => {
                   const active = filter === option.value;
@@ -579,7 +736,11 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                       key={option.value}
                       onPress={() => setFilter(option.value)}
                       className="rounded-full px-4 py-2"
-                      style={{ backgroundColor: active ? colors.primary : colors.surface }}
+                      style={{
+                        backgroundColor: active
+                          ? colors.primary
+                          : colors.surface,
+                      }}
                     >
                       <Text
                         style={{
@@ -611,7 +772,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                     <View
                       key={item.rescueBatchItemId}
                       className="rounded-2xl border p-4"
-                      style={{ borderColor: colors.border, backgroundColor: colors.card }}
+                      style={{
+                        borderColor: colors.border,
+                        backgroundColor: colors.card,
+                      }}
                     >
                       <View className="flex-row flex-wrap gap-2">
                         <View
@@ -668,31 +832,55 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                         ) : null}
                       </View>
 
-                      <Text className="mt-3 text-base font-bold" style={{ color: colors.text }}>
+                      <Text
+                        className="mt-3 text-base font-bold"
+                        style={{ color: colors.text }}
+                      >
                         {item.description}
                       </Text>
-                      <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
+                      <Text
+                        className="mt-2 text-sm"
+                        style={{ color: colors.textSecondary }}
+                      >
                         {item.address}
                       </Text>
-                      <Text className="mt-2 text-sm font-medium" style={{ color: colors.text }}>
-                        {formatDistanceKm(item.distanceKm)} km • {formatMinutes(item.estimatedMinutes)} phút
+                      <Text
+                        className="mt-2 text-sm font-medium"
+                        style={{ color: colors.text }}
+                      >
+                        {formatDistanceKm(item.distanceKm)} km •{' '}
+                        {formatMinutes(item.estimatedMinutes)} phút
                       </Text>
 
                       <View className="mt-3 flex-row items-center justify-between">
                         <View className="flex-1 pr-3">
-                          <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                          <Text
+                            className="text-sm font-semibold"
+                            style={{ color: colors.text }}
+                          >
                             {item.reporterFullName || 'Người báo tin'}
                           </Text>
-                          <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                          <Text
+                            className="text-sm"
+                            style={{ color: colors.textSecondary }}
+                          >
                             {item.reporterPhone || 'Không có số điện thoại'}
                           </Text>
                         </View>
                         <TouchableOpacity
-                          onPress={() => rescueTeamService.openCallReporter(item.reporterPhone)}
+                          onPress={() =>
+                            rescueTeamService.openCallReporter(
+                              item.reporterPhone,
+                            )
+                          }
                           className="h-10 w-10 items-center justify-center rounded-full"
                           style={{ backgroundColor: colors.surface }}
                         >
-                          <Ionicons name="call-outline" size={18} color={colors.primary} />
+                          <Ionicons
+                            name="call-outline"
+                            size={18}
+                            color={colors.primary}
+                          />
                         </TouchableOpacity>
                       </View>
 
@@ -702,19 +890,32 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                           className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
                           style={{ backgroundColor: colors.primary }}
                         >
-                          <Ionicons name="navigate-outline" size={18} color="#fff" />
-                          <Text className="font-bold text-white">Dẫn đường</Text>
+                          <Ionicons
+                            name="navigate-outline"
+                            size={18}
+                            color="#fff"
+                          />
+                          <Text className="font-bold text-white">
+                            Dẫn đường
+                          </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                          onPress={() => rescueTeamService.openExternalNavigation(item)}
+                          onPress={() =>
+                            rescueTeamService.openExternalNavigation(item)
+                          }
                           className="flex-row items-center justify-center rounded-xl border px-4 py-3"
                           style={{ borderColor: colors.border }}
                         >
-                          <Ionicons name="map-outline" size={18} color={colors.primary} />
+                          <Ionicons
+                            name="map-outline"
+                            size={18}
+                            color={colors.primary}
+                          />
                         </TouchableOpacity>
                       </View>
 
-                      {currentMissionForUi?.rescueBatchItemId === item.rescueBatchItemId
+                      {currentMissionForUi?.rescueBatchItemId ===
+                      item.rescueBatchItemId
                         ? renderLeaderMissionActions(item)
                         : null}
                     </View>
@@ -864,7 +1065,15 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
   );
 }
 
-function Badge({ label, bg, text }: { label: string; bg: string; text: string }) {
+function Badge({
+  label,
+  bg,
+  text,
+}: {
+  label: string;
+  bg: string;
+  text: string;
+}) {
   return (
     <View className="rounded-full px-3 py-1" style={{ backgroundColor: bg }}>
       <Text className="text-xs font-bold" style={{ color: text }}>
@@ -886,7 +1095,10 @@ function MetaBadge({
   text: string;
 }) {
   return (
-    <View className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5" style={{ backgroundColor: bg }}>
+    <View
+      className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
+      style={{ backgroundColor: bg }}
+    >
       <Ionicons name={icon} size={14} color={text} />
       <Text className="text-xs font-semibold" style={{ color: text }}>
         {label}
@@ -906,16 +1118,33 @@ function StepGroup({
 }) {
   const { colors } = useTheme();
   const steps = [
-    { status: 2 as const, short: 'Đi', label: 'Đang di chuyển', icon: 'navigate-outline' as const },
-    { status: 3 as const, short: 'Làm', label: 'Đang cứu hộ', icon: 'medkit-outline' as const },
+    {
+      status: 2 as const,
+      short: 'Đi',
+      label: 'Đang di chuyển',
+      icon: 'navigate-outline' as const,
+    },
+    {
+      status: 3 as const,
+      short: 'Làm',
+      label: 'Đang cứu hộ',
+      icon: 'medkit-outline' as const,
+    },
   ];
 
   return (
-    <View className="overflow-hidden rounded-2xl border" style={{ borderColor: colors.border }}>
+    <View
+      className="overflow-hidden rounded-2xl border"
+      style={{ borderColor: colors.border }}
+    >
       <View className="flex-row">
         {steps.map((step, index) => {
-          const isActive = currentStatus.toLowerCase().includes(step.status === 2 ? 'enroute' : 'rescuing');
-          const backgroundColor = isActive ? `${colors.primary}18` : colors.card;
+          const isActive = currentStatus
+            .toLowerCase()
+            .includes(step.status === 2 ? 'enroute' : 'rescuing');
+          const backgroundColor = isActive
+            ? `${colors.primary}18`
+            : colors.card;
           const textColor = isActive ? colors.primary : colors.textSecondary;
           return (
             <TouchableOpacity
@@ -931,10 +1160,16 @@ function StepGroup({
               }}
             >
               <Ionicons name={step.icon} size={18} color={textColor} />
-              <Text className="mt-2 text-center text-xs font-bold" style={{ color: textColor }}>
+              <Text
+                className="mt-2 text-center text-xs font-bold"
+                style={{ color: textColor }}
+              >
                 {step.short}
               </Text>
-              <Text className="mt-1 text-center text-[11px]" style={{ color: textColor }}>
+              <Text
+                className="mt-1 text-center text-[11px]"
+                style={{ color: textColor }}
+              >
                 {step.label}
               </Text>
             </TouchableOpacity>

@@ -1,23 +1,19 @@
-import api from './api';
 import type {
-  RescueBatchItem,
-  RescueActiveBatchResponse,
-  RescueTeamHistoryResponse,
+    RescueActiveBatchResponse,
+    RescueBatchItem,
+    RescueTeamHistoryResponse,
 } from '../types/team';
 import {
-  decodePolyline,
-  fetchDirectionsPolyline,
-  getMapStyleUrl,
-  toMapCoordinate,
+    decodePolyline,
+    fetchDirectionsPolyline,
+    getMapStyleUrl,
+    toMapCoordinate,
 } from '../utils/geo';
 import { openCallReporter, openExternalNavigation } from '../utils/linking';
+import api from './api';
 
 export type {
-  RescueBatchItem,
-  RescueActiveBatchResponse,
-  RescueTeamHistoryRequestItem,
-  RescueTeamHistoryBatch,
-  RescueTeamHistoryResponse,
+    RescueActiveBatchResponse, RescueBatchItem, RescueTeamHistoryBatch, RescueTeamHistoryRequestItem, RescueTeamHistoryResponse
 } from '../types/team';
 
 export const rescueTeamService = {
@@ -108,17 +104,78 @@ export const rescueTeamService = {
     items: RescueBatchItem[],
     filter: 'all' | 'emergency' | 'normal' | 'in-progress' | 'pending' | 'done',
   ) => {
+    const normalizeType = (value?: string | number | null) => {
+      const normalized = String(value ?? '')
+        .trim()
+        .toLowerCase();
+      if (
+        normalized === '1' ||
+        normalized === 'emergency' ||
+        normalized === 'khẩn cấp'
+      ) {
+        return 'emergency';
+      }
+      if (
+        normalized === '0' ||
+        normalized === 'normal' ||
+        normalized === 'bình thường'
+      ) {
+        return 'normal';
+      }
+      return normalized;
+    };
+
+    const normalizeStatus = (value?: string | null) => {
+      return String(value ?? '')
+        .trim()
+        .toLowerCase();
+    };
+
+    const inProgressStates = new Set([
+      'inprogress',
+      'enroute',
+      'rescuing',
+      'returning',
+      'assigned',
+    ]);
+
+    const pendingStates = new Set(['pending', 'verified']);
+
+    const doneStates = new Set([
+      'done',
+      'rescuecompleted',
+      'completed',
+      'closed',
+      'cancelled',
+    ]);
+
+    const getStatusSet = (item: RescueBatchItem) => {
+      const primaryStatus = normalizeStatus(item.status);
+      const requestStatus = normalizeStatus(item.rescueRequestStatus);
+      return [primaryStatus, requestStatus].filter(Boolean);
+    };
+
     switch (filter) {
       case 'emergency':
-        return items.filter((item) => item.rescueRequestType === 'Emergency');
+        return items.filter(
+          (item) => normalizeType(item.rescueRequestType) === 'emergency',
+        );
       case 'normal':
-        return items.filter((item) => item.rescueRequestType === 'Normal');
+        return items.filter(
+          (item) => normalizeType(item.rescueRequestType) === 'normal',
+        );
       case 'in-progress':
-        return items.filter((item) => item.status === 'InProgress');
+        return items.filter((item) =>
+          getStatusSet(item).some((status) => inProgressStates.has(status)),
+        );
       case 'pending':
-        return items.filter((item) => item.status === 'Pending');
+        return items.filter((item) =>
+          getStatusSet(item).some((status) => pendingStates.has(status)),
+        );
       case 'done':
-        return items.filter((item) => item.status === 'Done');
+        return items.filter((item) =>
+          getStatusSet(item).some((status) => doneStates.has(status)),
+        );
       default:
         return items;
     }
