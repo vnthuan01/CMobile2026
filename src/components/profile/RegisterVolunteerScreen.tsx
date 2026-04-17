@@ -3,52 +3,52 @@ import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
-  useCampaignDetail,
-  useVolunteerRegistrationCampaigns,
+    useCampaignDetail,
+    useVolunteerRegistrationCampaigns,
 } from '@/src/hooks/useDonation';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
-  useCreateVolunteerProfile,
-  useResubmitVolunteerProfile,
-  useVolunteerSkills,
+    useCreateVolunteerProfile,
+    useResubmitVolunteerProfile,
+    useVolunteerSkills,
 } from '@/src/hooks/useVolunteerActions';
 import type { CampaignListItem } from '@/src/services/donationService';
 import {
-  CampaignResourceType,
-  getCampaignDetail,
+    CampaignResourceType,
+    getCampaignDetail,
 } from '@/src/services/donationService';
 import {
-  CreateVolunteerCertificateRequest,
-  CreateVolunteerRequest,
-  ResubmitVolunteerProfileRequest,
-  SkillResponse,
-  TeamRolePreference,
-  VolunteerProfileResponse,
+    CreateVolunteerCertificateRequest,
+    CreateVolunteerRequest,
+    ResubmitVolunteerProfileRequest,
+    SkillResponse,
+    TeamRolePreference,
+    VolunteerProfileResponse,
 } from '@/src/services/volunteerService';
 import { useProfileFlowStore } from '@/src/store/profileFlowStore';
 import {
-  showErrorToast,
-  showSuccessToast,
-  showWarningToast,
+    showErrorToast,
+    showSuccessToast,
+    showWarningToast,
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, {
-  DateTimePickerAndroid,
-  DateTimePickerEvent,
+    DateTimePickerAndroid,
+    DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { useQueries } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -420,6 +420,11 @@ export default function RegisterVolunteerScreen({
         ? prev.filter((id) => id !== skillId)
         : [...prev, skillId],
     );
+  };
+
+  const handleYearsOfExperienceChange = (value: string) => {
+    const normalized = value.replace(/[^0-9]/g, '');
+    setYearsOfExperience(normalized);
   };
 
   const updateCertificate = (
@@ -956,8 +961,9 @@ export default function RegisterVolunteerScreen({
           </Text>
           <TextInput
             value={yearsOfExperience}
-            onChangeText={setYearsOfExperience}
+            onChangeText={handleYearsOfExperienceChange}
             keyboardType="number-pad"
+            inputMode="numeric"
             placeholder="Ví dụ: 2"
             className="h-12 rounded-xl border px-4 text-base"
             placeholderTextColor={colors.textSecondary}
