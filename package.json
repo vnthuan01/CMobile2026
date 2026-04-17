@@ -6,6 +6,8 @@
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
+    "android:release": "expo run:android --variant release",
+    "android:release:win": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:NODE_ENV='production'; npx expo run:android --variant release\"",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
