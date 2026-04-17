@@ -1,4 +1,5 @@
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useFundraisingCampaigns } from '@/src/hooks/useDonation';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -16,7 +17,8 @@ export default function FundraisingCampaignListScreen() {
   const Touchable = TouchableOpacity as any;
   const Press = Pressable as any;
   const router = useRouter();
-  const { top, bottom } = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const { data, isLoading, isError, refetch } = useFundraisingCampaigns();
 
@@ -51,7 +53,7 @@ export default function FundraisingCampaignListScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         <View className="mx-auto w-full max-w-md gap-4 p-4">

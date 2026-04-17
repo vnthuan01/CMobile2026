@@ -1,6 +1,7 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useCurrentTeam } from '@/src/hooks/useTeamOverview';
 import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { TeamDetailResponse, TeamSkillResponse } from '@/src/services/teamService';
@@ -16,7 +17,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MyCurrentTeamScreenProps {
   onBack?: () => void;
@@ -27,7 +27,7 @@ export default function MyCurrentTeamScreen({
   onBack,
   onOpenTasks,
 }: MyCurrentTeamScreenProps) {
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(32);
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const currentTeamQuery = useCurrentTeam();
@@ -200,7 +200,7 @@ export default function MyCurrentTeamScreen({
       ) : (
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingBottom: bottom + 32 }}
+          contentContainerStyle={{ paddingBottom: bottomInset }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

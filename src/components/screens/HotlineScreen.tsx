@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 
 interface HotlineScreenProps {
     onBack?: () => void;
@@ -96,7 +97,8 @@ const LOCAL_DIRECTORIES: LocalDirectory[] = [
 
 export default function HotlineScreen({ onBack }: HotlineScreenProps) {
     const router = useRouter();
-    const { top, bottom } = useSafeAreaInsets();
+    const { top } = useSafeAreaInsets();
+    const bottomInset = useBottomContentInset(24);
     const { colors } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRegion, setSelectedRegion] = useState('Miền Bắc');
@@ -149,7 +151,7 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
 
             <ScrollView
                 className="flex-1"
-                contentContainerStyle={{ paddingBottom: bottom + 24 }}
+                contentContainerStyle={{ paddingBottom: bottomInset }}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Search Bar */}

@@ -1,6 +1,7 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useUserProfile } from '@/src/hooks/useUserProfile';
 import { useAuthStore } from '@/src/store/authStore';
 import {
@@ -10,7 +11,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { type ReactNode, useMemo } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface UserProfileViewScreenProps {
   onBack?: () => void;
@@ -21,7 +21,7 @@ export default function UserProfileViewScreen({
   onBack,
   onEdit,
 }: UserProfileViewScreenProps) {
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const authUser = useAuthStore((state) => state.user);
   const { data, isLoading } = useUserProfile(true);
@@ -64,7 +64,7 @@ export default function UserProfileViewScreen({
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         <View className="px-4 pt-4">

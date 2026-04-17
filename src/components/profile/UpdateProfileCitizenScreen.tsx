@@ -1,6 +1,7 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
   useUpdateUserProfile,
@@ -28,7 +29,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface UpdateProfileCitizenScreenProps {
   onBack?: () => void;
@@ -43,7 +43,7 @@ export default function UpdateProfileCitizenScreen({
   onSave,
   hideBackButton = false,
 }: UpdateProfileCitizenScreenProps) {
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const authUser = useAuthStore((state) => state.user);
   const { data } = useUserProfile(true);
@@ -275,7 +275,7 @@ export default function UpdateProfileCitizenScreen({
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         className="flex-1"
         showsVerticalScrollIndicator={false}
       >

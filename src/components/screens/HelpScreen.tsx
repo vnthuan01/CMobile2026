@@ -1,6 +1,7 @@
 import '@/global.css';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -124,7 +125,8 @@ const FAQ_ITEMS = [
 ];
 
 export default function HelpScreen({ onBack }: HelpScreenProps) {
-  const { top, bottom } = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(32);
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const isVolunteer = user?.role === 'Volunteer';
@@ -151,8 +153,8 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
       </View>
 
       <ScrollView
-        style={{ paddingBottom: bottom + 32 }}
         className="flex-1"
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         {/* Welcome Section */}

@@ -1,4 +1,5 @@
 import Header from '@/src/components/header/header';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
     fetchNotifications,
@@ -19,7 +20,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function formatNotificationTime(iso: string) {
   const date = new Date(iso);
@@ -50,7 +50,7 @@ function getPreviewThumbnails(item: AppNotification): string[] {
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -258,7 +258,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={items}
           keyExtractor={(item) => item.notificationId}
-          contentContainerStyle={{ padding: 16, paddingBottom: bottom + 24 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: bottomInset }}
           renderItem={renderItem}
           refreshControl={
             <RefreshControl

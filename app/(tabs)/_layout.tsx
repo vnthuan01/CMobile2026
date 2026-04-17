@@ -4,17 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, Platform, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TabIconProps = {
   color: string;
 };
 
-const TAB_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
+const BASE_TAB_HEIGHT = Platform.OS === 'ios' ? 74 : 56;
 const ICON_SIZE = 24;
 
 export default function TabsLayout() {
   const user = useAuthStore((s) => s.user);
   const role = (user?.role ?? '').toLowerCase();
+  const { bottom } = useSafeAreaInsets();
   /* ================= THEME ================= */
   const { colors, isDark } = useTheme();
 
@@ -27,6 +29,8 @@ export default function TabsLayout() {
   const inactiveColor = colors.textSecondary;
   const tabBgColor = colors.card;
   const borderColor = colors.border;
+  const tabBarBottomPadding = Platform.OS === 'ios' ? Math.max(bottom, 14) : Math.max(bottom, 10);
+  const tabBarHeight = BASE_TAB_HEIGHT + tabBarBottomPadding;
 
   /* ================= COMMON OPTIONS ================= */
   const screenOptions = {
@@ -38,9 +42,9 @@ export default function TabsLayout() {
     tabBarAllowFontScaling: false,
 
     tabBarStyle: {
-      height: TAB_HEIGHT,
+      height: tabBarHeight,
       paddingTop: 6,
-      paddingBottom: Platform.OS === 'ios' ? 14 : 8,
+      paddingBottom: tabBarBottomPadding,
       borderTopWidth: 0.5,
       borderTopColor: borderColor,
       backgroundColor: tabBgColor,

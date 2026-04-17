@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type VerifyStatus = 'loading' | 'success' | 'error';
 
@@ -12,7 +13,7 @@ export default function ConfirmEmailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const confirmEmailMutation = useConfirmEmail();
-  const params = useLocalSearchParams<{ email?: string; token?: string }>();
+  const params = useLocalSearchParams();
 
   const [status, setStatus] = useState<VerifyStatus>('loading');
   const [message, setMessage] = useState('Đang xác thực email của bạn...');
@@ -51,8 +52,9 @@ export default function ConfirmEmailScreen() {
   }, [params.email, params.token]);
 
   return (
-    <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: colors.background }}>
-      <View className="w-full max-w-[420px] items-center rounded-2xl border p-6" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+    <SafeAreaView edges={['top', 'bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View className="flex-1 items-center justify-center px-6">
+        <View className="w-full max-w-[420px] items-center rounded-2xl border p-6" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
         {status === 'loading' ? (
           <>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -106,7 +108,8 @@ export default function ConfirmEmailScreen() {
             </TouchableOpacity>
           </>
         )}
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

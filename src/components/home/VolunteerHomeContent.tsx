@@ -7,10 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function VolunteerHomeContent() {
-  const { bottom } = useSafeAreaInsets();
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const volunteerHomeQuery = useVolunteerHomeOverview();
@@ -149,7 +147,7 @@ export default function VolunteerHomeContent() {
   };
 
   return (
-    <View style={{ paddingBottom: bottom + 20 }}>
+    <View style={{ paddingBottom: 20 }}>
       <View className="mt-6 px-4">
         <SectionTitle
           title="Trung tâm tình nguyện"

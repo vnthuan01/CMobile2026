@@ -1,11 +1,11 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SettingsScreenProps {
     onBack?: () => void;
@@ -13,7 +13,7 @@ interface SettingsScreenProps {
 }
 
 export default function SettingsScreen({ onBack, onNavigate }: SettingsScreenProps) {
-    const { bottom } = useSafeAreaInsets();
+    const bottomInset = useBottomContentInset(32);
     const [notifications, setNotifications] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [vibrationEnabled, setVibrationEnabled] = useState(true);
@@ -57,7 +57,7 @@ export default function SettingsScreen({ onBack, onNavigate }: SettingsScreenPro
             <ScreenHeader title="Cài đặt" onBack={onBack} />
 
             <ScrollView
-                contentContainerStyle={{ paddingBottom: bottom + 32 }}
+                contentContainerStyle={{ paddingBottom: bottomInset }}
                 className="flex-1"
                 showsVerticalScrollIndicator={false}
             >

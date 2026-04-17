@@ -2,6 +2,7 @@ import '@/global.css';
 import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import {
   useCampaignDetail,
   useVolunteerRegistrationCampaigns,
@@ -50,7 +51,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface RegisterVolunteerScreenProps {
   onBack?: () => void;
@@ -212,7 +212,7 @@ export default function RegisterVolunteerScreen({
   mode = 'create',
   initialProfile,
 }: RegisterVolunteerScreenProps) {
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const router = useRouter();
   const { colors } = useTheme();
   const { dialogProps, showDialog } = useDialog();
@@ -733,7 +733,7 @@ export default function RegisterVolunteerScreen({
       />
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         {mode === 'resubmit' && initialProfile?.reason ? (

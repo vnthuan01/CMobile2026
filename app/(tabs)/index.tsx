@@ -4,6 +4,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 import UserHomeContent from '@/src/features/rescue/containers/UserHomeContent';
 import VolunteerHomeContent from '@/src/features/volunteer/containers/VolunteerHomeContent';
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
 import { useAuthStore } from '@/src/store/authStore';
 import { useNotificationStore } from '@/src/store/notificationStore';
@@ -28,7 +29,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function IndexScreen() {
   const router = useRouter();
-  const { top, bottom } = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { width } = useWindowDimensions();
   const user = useAuthStore((s) => s.user);
   const role = (user?.role ?? '').toLowerCase();
@@ -83,7 +85,7 @@ export default function IndexScreen() {
       {/* ===== CONTENT ===== */}
       <ScrollView
         style={{ paddingTop: top }}
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}

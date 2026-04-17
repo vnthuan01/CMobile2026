@@ -4,6 +4,7 @@ import ImageUploader from '@/src/components/common/ImageUploader';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import WebViewMap from '@/src/components/common/WebViewMap';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useTeamTasksController } from '@/src/hooks/useTeamTasksController';
 import {
   RescueBatchItem as BaseRescueBatchItem,
@@ -22,7 +23,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TeamTasksMap from './TeamTasksMap';
 
 type MissionFilter =
@@ -58,7 +58,7 @@ export default function TeamTasksScreen({
   onBack,
   openMapOnLoad = false,
 }: TeamTasksScreenProps) {
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const {
     screen,
@@ -688,7 +688,7 @@ export default function TeamTasksScreen({
       ) : (
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingBottom: bottom + 24 }}
+          contentContainerStyle={{ paddingBottom: bottomInset }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl

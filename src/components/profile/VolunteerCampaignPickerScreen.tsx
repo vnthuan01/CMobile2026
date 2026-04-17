@@ -1,6 +1,7 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import {
   useCampaignDetail,
   useVolunteerRegistrationCampaigns,
@@ -22,7 +23,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const getCampaignPriority = (status: number) => {
   switch (Number(status)) {
@@ -117,7 +117,7 @@ const getPeopleGoal = (campaign?: CampaignDetail | null) =>
 
 export default function VolunteerCampaignPickerScreen() {
   const router = useRouter();
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const { data, isLoading, isError, refetch } =
     useVolunteerRegistrationCampaigns(true);
@@ -168,7 +168,7 @@ export default function VolunteerCampaignPickerScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         <View className="p-4">

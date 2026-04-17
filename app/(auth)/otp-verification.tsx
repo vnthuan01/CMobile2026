@@ -32,7 +32,7 @@ export default function OTPScreen() {
   const verifyEmailOtpMutation = useVerifyEmailOtp();
   const sendForgotPasswordOtpMutation = useSendForgotPasswordOtp();
   const resendEmailOtpMutation = useResendEmailOtp();
-  const params = useLocalSearchParams<{ email?: string; mode?: string }>();
+  const params = useLocalSearchParams();
 
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const [counter, setCounter] = useState(30);
@@ -161,7 +161,7 @@ export default function OTPScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"

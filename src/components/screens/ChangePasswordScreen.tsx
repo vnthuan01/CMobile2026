@@ -2,6 +2,7 @@ import '@/global.css';
 import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { authService } from '@/src/services/authService';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +15,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ChangePasswordScreenProps {
   onBack?: () => void;
@@ -32,7 +32,7 @@ export default function ChangePasswordScreen({
   onBack,
 }: ChangePasswordScreenProps) {
   const router = useRouter();
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors, isDark } = useTheme();
   const { dialogProps, showDialog } = useDialog();
 
@@ -252,7 +252,7 @@ export default function ChangePasswordScreen({
       <ScreenHeader title="Đổi mật khẩu" onBack={onBack} />
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         className="flex-1"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

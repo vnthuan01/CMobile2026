@@ -9,7 +9,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { type ReactNode, useCallback, useMemo } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   DonateQuickActionIcon,
   TrackingQuickActionIcon,
@@ -18,7 +17,6 @@ import {
 import UserRescueTrackingMap from '../user/UserRescueTrackingMap';
 
 export default function UserHomeContent() {
-  const { bottom } = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
 
@@ -149,7 +147,7 @@ export default function UserHomeContent() {
   };
 
   return (
-    <View style={{ paddingBottom: bottom + 20 }}>
+    <View style={{ paddingBottom: 20 }}>
       <View className="mt-6 px-4">
         <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>
           Hành động nhanh

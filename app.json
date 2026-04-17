@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CMobile-Reliefcare-26",
+    "name": "ReliefCare",
     "slug": "CMobile-Reliefcare-26",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -32,16 +32,11 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "CMobile-Reliefcare-26 yêu cầu cấp quyền truy cập vị trí"
+          "locationWhenInUsePermission": "ReliefCare yêu cầu cấp quyền truy cập vị trí"
         }
       ],
       "@react-native-community/datetimepicker",
-      [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsDownloadToken": "${EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN}"
-        }
-      ]
+      "@rnmapbox/maps"
     ],
     "experiments": {
       "typedRoutes": true,

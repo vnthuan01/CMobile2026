@@ -2,6 +2,7 @@ import '@/global.css';
 import { AppDialog, useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
 import {
   useAllSkills,
@@ -26,7 +27,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MyVolunteerProfileScreenProps {
   onBack?: () => void;
@@ -41,7 +41,7 @@ export default function MyVolunteerProfileScreen({
   onResubmit,
   justSubmitted = false,
 }: MyVolunteerProfileScreenProps) {
-  const { bottom } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
   const { colors } = useTheme();
   const router = useRouter();
   const { dialogProps, showDialog } = useDialog();
@@ -67,7 +67,7 @@ export default function MyVolunteerProfileScreen({
   const skills = skillsQuery.data ?? [];
   const loading = profileQuery.isLoading || skillsQuery.isLoading;
   const backendRoles = citizenProfileQuery.data?.profile?.roles ?? [];
-  const backendHasVolunteerRole = backendRoles.some((role) => {
+  const backendHasVolunteerRole = backendRoles.some((role: string) => {
     const normalized = String(role).toLowerCase();
     return normalized === 'volunteer' || normalized === 'leader';
   });
@@ -249,7 +249,7 @@ export default function MyVolunteerProfileScreen({
       <ScreenHeader title="Hồ sơ tình nguyện viên" onBack={onBack} />
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         <View className="px-4 pt-4">
