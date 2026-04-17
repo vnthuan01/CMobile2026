@@ -539,8 +539,7 @@ export function useTeamTasksController() {
 
     sendHeartbeat();
 
-    const speed = userLocation.speedKph ?? 0;
-    const intervalMs = speed >= 5 ? 10000 : 20000;
+    const intervalMs = 90000;
     setHeartbeatIntervalMs(intervalMs);
 
     if (heartbeatIntervalRef.current) {

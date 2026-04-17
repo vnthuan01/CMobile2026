@@ -5,95 +5,105 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenHeaderProps {
-    title: string;
-    subtitle?: string;
-    onBack?: () => void;
-    rightAction?: React.ReactNode;
-    backgroundColor?: string;
-    titleColor?: string;
-    // Legacy aliases for backward compatibility with Header
-    center?: boolean;
-    rightComponent?: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  onBack?: () => void;
+  rightAction?: React.ReactNode;
+  backgroundColor?: string;
+  titleColor?: string;
+  // Legacy aliases for backward compatibility with Header
+  center?: boolean;
+  rightComponent?: React.ReactNode;
 }
 
 export default function ScreenHeader({
-    title,
-    subtitle,
-    onBack,
-    rightAction,
-    backgroundColor,
-    titleColor,
-    center: _center,
-    rightComponent,
+  title,
+  subtitle,
+  onBack,
+  rightAction,
+  backgroundColor,
+  titleColor,
+  center: _center,
+  rightComponent,
 }: ScreenHeaderProps) {
-    const { top } = useSafeAreaInsets();
-    const { colors, isDark } = useTheme();
+  const { top } = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
 
-    const bgColor = backgroundColor ?? colors.card;
-    const txtColor = titleColor ?? colors.text;
-    const resolvedRightAction = rightAction ?? rightComponent ?? null;
-    const backButtonBg = isDark ? colors.surface : `${colors.primary}15`;
+  const bgColor = backgroundColor ?? colors.card;
+  const txtColor = titleColor ?? colors.text;
+  const resolvedRightAction = rightAction ?? rightComponent ?? null;
+  const backButtonBg = isDark ? colors.surface : `${colors.primary}15`;
 
-    return (
-        <View
-            style={[
-                {
-                    paddingTop: top + 10,
-                    paddingBottom: 10,
-                    paddingHorizontal: 16,
-                    backgroundColor: bgColor,
-                    borderBottomColor: colors.border,
-                },
-                !isDark && styles.shadow,
-            ]}
-            className="border-b"
-        >
-            <View className="flex-row items-center">
-                {onBack ? (
-                    <TouchableOpacity
-                        onPress={onBack}
-                        style={{ width: 40, height: 40, backgroundColor: backButtonBg }}
-                        className="items-center justify-center rounded-full"
-                    >
-                        <Ionicons name="arrow-back-outline" size={22} color={colors.primary} />
-                    </TouchableOpacity>
-                ) : (
-                    <View style={{ width: 40 }} />
-                )}
+  return (
+    <View
+      style={[
+        {
+          paddingTop: top + 10,
+          paddingBottom: 10,
+          paddingHorizontal: 16,
+          backgroundColor: bgColor,
+          borderBottomColor: colors.border,
+        },
+        !isDark && styles.shadow,
+      ]}
+      className="border-b"
+    >
+      <View className="flex-row items-center">
+        {onBack ? (
+          <TouchableOpacity
+            onPress={onBack}
+            style={{ width: 40, height: 40, backgroundColor: backButtonBg }}
+            className="items-center justify-center rounded-full"
+          >
+            <Ionicons
+              name="arrow-back-outline"
+              size={22}
+              color={colors.primary}
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
 
-                <View className="flex-1 items-center">
-                    <Text
-                        style={{ color: txtColor, fontSize: 18 }}
-                        className="font-bold text-center leading-tight"
-                        numberOfLines={1}
-                    >
-                        {title}
-                    </Text>
-                    {subtitle ? (
-                        <Text
-                            style={{ color: colors.textSecondary, fontSize: 13 }}
-                            className="mt-0.5 text-center"
-                            numberOfLines={1}
-                        >
-                            {subtitle}
-                        </Text>
-                    ) : null}
-                </View>
-
-                <View style={{ width: 40 }} className="items-end">
-                    {resolvedRightAction}
-                </View>
-            </View>
+        <View className="flex-1 items-center">
+          <Text
+            style={{ color: txtColor, fontSize: 18 }}
+            className="text-center font-bold leading-tight"
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text
+              style={{ color: colors.textSecondary, fontSize: 13 }}
+              className="mt-0.5 text-center"
+              numberOfLines={1}
+            >
+              {subtitle}
+            </Text>
+          ) : null}
         </View>
-    );
+
+        <View
+          style={{
+            minWidth: 40,
+            width: resolvedRightAction ? undefined : 40,
+          }}
+          className="items-end"
+        >
+          {resolvedRightAction}
+        </View>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    shadow: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
-        elevation: 2,
-    },
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
 });

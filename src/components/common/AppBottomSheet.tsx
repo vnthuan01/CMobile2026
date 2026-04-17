@@ -1,13 +1,14 @@
+import { useTheme } from '@/src/context/ThemeContext';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { useEffect, useMemo, useRef } from 'react';
 import { View } from 'react-native';
-import { useTheme } from '@/src/context/ThemeContext';
 
 interface AppBottomSheetProps {
   open: boolean;
   onClose?: () => void;
   children: React.ReactNode;
   snapPoints?: Array<string | number>;
+  allowCloseByPanDown?: boolean;
 }
 
 export default function AppBottomSheet({
@@ -15,6 +16,7 @@ export default function AppBottomSheet({
   onClose,
   children,
   snapPoints,
+  allowCloseByPanDown = true,
 }: AppBottomSheetProps) {
   const ref = useRef<BottomSheet>(null);
   const { colors } = useTheme();
@@ -33,9 +35,13 @@ export default function AppBottomSheet({
       ref={ref}
       index={open ? 0 : -1}
       snapPoints={points}
-      enablePanDownToClose
+      enablePanDownToClose={allowCloseByPanDown}
       onClose={onClose}
-      backgroundStyle={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: colors.card }}
+      backgroundStyle={{
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        backgroundColor: colors.card,
+      }}
       handleIndicatorStyle={{ backgroundColor: colors.border, width: 48 }}
     >
       <BottomSheetView style={{ flex: 1 }}>
