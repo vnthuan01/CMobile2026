@@ -207,14 +207,13 @@ export default function VolunteerProfile({
                   className="text-base font-bold"
                   style={{ color: colors.text }}
                 >
-                  Team của tôi
+                  Đội của tôi
                 </Text>
                 <Text
                   className="mt-1 text-xs leading-relaxed"
                   style={{ color: colors.textSecondary }}
                 >
-                  Xem trưởng nhóm, moderator, danh sách thành viên và kỹ năng
-                  của team.
+                  Xem danh sách thành viên và kỹ năng của team.
                 </Text>
               </View>
               <TouchableOpacity
@@ -633,38 +632,6 @@ export default function VolunteerProfile({
                     style={{ color: colors.textSecondary }}
                   >
                     Gửi báo cáo tổng hợp của nhóm
-                  </Text>
-                </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => onNavigate?.('/profile/requests')}
-                className="flex-row items-center gap-4 border-b p-4"
-                style={{ borderColor: neutralBorder }}
-              >
-                <View
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.surface }}
-                >
-                  <Ionicons name="document-text" size={18} color={iconAccent} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="text-sm font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Theo dõi yêu cầu
-                  </Text>
-                  <Text
-                    className="text-xs"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Xem trạng thái yêu cầu của bạn
                   </Text>
                 </View>
                 <Ionicons

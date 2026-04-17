@@ -6,20 +6,21 @@ import WebViewMap from '@/src/components/common/WebViewMap';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useTeamTasksController } from '@/src/hooks/useTeamTasksController';
 import {
-    RescueBatchItem as BaseRescueBatchItem,
-    RescueActiveBatchResponse,
-    rescueTeamService,
+  RescueBatchItem as BaseRescueBatchItem,
+  RescueActiveBatchResponse,
+  rescueTeamService,
 } from '@/src/services/rescueTeamService';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import { useEffect, useRef } from 'react';
 import {
-    ActivityIndicator,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TeamTasksMap from './TeamTasksMap';
@@ -39,9 +40,10 @@ type RescueBatchItem = BaseRescueBatchItem & {
 
 interface TeamTasksScreenProps {
   onBack?: () => void;
+  openMapOnLoad?: boolean;
 }
 
-const FILTER_OPTIONS: Array<{ label: string; value: MissionFilter }> = [
+const FILTER_OPTIONS: { label: string; value: MissionFilter }[] = [
   { label: 'Tất cả', value: 'all' },
   { label: 'Khẩn cấp', value: 'emergency' },
   { label: 'Bình thường', value: 'normal' },
@@ -52,7 +54,10 @@ const FILTER_OPTIONS: Array<{ label: string; value: MissionFilter }> = [
 
 const supportsNativeMap = Constants.appOwnership !== 'expo';
 
-export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
+export default function TeamTasksScreen({
+  onBack,
+  openMapOnLoad = false,
+}: TeamTasksScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
   const {
@@ -90,6 +95,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     summary,
     mapStyle,
     getMissionDisplayStatus,
+    getMissionMessage,
     openMapScreen,
     resetLeaderForms,
     currentMissionForUi,
@@ -98,13 +104,22 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
     submitCompleteMission,
     heartbeatStatusLabel,
     debugTrackingLines,
-    activeActionMission,
   } = useTeamTasksController();
 
   const filteredItemsWithPriority = filteredItems as RescueBatchItem[];
-  const historyBatchesWithPriority = historyBatches as Array<
-    RescueActiveBatchResponse & { items: RescueBatchItem[] }
-  >;
+  const historyBatchesWithPriority =
+    historyBatches as (RescueActiveBatchResponse & {
+      items: RescueBatchItem[];
+    })[];
+  const autoOpenedMapRef = useRef(false);
+
+  useEffect(() => {
+    if (!openMapOnLoad || autoOpenedMapRef.current || loading) return;
+    if (!currentMissionForUi) return;
+
+    autoOpenedMapRef.current = true;
+    openMapScreen(currentMissionForUi);
+  }, [currentMissionForUi, loading, openMapOnLoad, openMapScreen]);
 
   const statusBadge = (status?: string) => {
     const normalized = String(status ?? '').toLowerCase();
@@ -120,6 +135,13 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
         bg: `${colors.status.pending}22`,
         text: colors.status.pending,
         label: 'Chờ xử lý',
+      };
+    }
+    if (normalized === 'assigned') {
+      return {
+        bg: `${colors.status.incoming}22`,
+        text: colors.status.incoming,
+        label: 'Được phân công',
       };
     }
     if (normalized === 'done' || normalized === 'rescuecompleted') {
@@ -411,7 +433,7 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                 className="text-sm font-semibold"
                 style={{ color: colors.primary }}
               >
-                Đóng panel
+                Đóng
               </Text>
             </TouchableOpacity>
           </View>
@@ -694,7 +716,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                 {teamName || team?.name || 'Nhóm hiện tại'}
               </Text>
               <Text className="mt-2 text-sm text-white/80">
-                {summary.total} nhiệm vụ • {summary.emergencyCount} khẩn cấp
+                {summary.total} nhiệm vụ • {summary.emergencyCount} khẩn cấp •{' '}
+                {summary.normalCount} bình thường
               </Text>
               {heartbeatStatusLabel ? (
                 <View
@@ -758,172 +781,216 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
             {displayBatch ? (
               <View className="mt-4 gap-3">
-                {filteredItemsWithPriority.map((item) => {
-                  const type = typeBadge(item.rescueRequestType);
-                  const status = statusBadge(
-                    getMissionDisplayStatus(item) || undefined,
-                  );
-                  const priority = priorityBadge(
-                    item.priorityPoint,
-                    item.priorityLevel,
-                  );
+                {filteredItemsWithPriority.length > 0 ? (
+                  filteredItemsWithPriority.map((item) => {
+                    const type = typeBadge(item.rescueRequestType);
+                    const status = statusBadge(
+                      getMissionDisplayStatus(item) || undefined,
+                    );
+                    const priority = priorityBadge(
+                      item.priorityPoint,
+                      item.priorityLevel,
+                    );
 
-                  return (
-                    <View
-                      key={item.rescueBatchItemId}
-                      className="rounded-2xl border p-4"
-                      style={{
-                        borderColor: colors.border,
-                        backgroundColor: colors.card,
-                      }}
-                    >
-                      <View className="flex-row flex-wrap gap-2">
-                        <View
-                          className="rounded-full px-3 py-1"
-                          style={{ backgroundColor: type.bg }}
-                        >
-                          <Text
-                            className="text-xs font-bold"
-                            style={{ color: type.text }}
+                    return (
+                      <View
+                        key={item.rescueBatchItemId}
+                        className="rounded-2xl border p-4"
+                        style={{
+                          borderColor: colors.border,
+                          backgroundColor: colors.card,
+                        }}
+                      >
+                        <View className="flex-row flex-wrap gap-2">
+                          <View
+                            className="rounded-full px-3 py-1"
+                            style={{ backgroundColor: type.bg }}
                           >
-                            {type.label}
-                          </Text>
-                        </View>
-                        <View
-                          className="rounded-full px-3 py-1"
-                          style={{ backgroundColor: status.bg }}
-                        >
-                          <Text
-                            className="text-xs font-bold"
-                            style={{ color: status.text }}
-                          >
-                            {status.label}
-                          </Text>
-                        </View>
-                        <View
-                          className="rounded-full px-3 py-1"
-                          style={{ backgroundColor: priority.levelBg }}
-                        >
-                          <Text
-                            className="text-xs font-bold"
-                            style={{ color: priority.levelText }}
-                          >
-                            {priority.levelLabel}
-                          </Text>
-                        </View>
-                        <View
-                          className="rounded-full px-3 py-1"
-                          style={{ backgroundColor: priority.pointBg }}
-                        >
-                          <Text
-                            className="text-xs font-bold"
-                            style={{ color: priority.pointText }}
-                          >
-                            {priority.pointLabel}
-                          </Text>
-                        </View>
-                        {currentMissionForUi?.rescueBatchItemId ===
-                        item.rescueBatchItemId ? (
-                          <View className="rounded-full bg-green-100 px-3 py-1">
-                            <Text className="text-xs font-bold text-green-700">
-                              Hiện tại
+                            <Text
+                              className="text-xs font-bold"
+                              style={{ color: type.text }}
+                            >
+                              {type.label}
                             </Text>
                           </View>
-                        ) : null}
-                      </View>
-
-                      <Text
-                        className="mt-3 text-base font-bold"
-                        style={{ color: colors.text }}
-                      >
-                        {item.description}
-                      </Text>
-                      <Text
-                        className="mt-2 text-sm"
-                        style={{ color: colors.textSecondary }}
-                      >
-                        {item.address}
-                      </Text>
-                      <Text
-                        className="mt-2 text-sm font-medium"
-                        style={{ color: colors.text }}
-                      >
-                        {formatDistanceKm(item.distanceKm)} km •{' '}
-                        {formatMinutes(item.estimatedMinutes)} phút
-                      </Text>
-
-                      <View className="mt-3 flex-row items-center justify-between">
-                        <View className="flex-1 pr-3">
-                          <Text
-                            className="text-sm font-semibold"
-                            style={{ color: colors.text }}
+                          <View
+                            className="rounded-full px-3 py-1"
+                            style={{ backgroundColor: priority.levelBg }}
                           >
-                            {item.reporterFullName || 'Người báo tin'}
-                          </Text>
+                            <Text
+                              className="text-xs font-bold"
+                              style={{ color: priority.levelText }}
+                            >
+                              {priority.levelLabel}
+                            </Text>
+                          </View>
+                          <View
+                            className="rounded-full px-3 py-1"
+                            style={{ backgroundColor: priority.pointBg }}
+                          >
+                            <Text
+                              className="text-xs font-bold"
+                              style={{ color: priority.pointText }}
+                            >
+                              {priority.pointLabel}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View className="mt-2 flex-row flex-wrap gap-2">
+                          <View
+                            className="rounded-full px-3 py-1"
+                            style={{ backgroundColor: status.bg }}
+                          >
+                            <Text
+                              className="text-xs font-bold"
+                              style={{ color: status.text }}
+                            >
+                              {status.label}
+                            </Text>
+                          </View>
+                          {currentMissionForUi?.rescueBatchItemId ===
+                          item.rescueBatchItemId ? (
+                            <View className="rounded-full bg-green-100 px-3 py-1">
+                              <Text className="text-xs font-bold text-green-700">
+                                Hiện tại
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+
+                        <Text
+                          className="mt-3 text-sm"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Địa chỉ: {item.address || 'Chưa có địa chỉ'}
+                        </Text>
+                        <Text
+                          className="mt-2 text-sm font-medium"
+                          style={{ color: colors.text }}
+                        >
+                          Khoảng cách: {formatDistanceKm(item.distanceKm)} km •{' '}
+                          {formatMinutes(item.estimatedMinutes)} phút
+                        </Text>
+
+                        <View className="mt-2 gap-1.5">
                           <Text
-                            className="text-sm"
+                            className="text-xs font-semibold"
                             style={{ color: colors.textSecondary }}
                           >
-                            {item.reporterPhone || 'Không có số điện thoại'}
+                            Tin nhắn:
+                          </Text>
+                          <Text
+                            className="text-base font-bold"
+                            style={{ color: colors.text }}
+                          >
+                            {getMissionMessage(item)}
                           </Text>
                         </View>
-                        <TouchableOpacity
-                          onPress={() =>
-                            rescueTeamService.openCallReporter(
-                              item.reporterPhone,
-                            )
-                          }
-                          className="h-10 w-10 items-center justify-center rounded-full"
-                          style={{ backgroundColor: colors.surface }}
-                        >
-                          <Ionicons
-                            name="call-outline"
-                            size={18}
-                            color={colors.primary}
-                          />
-                        </TouchableOpacity>
-                      </View>
 
-                      <View className="mt-4 flex-row gap-3">
-                        <TouchableOpacity
-                          onPress={() => openMapScreen(item)}
-                          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
-                          style={{ backgroundColor: colors.primary }}
-                        >
-                          <Ionicons
-                            name="navigate-outline"
-                            size={18}
-                            color="#fff"
-                          />
-                          <Text className="font-bold text-white">
-                            Dẫn đường
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() =>
-                            rescueTeamService.openExternalNavigation(item)
-                          }
-                          className="flex-row items-center justify-center rounded-xl border px-4 py-3"
-                          style={{ borderColor: colors.border }}
-                        >
-                          <Ionicons
-                            name="map-outline"
-                            size={18}
-                            color={colors.primary}
-                          />
-                        </TouchableOpacity>
-                      </View>
+                        <View className="mt-3 flex-row items-center justify-between">
+                          <View className="flex-1 pr-3">
+                            <Text
+                              className="text-sm"
+                              style={{ color: colors.textSecondary }}
+                            >
+                              Tên nạn nhân:{' '}
+                              <Text
+                                className="font-semibold"
+                                style={{ color: colors.text }}
+                              >
+                                {item.reporterFullName || 'Người báo tin'}
+                              </Text>
+                            </Text>
+                            <Text
+                              className="mt-1 text-sm"
+                              style={{ color: colors.textSecondary }}
+                            >
+                              Số điện thoại:{' '}
+                              <Text style={{ color: colors.text }}>
+                                {item.reporterPhone || 'Không có số điện thoại'}
+                              </Text>
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() =>
+                              rescueTeamService.openCallReporter(
+                                item.reporterPhone,
+                              )
+                            }
+                            className="h-10 w-10 items-center justify-center rounded-full"
+                            style={{ backgroundColor: colors.surface }}
+                          >
+                            <Ionicons
+                              name="call-outline"
+                              size={18}
+                              color={colors.primary}
+                            />
+                          </TouchableOpacity>
+                        </View>
 
-                      {currentMissionForUi?.rescueBatchItemId ===
-                      item.rescueBatchItemId
-                        ? renderLeaderMissionActions(item)
-                        : null}
-                    </View>
-                  );
-                })}
+                        <View className="mt-4 flex-row gap-3">
+                          <TouchableOpacity
+                            onPress={() => openMapScreen(item)}
+                            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
+                            style={{ backgroundColor: colors.primary }}
+                          >
+                            <Ionicons
+                              name="navigate-outline"
+                              size={18}
+                              color="#fff"
+                            />
+                            <Text className="font-bold text-white">
+                              Dẫn đường
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() =>
+                              rescueTeamService.openExternalNavigation(item)
+                            }
+                            className="flex-row items-center justify-center rounded-xl border px-4 py-3"
+                            style={{ borderColor: colors.border }}
+                          >
+                            <Ionicons
+                              name="map-outline"
+                              size={18}
+                              color={colors.primary}
+                            />
+                          </TouchableOpacity>
+                        </View>
+
+                        {currentMissionForUi?.rescueBatchItemId ===
+                        item.rescueBatchItemId
+                          ? renderLeaderMissionActions(item)
+                          : null}
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View
+                    className="rounded-2xl border p-4"
+                    style={{
+                      borderColor: colors.border,
+                      backgroundColor: colors.card,
+                    }}
+                  >
+                    <Text style={{ color: colors.textSecondary }}>
+                      Không có nhiệm vụ phù hợp.
+                    </Text>
+                  </View>
+                )}
               </View>
-            ) : (
-              <View className="mt-4 gap-5">
+            ) : null}
+
+            {historyBatchesWithPriority.length > 0 ? (
+              <View className={displayBatch ? 'mt-6 gap-5' : 'mt-4 gap-5'}>
+                <Text
+                  className="text-base font-bold"
+                  style={{ color: colors.text }}
+                >
+                  Lịch sử đã xử lý
+                </Text>
+
                 {historyBatchesWithPriority.map((historyBatch) => {
                   const historyItems = rescueTeamService.getFilteredItems(
                     historyBatch.items,
@@ -934,11 +1001,14 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
 
                   return (
                     <View key={historyBatch.rescueBatchId} className="gap-3">
-                      <View className="rounded-2xl bg-slate-100 px-4 py-3">
-                        <Text className="text-sm font-bold text-text-primary">
-                          Batch {historyBatch.rescueBatchId.slice(0, 8)}
-                        </Text>
-                        <Text className="mt-1 text-xs text-text-secondary">
+                      <View
+                        className="rounded-2xl px-4 py-3"
+                        style={{ backgroundColor: colors.surface }}
+                      >
+                        <Text
+                          className="text-xs"
+                          style={{ color: colors.textSecondary }}
+                        >
                           {new Date(historyBatch.createdAt).toLocaleString(
                             'vi-VN',
                           )}{' '}
@@ -959,7 +1029,11 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                         return (
                           <View
                             key={item.rescueBatchItemId}
-                            className="rounded-2xl border border-surface-dark bg-white p-4"
+                            className="rounded-2xl border p-4"
+                            style={{
+                              borderColor: colors.border,
+                              backgroundColor: colors.card,
+                            }}
                           >
                             <View className="flex-row flex-wrap gap-2">
                               <View
@@ -971,17 +1045,6 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                                   style={{ color: type.text }}
                                 >
                                   {type.label}
-                                </Text>
-                              </View>
-                              <View
-                                className="rounded-full px-3 py-1"
-                                style={{ backgroundColor: status.bg }}
-                              >
-                                <Text
-                                  className="text-xs font-bold"
-                                  style={{ color: status.text }}
-                                >
-                                  {status.label}
                                 </Text>
                               </View>
                               <View
@@ -1008,31 +1071,83 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                               </View>
                             </View>
 
-                            <Text
-                              className="mt-3 text-base font-bold text-text-primary"
-                              numberOfLines={2}
-                            >
-                              {item.description}
-                            </Text>
-                            <View className="mt-2 flex-row items-start gap-2">
-                              <Ionicons
-                                name="location-outline"
-                                size={16}
-                                color={colors.primary}
-                              />
-                              <Text className="flex-1 text-sm text-text-secondary">
-                                {item.address}
+                            <View className="mt-2 flex-row flex-wrap gap-2">
+                              <View
+                                className="rounded-full px-3 py-1"
+                                style={{ backgroundColor: status.bg }}
+                              >
+                                <Text
+                                  className="text-xs font-bold"
+                                  style={{ color: status.text }}
+                                >
+                                  {status.label}
+                                </Text>
+                              </View>
+                              {currentMissionForUi?.rescueBatchItemId ===
+                              item.rescueBatchItemId ? (
+                                <View className="rounded-full bg-green-100 px-3 py-1">
+                                  <Text className="text-xs font-bold text-green-700">
+                                    Hiện tại
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            <View className="mt-3 gap-1.5">
+                              <Text
+                                className="text-sm"
+                                style={{ color: colors.textSecondary }}
+                              >
+                                Địa chỉ: {item.address || 'Chưa có địa chỉ'}
                               </Text>
+                              <Text
+                                className="mt-2 text-sm font-medium"
+                                style={{ color: colors.text }}
+                              >
+                                Khoảng cách: {formatDistanceKm(item.distanceKm)}{' '}
+                                km • {formatMinutes(item.estimatedMinutes)} phút
+                              </Text>
+
+                              <View className="mt-2 gap-1.5">
+                                <Text
+                                  className="text-xs font-semibold"
+                                  style={{ color: colors.textSecondary }}
+                                >
+                                  Tin nhắn:
+                                </Text>
+                                <Text
+                                  className="text-base font-bold"
+                                  style={{ color: colors.text }}
+                                  numberOfLines={3}
+                                >
+                                  {getMissionMessage(item)}
+                                </Text>
+                              </View>
                             </View>
 
                             <View className="mt-3 flex-row items-center justify-between">
                               <View className="flex-1 pr-3">
-                                <Text className="text-sm font-semibold text-text-primary">
-                                  {item.reporterFullName || 'Người báo tin'}
+                                <Text
+                                  className="text-sm"
+                                  style={{ color: colors.textSecondary }}
+                                >
+                                  Tên nạn nhân:{' '}
+                                  <Text
+                                    className="font-semibold"
+                                    style={{ color: colors.text }}
+                                  >
+                                    {item.reporterFullName || 'Người báo tin'}
+                                  </Text>
                                 </Text>
-                                <Text className="text-sm text-text-secondary">
-                                  {item.reporterPhone ||
-                                    'Không có số điện thoại'}
+                                <Text
+                                  className="mt-1 text-sm"
+                                  style={{ color: colors.textSecondary }}
+                                >
+                                  Số điện thoại:{' '}
+                                  <Text style={{ color: colors.text }}>
+                                    {item.reporterPhone ||
+                                      'Không có số điện thoại'}
+                                  </Text>
                                 </Text>
                               </View>
                               <TouchableOpacity
@@ -1041,7 +1156,8 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                                     item.reporterPhone,
                                   )
                                 }
-                                className="h-10 w-10 items-center justify-center rounded-full bg-surface"
+                                className="h-10 w-10 items-center justify-center rounded-full"
+                                style={{ backgroundColor: colors.surface }}
                               >
                                 <Ionicons
                                   name="call-outline"
@@ -1057,28 +1173,10 @@ export default function TeamTasksScreen({ onBack }: TeamTasksScreenProps) {
                   );
                 })}
               </View>
-            )}
+            ) : null}
           </View>
         </ScrollView>
       )}
-    </View>
-  );
-}
-
-function Badge({
-  label,
-  bg,
-  text,
-}: {
-  label: string;
-  bg: string;
-  text: string;
-}) {
-  return (
-    <View className="rounded-full px-3 py-1" style={{ backgroundColor: bg }}>
-      <Text className="text-xs font-bold" style={{ color: text }}>
-        {label}
-      </Text>
     </View>
   );
 }
@@ -1203,12 +1301,12 @@ function FallbackMapPreview({
         size: 14,
       };
     })
-    .filter(Boolean) as Array<{
+    .filter(Boolean) as {
     id: string;
     coordinate: [number, number];
     color: string;
     size?: number;
-  }>;
+  }[];
 
   const center =
     (selectedMission && rescueTeamService.toMapCoordinate(selectedMission)) ||
