@@ -8,13 +8,13 @@ import { showWarningToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Modal,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Modal,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UserRescueTrackingMap from './UserRescueTrackingMap';
@@ -268,11 +268,6 @@ export default function ViewRequestRescueScreen({
     activeTeam?.distanceKmToVictim ?? fallbackDistanceKm ?? null;
   const etaToVictimMinutes =
     activeTeam?.estimatedMinutesToArrival ?? fallbackEtaMinutes ?? null;
-  const translatedVerificationNote = useMemo(
-    () => formatWeatherNoteVi(latestVerification?.note),
-    [latestVerification?.note],
-  );
-
   const formatDateTime = (value?: string | null) => {
     if (!value) return '---';
     const date = new Date(value);
@@ -355,7 +350,7 @@ export default function ViewRequestRescueScreen({
     setShowCancelModal(false);
   };
 
-  const submitCancelRequest = () => {
+  const submitCancelRequest = async () => {
     const normalizedReason = cancelReason.trim();
 
     if (!normalizedReason) {
@@ -365,11 +360,25 @@ export default function ViewRequestRescueScreen({
 
     setCancelReasonError('');
 
+    const latestResult = await trackingQuery.refetch();
+    const latestDetail = latestResult.data?.detail;
+    const latestCanCancel =
+      latestDetail?.rescueRequestStatus === 'Pending' &&
+      !latestDetail?.assignedRescueTeam;
+
+    if (!latestCanCancel) {
+      showWarningToast(
+        'Không thể hủy yêu cầu',
+        'Đơn đã đổi trạng thái và không còn hợp lệ để hủy. Vui lòng tải lại màn hình.',
+      );
+      return;
+    }
+
     if (__DEV__) {
       console.info('[CancelRequest] Submit from ViewRequestRescueScreen', {
         requestId,
-        status: detail?.rescueRequestStatus,
-        hasAssignedTeam: !!detail?.assignedRescueTeam,
+        status: latestDetail?.rescueRequestStatus,
+        hasAssignedTeam: !!latestDetail?.assignedRescueTeam,
         reason: normalizedReason,
       });
     }
@@ -633,40 +642,6 @@ export default function ViewRequestRescueScreen({
                   <Text className="mt-1 text-sm" style={{ color: colors.text }}>
                     {latestVerification.reason}
                   </Text>
-                </View>
-              ) : null}
-              {latestVerification.note ? (
-                <View
-                  className="mt-3 rounded-2xl p-3"
-                  style={{ backgroundColor: colors.surface }}
-                >
-                  <Text
-                    className="text-xs font-semibold uppercase"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Ghi chú
-                  </Text>
-                  <View className="mt-2 gap-2">
-                    {translatedVerificationNote.map((line, index) => (
-                      <View
-                        key={`${index}-${line}`}
-                        className="flex-row items-start gap-2"
-                      >
-                        <Text
-                          className="mt-0.5 text-sm font-bold"
-                          style={{ color: colors.primary }}
-                        >
-                          •
-                        </Text>
-                        <Text
-                          className="flex-1 text-sm leading-6"
-                          style={{ color: colors.text }}
-                        >
-                          {line}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
                 </View>
               ) : null}
             </View>

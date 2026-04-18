@@ -2,11 +2,14 @@ import { queryClient } from '@/src/lib/queryClient';
 import {
     fetchNotifications,
     fetchRealtimeToken,
-    fetchUnreadNotificationCount,
 } from '@/src/services/notificationService';
 import { useAuthStore } from '@/src/store/authStore';
 import { useNotificationStore } from '@/src/store/notificationStore';
 import type { AppNotification } from '@/src/types/notification';
+import {
+    filterNotificationsForRole,
+    shouldDisplayNotificationForRole,
+} from '@/src/utils/notificationRoleFilter';
 import { showInfoToast, showWarningToast } from '@/src/utils/toast';
 import { Centrifuge, type Subscription } from 'centrifuge';
 import { useEffect, useRef } from 'react';
@@ -53,6 +56,7 @@ function getNotificationToastType(notificationType: string) {
 export function useNotificationRealtime() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const userRole = useAuthStore((state) => state.user?.role ?? '');
 
   const setConnected = useNotificationStore((state) => state.setConnected);
   const setUnreadCount = useNotificationStore((state) => state.setUnreadCount);
@@ -96,12 +100,17 @@ export function useNotificationRealtime() {
 
   const syncNotificationState = async () => {
     try {
-      const [unreadCount, notificationsResponse] = await Promise.all([
-        fetchUnreadNotificationCount(),
-        fetchNotifications({ pageNumber: 1, pageSize: 20 }),
-      ]);
-      setUnreadCount(unreadCount);
-      setNotifications(notificationsResponse.data ?? []);
+      const notificationsResponse = await fetchNotifications({
+        pageNumber: 1,
+        pageSize: 50,
+      });
+      const filteredItems = filterNotificationsForRole(
+        userRole,
+        notificationsResponse.data ?? [],
+      );
+
+      setNotifications(filteredItems);
+      setUnreadCount(filteredItems.filter((item) => !item.isRead).length);
     } catch {
       // Silent fail: user still receives realtime publications if websocket is healthy.
     }
@@ -122,6 +131,10 @@ export function useNotificationRealtime() {
   const handlePublication = (payload: PublicationPayload) => {
     const notification = parseNotificationPayload(payload);
     if (!notification) {
+      return;
+    }
+
+    if (!shouldDisplayNotificationForRole(userRole, notification)) {
       return;
     }
 
@@ -252,5 +265,5 @@ export function useNotificationRealtime() {
       sub.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, accessToken]);
+  }, [isAuthenticated, accessToken, userRole]);
 }

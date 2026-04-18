@@ -9,6 +9,8 @@ export const volunteerProfileKeys = {
   all: ['volunteerProfile'] as const,
   myProfile: () => [...volunteerProfileKeys.all, 'myProfile'] as const,
   skills: () => [...volunteerProfileKeys.all, 'skills'] as const,
+  registrationSkills: () =>
+    [...volunteerProfileKeys.all, 'registrationSkills'] as const,
 };
 
 export function useMyVolunteerProfile(

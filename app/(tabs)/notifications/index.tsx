@@ -1,13 +1,15 @@
 import Header from '@/src/components/header/header';
-import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import {
     fetchNotifications,
     markAllNotificationsAsRead,
     markNotificationAsRead,
 } from '@/src/services/notificationService';
+import { useAuthStore } from '@/src/store/authStore';
 import { useNotificationStore } from '@/src/store/notificationStore';
 import type { AppNotification } from '@/src/types/notification';
+import { filterNotificationsForRole } from '@/src/utils/notificationRoleFilter';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -55,6 +57,7 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [markAllLoading, setMarkAllLoading] = useState(false);
+  const userRole = useAuthStore((state) => state.user?.role ?? '');
 
   const items = useNotificationStore((state) => state.items);
   const unreadCount = useNotificationStore((state) => state.unreadCount);
@@ -82,8 +85,12 @@ export default function NotificationsScreen() {
           pageNumber: 1,
           pageSize: 50,
         });
-        setNotifications(response.data ?? []);
-        const unread = (response.data ?? []).filter(
+        const filteredItems = filterNotificationsForRole(
+          userRole,
+          response.data ?? [],
+        );
+        setNotifications(filteredItems);
+        const unread = filteredItems.filter(
           (item) => !item.isRead,
         ).length;
         setUnreadCount(unread);
@@ -92,7 +99,7 @@ export default function NotificationsScreen() {
         setRefreshing(false);
       }
     },
-    [setNotifications, setUnreadCount],
+    [setNotifications, setUnreadCount, userRole],
   );
 
   useFocusEffect(
