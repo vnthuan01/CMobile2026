@@ -1,17 +1,17 @@
 import type {
-    CreateVolunteerRequest,
-    ResubmitVolunteerProfileRequest,
-    SkillResponse,
-    VolunteerProfileResponse,
+  CreateVolunteerRequest,
+  ResubmitVolunteerProfileRequest,
+  SkillResponse,
+  VolunteerProfileResponse,
 } from '../types/volunteer';
 import { extractApiErrorMessage } from '../utils/apiError';
 import api from './api';
 import { uploadService } from './uploadService';
 
 export type {
-    CreateVolunteerCertificateRequest,
-    CreateVolunteerRequest, ResubmitVolunteerProfileRequest, SkillResponse,
-    VolunteerProfileResponse
+  CreateVolunteerCertificateRequest,
+  CreateVolunteerRequest, ResubmitVolunteerProfileRequest, SkillResponse,
+  VolunteerProfileResponse
 } from '../types/volunteer';
 
 export { TeamRolePreference } from '../types/volunteer';
@@ -104,36 +104,94 @@ export const volunteerService = {
   },
 
   getAllSkills: async () => {
-    const routes = ['/Skill', '/Skills', '/api/Skill', '/api/Skills'];
+    const routes = [
+      'Skill',
+      'skill',
+      '/api/Skill',
+      '/api/skill',
+      '/api/Skills',
+      '/api/skills',
+    ];
+
+    let lastErrorMessage = 'Không thể lấy danh sách kỹ năng';
 
     for (const route of routes) {
       try {
-        const response = await api.get(route);
+        const response = await api.get<any>(route, {
+          params: {
+            PageIndex: 1,
+            PageSize: 100,
+          },
+        });
         const raw = response.data;
-        const normalized = Array.isArray(raw)
+
+        const rawItems = Array.isArray(raw)
           ? raw
           : Array.isArray(raw?.items)
             ? raw.items
+            : Array.isArray(raw?.Items)
+              ? raw.Items
             : Array.isArray(raw?.data)
               ? raw.data
-              : [];
+              : Array.isArray(raw?.Data)
+                ? raw.Data
+              : Array.isArray(raw?.result?.items)
+                ? raw.result.items
+                : Array.isArray(raw?.Result?.items)
+                  ? raw.Result.items
+                : Array.isArray(raw?.result?.data)
+                  ? raw.result.data
+                  : Array.isArray(raw?.Result?.data)
+                    ? raw.Result.data
+                  : Array.isArray(raw?.result)
+                    ? raw.result
+                    : Array.isArray(raw?.Result)
+                      ? raw.Result
+                    : [];
+
+        const normalized = rawItems
+          .map((item: any) => ({
+            skillId: item?.skillId ?? item?.SkillId ?? item?.id ?? item?.Id ?? '',
+            code: item?.code ?? item?.Code ?? '',
+            name:
+              item?.name ??
+              item?.Name ??
+              item?.displayName ??
+              item?.DisplayName ??
+              item?.code ??
+              item?.Code ??
+              '',
+            description:
+              item?.description ??
+              item?.Description ??
+              null,
+          }))
+          .filter((item: SkillResponse) => Boolean(item.skillId && item.name));
+
+        if (normalized.length === 0) {
+          continue;
+        }
 
         return {
           success: response.status === 200,
-          data: normalized as SkillResponse[],
+          data: normalized,
           message: 'Lấy danh sách kỹ năng thành công',
         };
       } catch (error: any) {
-        if (error?.response?.status !== 404) {
-          return {
-            success: false,
-            data: [] as SkillResponse[],
-            message:
-              error.response?.data?.message ||
-              error.message ||
-              'Không thể lấy danh sách kỹ năng',
-          };
+        if (__DEV__) {
+          console.warn('[Skills] Request failed', {
+            route,
+            params: { PageIndex: 1, PageSize: 100 },
+            status: error?.response?.status,
+            data: error?.response?.data,
+            message: error?.message,
+          });
         }
+
+        lastErrorMessage =
+          error?.response?.data?.message ||
+          error?.message ||
+          'Không thể lấy danh sách kỹ năng';
       }
     }
 
@@ -141,7 +199,8 @@ export const volunteerService = {
       success: false,
       data: [] as SkillResponse[],
       message:
-        'Không tìm thấy endpoint Skills. Kiểm tra lại route backend (ví dụ: /api/Skill).',
+        lastErrorMessage ||
+        'Không thể lấy danh sách kỹ năng từ endpoint /api/Skill.',
     };
   },
 

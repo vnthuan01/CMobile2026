@@ -1,5 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { cancelRescueRequest } from '../services/rescueService';
+import {
+    cancelRescueRequest,
+    fetchRescueRequestDetail,
+} from '../services/rescueService';
 import { extractApiErrorMessage } from '../utils/apiError';
 import { showApiErrorToast } from '../utils/apiToast';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
@@ -25,10 +28,13 @@ export function useCancelRescueRequest() {
 
       showSuccessToast('Huỷ yêu cầu thành công', 'Yêu cầu cứu hộ đã được huỷ.');
     },
-    onError: (error: unknown) => {
+    onError: async (
+      error: unknown,
+      variables: CancelRescueRequestMutationInput,
+    ) => {
       if (__DEV__) {
         const axiosError = error as any;
-        console.error('[CancelRequest] Mutation error', {
+        console.warn('[CancelRequest] Mutation error', {
           status: axiosError?.response?.status,
           data: axiosError?.response?.data,
           message: axiosError?.message,
@@ -51,8 +57,38 @@ export function useCancelRescueRequest() {
 
       if (
         normalized.includes('expected to affect 1 row') ||
+        normalized.includes('actually affected 0 row') ||
         normalized.includes('has been modified or deleted')
       ) {
+        try {
+          const latest = await fetchRescueRequestDetail(variables.requestId);
+
+          if (latest?.rescueRequestStatus === 'Cancelled') {
+            queryClient.invalidateQueries({ queryKey: ['rescueRequests'] });
+            queryClient.invalidateQueries({
+              queryKey: ['rescueRequestDetail', variables.requestId],
+            });
+            showSuccessToast(
+              'Yêu cầu đã được huỷ',
+              'Trạng thái yêu cầu đã chuyển sang huỷ trên hệ thống.',
+            );
+            return;
+          }
+
+          if (
+            latest?.rescueRequestStatus !== 'Pending' ||
+            latest?.assignedRescueTeam
+          ) {
+            showErrorToast(
+              'Không thể huỷ yêu cầu',
+              'Yêu cầu không còn ở trạng thái chờ xác minh hoặc đã được gán đội nên không thể huỷ.',
+            );
+            return;
+          }
+        } catch {
+          // Keep fallback message below when detail refetch is unavailable.
+        }
+
         showErrorToast(
           'Không thể huỷ yêu cầu',
           'Yêu cầu không còn hợp lệ để hủy. Chỉ có thể hủy khi đơn đang chờ xác minh và chưa được gán đội.',

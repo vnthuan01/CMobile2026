@@ -9,7 +9,7 @@ import { volunteerProfileKeys } from './useMyVolunteerProfile';
 
 export function useVolunteerSkills(enabled = true) {
   return useQuery({
-    queryKey: volunteerProfileKeys.skills(),
+    queryKey: volunteerProfileKeys.registrationSkills(),
     queryFn: async () => {
       const result = await volunteerService.getAllSkills();
 

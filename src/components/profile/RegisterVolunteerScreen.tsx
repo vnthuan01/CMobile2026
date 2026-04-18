@@ -76,6 +76,15 @@ const TEAM_ROLE_OPTIONS: { label: string; value: TeamRolePreference }[] = [
 ];
 
 const getLocalizedSkillName = (name?: string | null, code?: string | null) => {
+  const normalizedCode = String(code ?? '')
+    .trim()
+    .toUpperCase();
+
+  if (normalizedCode === 'FIRST_AID') return 'Sơ cứu';
+  if (normalizedCode === 'LOGISTICS') return 'Hậu cần';
+  if (normalizedCode === 'MEDICAL_SUPPORT') return 'Hỗ trợ y tế';
+  if (normalizedCode === 'SEARCH_RESCUE') return 'Tìm kiếm cứu nạn';
+
   const source = `${code || ''} ${name || ''}`.toLowerCase().trim();
 
   if (!source) return 'Kỹ năng';
@@ -112,7 +121,11 @@ const getLocalizedSkillName = (name?: string | null, code?: string | null) => {
     return 'Tìm kiếm cứu nạn';
   }
 
-  return name || code || 'Kỹ năng';
+  if (name && !/^[a-z0-9_\s-]+$/i.test(name.trim())) {
+    return name;
+  }
+
+  return 'Kỹ năng chuyên môn';
 };
 
 const getCampaignStatusMeta = (status: number, colors: any) => {
@@ -1055,8 +1068,7 @@ export default function RegisterVolunteerScreen({
             </View>
           ) : skills.length === 0 ? (
             <Text className="text-sm" style={{ color: colors.status.error }}>
-              Không tải được danh sách kỹ năng. Vui lòng kiểm tra endpoint
-              Skill.
+              Không tải được danh sách kỹ năng.
             </Text>
           ) : (
             <View className="flex-row flex-wrap gap-2">

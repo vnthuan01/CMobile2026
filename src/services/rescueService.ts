@@ -82,64 +82,45 @@ export async function cancelRescueRequest(
   requestId: string,
   payload: CancelRescueRequestPayload,
 ): Promise<RescueRequestDetailResponse> {
-  const routes = [`/RescueRequest/${requestId}/cancel`];
-  const payloadCandidates = [
-    { reason: payload.reason },
-    { Reason: payload.reason },
+  const body = { reason: payload.reason };
+  const routes = [
+    `RescueRequest/${requestId}/cancel`,
+    `/api/RescueRequest/${requestId}/cancel`,
+    `/RescueRequest/${requestId}/cancel`,
   ];
 
   let lastError: unknown = null;
 
   for (const route of routes) {
-    for (const body of payloadCandidates) {
-      try {
-        if (__DEV__) {
-          console.info('[CancelRequest] Trying PATCH', {
-            route,
-            requestId,
-            body,
-          });
-        }
-        const res = await api.patch<RescueRequestDetailResponse>(route, body);
-        return res.data;
-      } catch (error) {
-        if (__DEV__) {
-          const axiosError = error as any;
-          console.warn('[CancelRequest] PATCH failed', {
-            route,
-            requestId,
-            body,
-            status: axiosError?.response?.status,
-            data: axiosError?.response?.data,
-            message: axiosError?.message,
-          });
-        }
-        lastError = error;
+    try {
+      if (__DEV__) {
+        console.info('[CancelRequest] Trying PATCH', {
+          route,
+          requestId,
+          body,
+        });
       }
 
-      try {
-        if (__DEV__) {
-          console.info('[CancelRequest] Trying POST', {
-            route,
-            requestId,
-            body,
-          });
-        }
-        const res = await api.post<RescueRequestDetailResponse>(route, body);
-        return res.data;
-      } catch (error) {
-        if (__DEV__) {
-          const axiosError = error as any;
-          console.warn('[CancelRequest] POST failed', {
-            route,
-            requestId,
-            body,
-            status: axiosError?.response?.status,
-            data: axiosError?.response?.data,
-            message: axiosError?.message,
-          });
-        }
-        lastError = error;
+      const res = await api.patch<RescueRequestDetailResponse>(route, body);
+      return res.data;
+    } catch (error) {
+      const axiosError = error as any;
+      const status = axiosError?.response?.status;
+
+      if (__DEV__) {
+        console.warn('[CancelRequest] PATCH failed', {
+          route,
+          requestId,
+          body,
+          status,
+          data: axiosError?.response?.data,
+          message: axiosError?.message,
+        });
+      }
+
+      lastError = error;
+      if (status !== 404) {
+        throw error;
       }
     }
   }
