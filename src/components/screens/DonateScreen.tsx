@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
   ImageBackground,
   ActivityIndicator,
   Pressable,
   ScrollView,
-  Switch,
   Text,
     TextInput,
     TouchableOpacity,
@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/src/store/authStore';
 import {
+    donationKeys,
     useCampaignDonationSummary,
     useCreateDonationCheckout,
     useDonationStatus,
@@ -60,25 +61,35 @@ const Touchable = TouchableOpacity as any;
 
 export default function DonateScreen({ onBack }: DonateScreenProps) {
   const router = useRouter();
-  const params = useLocalSearchParams<{ campaignId?: string }>();
+  const queryClient = useQueryClient();
+  const params = useLocalSearchParams();
+  const campaignIdParam = Array.isArray(params.campaignId)
+    ? params.campaignId[0]
+    : params.campaignId;
+  const refreshParam = Array.isArray(params.refresh) ? params.refresh[0] : params.refresh;
+  const shouldRefresh = refreshParam === '1';
+  const hasHandledRefresh = useRef(false);
   const { top, bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const isLoggedIn = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const [selectedAmount, setSelectedAmount] = useState('500000');
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'momo' | 'bank'>('momo');
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
   const [message, setMessage] = useState('');
   const [donationId, setDonationId] = useState<string | null>(null);
   const donorName = useMemo(() => {
-    if (isAnonymous) return 'Nhà hảo tâm ẩn danh';
-    return user?.user_name?.trim() || user?.email?.trim() || 'Người ủng hộ ReliefHub';
-  }, [isAnonymous, user?.email, user?.user_name]);
+    if (isLoggedIn) {
+      return user?.user_name?.trim() || user?.email?.trim() || 'Người ủng hộ ReliefHub';
+    }
+    return guestName.trim();
+  }, [guestName, isLoggedIn, user?.email, user?.user_name]);
 
   const { data: fundraisingCampaigns, isLoading: isLoadingFundraisingCampaigns } = useFundraisingCampaigns();
   const { data: fundContributions, isLoading: isLoadingFundContributions } = useFundContributions();
   const activeFundraisingCampaignId =
-    typeof params.campaignId === 'string' && params.campaignId.trim().length > 0
-      ? params.campaignId
+    typeof campaignIdParam === 'string' && campaignIdParam.trim().length > 0
+      ? campaignIdParam
       : fundraisingCampaigns?.items?.[0]?.campaignId;
   const { data: campaignSummary, isLoading: isLoadingCampaignSummary } =
     useCampaignDonationSummary(activeFundraisingCampaignId);
@@ -100,7 +111,7 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
       .filter((item: any) => !campaignSummary?.campaignId || item.campaignId === campaignSummary.campaignId)
       .slice(0, 5)
       .map((donor: any, index: number) => {
-        const donorNameText = donor.donorName || 'Nhà hảo tâm ẩn danh';
+        const donorNameText = donor.donorName || 'Người ủng hộ';
         const parts = donorNameText.split(' ').filter(Boolean);
         const initials =
           parts.length >= 2
@@ -118,6 +129,41 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
   }, [campaignSummary?.campaignId, fundContributions]);
 
   const donationStatusUi = DONATION_STATUS_UI[Number(donationStatus?.status ?? DonationStatus.Pending)];
+
+  useEffect(() => {
+    if (!shouldRefresh || hasHandledRefresh.current) return;
+
+    hasHandledRefresh.current = true;
+
+    const refreshDonationData = async () => {
+      try {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: donationKeys.fundraisingCampaigns }),
+          queryClient.invalidateQueries({ queryKey: donationKeys.contributions }),
+          ...(activeFundraisingCampaignId
+            ? [
+                queryClient.invalidateQueries({
+                  queryKey: donationKeys.campaignSummary(activeFundraisingCampaignId),
+                }),
+              ]
+            : []),
+        ]);
+      } finally {
+        router.replace({
+          pathname: '/donate',
+          params: campaignIdParam ? { campaignId: campaignIdParam } : {},
+        });
+      }
+    };
+
+    void refreshDonationData();
+  }, [
+    activeFundraisingCampaignId,
+    campaignIdParam,
+    queryClient,
+    router,
+    shouldRefresh,
+  ]);
 
   useEffect(() => {
     if (!donationStatus) return;
@@ -157,12 +203,12 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
         const normalizedAmount = parseCurrency(selectedAmount);
 
         if (!campaignSummary?.campaignId) {
-            showErrorToast('Chưa có chiến dịch gây quỹ', 'Không tìm thấy campaign fundraising để tạo checkout.');
+            showErrorToast('Chưa có chiến dịch gây quỹ', 'Không tìm thấy chiến dịch gây quỹ để tạo thanh toán.');
             return;
         }
 
         if (Number(campaignSummary.type) !== CampaignType.Fundraising) {
-            showErrorToast('Campaign không hợp lệ', 'Chiến dịch hiện tại không phải campaign gây quỹ.');
+            showErrorToast('Chiến dịch không hợp lệ', 'Chiến dịch hiện tại không phải chiến dịch gây quỹ.');
             return;
         }
 
@@ -171,32 +217,48 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
             return;
         }
 
+        if (!isLoggedIn && !guestName.trim()) {
+            showErrorToast('Thiếu họ và tên', 'Vui lòng nhập họ và tên trước khi thanh toán.');
+            return;
+        }
+
+        if (!isLoggedIn && !guestPhone.trim()) {
+            showErrorToast('Thiếu số điện thoại', 'Vui lòng nhập số điện thoại trước khi thanh toán.');
+            return;
+        }
+
         try {
+            const encodedCampaignId = encodeURIComponent(campaignSummary.campaignId);
+            const returnUrl = `reliefcare://donate-result?paymentStatus=success&campaignId=${encodedCampaignId}`;
+            const cancelUrl = `reliefcare://donate-result?paymentStatus=cancelled&campaignId=${encodedCampaignId}`;
+
             const checkout = await createCheckout({
                 campaignId: campaignSummary.campaignId,
                 amount: normalizedAmount,
                 donorName,
                 message: message.trim() || undefined,
+                returnUrl,
+                cancelUrl,
             });
 
             setDonationId(checkout.donationId);
 
             if (checkout.checkoutUrl) {
                 await WebBrowser.openBrowserAsync(checkout.checkoutUrl);
-                showInfoToast('Đã mở trang thanh toán', 'Ứng dụng sẽ tự kiểm tra trạng thái donation sau khi bạn quay lại.');
+                showInfoToast('Đã mở trang thanh toán', 'Ứng dụng sẽ tự kiểm tra trạng thái ủng hộ sau khi bạn quay lại.');
             }
         } catch (error) {
             const extractedMessage = String((error as any)?.response?.data?.message || (error as any)?.message || '');
             if (extractedMessage.includes('502')) {
                 showErrorToast(
                     'Lỗi cổng thanh toán',
-                    'Server staging đang trả 502 khi tạo checkout PayOS. Cần kiểm tra PayOS config / gateway phía backend.',
+                    'Máy chủ đang phản hồi lỗi 502 khi tạo thanh toán PayOS. Vui lòng kiểm tra cấu hình cổng thanh toán ở hệ thống máy chủ.',
                 );
                 return;
             }
             showApiErrorToast(error, {
                 errorTitle: 'Không thể tạo thanh toán',
-                errorMessage: 'Không thể khởi tạo checkout donation.',
+                errorMessage: 'Không thể khởi tạo thanh toán ủng hộ.',
             });
         }
     };
@@ -351,25 +413,49 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
                         </View>
                     </View>
 
-                    {/* Options */}
+                    {/* Donor info + message */}
                     <View className="flex-col gap-4">
-                        <View className="flex-row items-center justify-between rounded-xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
-                            <View className="flex-row items-center gap-3">
-                                <View className="rounded-full p-2" style={{ backgroundColor: colors.surface }}>
-                                    <Ionicons name="eye-off" size={20} color={colors.textSecondary} />
+                        <View>
+                            <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                                Thông tin người ủng hộ
+                            </Text>
+                            {isLoggedIn ? (
+                                <View className="rounded-xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+                                    <Text className="text-xs" style={{ color: colors.textSecondary }}>Đang dùng thông tin từ tài khoản đăng nhập</Text>
+                                    <Text className="mt-2 text-sm font-semibold" style={{ color: colors.text }}>
+                                        Họ và tên: {user?.user_name?.trim() || 'Chưa cập nhật'}
+                                    </Text>
+                                    <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                                        Email: {user?.email?.trim() || 'Chưa cập nhật'}
+                                    </Text>
                                 </View>
-                                <View className="flex-col">
-                                    <Text className="text-sm font-bold" style={{ color: colors.text }}>Ủng hộ ẩn danh</Text>
-                                    <Text className="text-xs" style={{ color: colors.textSecondary }}>Không hiển thị tên trên danh sách</Text>
+                            ) : (
+                                <View className="rounded-xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+                                    <Text className="mb-2 text-xs" style={{ color: colors.textSecondary }}>
+                                        Vui lòng nhập thông tin trước khi tạo thanh toán.
+                                    </Text>
+                                    <TextInput
+                                        className="mb-3 w-full rounded-xl border p-3 text-sm"
+                                        placeholder="Họ và tên"
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={guestName}
+                                        onChangeText={setGuestName}
+                                        style={{ borderColor: colors.border, backgroundColor: colors.background, color: colors.text }}
+                                    />
+                                    <TextInput
+                                        className="w-full rounded-xl border p-3 text-sm"
+                                        placeholder="Số điện thoại"
+                                        placeholderTextColor={colors.textSecondary}
+                                        keyboardType="phone-pad"
+                                        value={guestPhone}
+                                        onChangeText={setGuestPhone}
+                                        style={{ borderColor: colors.border, backgroundColor: colors.background, color: colors.text }}
+                                    />
                                 </View>
-                            </View>
-                            <Switch
-                                value={isAnonymous}
-                                onValueChange={setIsAnonymous}
-                                trackColor={{ false: colors.border, true: colors.primary }}
-                                thumbColor={colors.white}
-                                ios_backgroundColor={colors.border}
-                            />
+                            )}
+                            <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }}>
+                                Một số thông tin thanh toán có thể được yêu cầu bổ sung trên trang PayOS.
+                            </Text>
                         </View>
                         <View className="relative">
                             <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>Lời nhắn (Tùy chọn)</Text>
@@ -386,55 +472,27 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
                         </View>
                     </View>
 
-                    {/* Payment Methods */}
+                    {/* Payment Method */}
                     <View>
                         <Text className="mb-3 px-1 text-lg font-bold" style={{ color: colors.text }}>
                             Phương thức thanh toán
                         </Text>
-                        <View className="flex-col gap-3">
-                            {/* MoMo */}
-                            <Touchable
-                                onPress={() => setPaymentMethod('momo')}
-                                className="group relative flex-row items-center justify-between overflow-hidden rounded-xl p-4"
-                                style={{ borderWidth: paymentMethod === 'momo' ? 2 : 1, borderColor: paymentMethod === 'momo' ? colors.primary : colors.border, backgroundColor: paymentMethod === 'momo' ? `${colors.primary}10` : colors.card }}
-                            >
-                                <View className="flex-row items-center gap-4">
-                                    <View className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#a50064]">
-                                        <Text className="text-xs font-bold text-white">MoMo</Text>
-                                    </View>
-                                    <View className="flex-col">
-                                        <Text className="text-sm font-bold" style={{ color: colors.text }}>Ví MoMo</Text>
-                                        <Text className="text-xs" style={{ color: colors.textSecondary }}>Miễn phí giao dịch</Text>
-                                    </View>
+                        <View className="rounded-xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+                            <View className="flex-row items-center gap-3">
+                                <View className="rounded-lg p-2" style={{ backgroundColor: `${colors.primary}14` }}>
+                                    <Ionicons name="card-outline" size={20} color={colors.primary} />
                                 </View>
-                                <View className="flex h-5 w-5 items-center justify-center rounded-full border-2" style={{ borderColor: paymentMethod === 'momo' ? colors.primary : colors.border }}>
-                                    {paymentMethod === 'momo' && <View className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                                <View className="flex-1">
+                                    <Text className="text-sm font-bold" style={{ color: colors.text }}>Thanh toán qua PayOS</Text>
+                                    <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                                        Bạn sẽ được chuyển đến trang thanh toán PayOS để chọn ngân hàng hoặc quét QR.
+                                    </Text>
                                 </View>
-                            </Touchable>
-
-                            {/* Bank Transfer */}
-                            <Touchable
-                                onPress={() => setPaymentMethod('bank')}
-                                className="group relative flex-row items-center justify-between overflow-hidden rounded-xl p-4"
-                                style={{ borderWidth: paymentMethod === 'bank' ? 2 : 1, borderColor: paymentMethod === 'bank' ? colors.primary : colors.border, backgroundColor: paymentMethod === 'bank' ? `${colors.primary}10` : colors.card }}
-                            >
-                                <View className="flex-row items-center gap-4">
-                                    <View className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600">
-                                        <Ionicons name="business" size={20} color={colors.white} />
-                                    </View>
-                                    <View className="flex-col">
-                                        <Text className="text-sm font-bold" style={{ color: colors.text }}>Chuyển khoản Ngân hàng</Text>
-                                        <Text className="text-xs" style={{ color: colors.textSecondary }}>Vietcombank, Techcombank...</Text>
-                                    </View>
-                                </View>
-                                <View className="flex h-5 w-5 items-center justify-center rounded-full border-2" style={{ borderColor: paymentMethod === 'bank' ? colors.primary : colors.border }}>
-                                    {paymentMethod === 'bank' && <View className="h-2.5 w-2.5 rounded-full bg-primary" />}
-                                </View>
-                            </Touchable>
+                            </View>
                         </View>
                     </View>
 
-                    {/* Top Donors */}
+                    {/* Nhà hảo tâm nổi bật */}
                     <View className="border-t pt-4" style={{ borderColor: colors.border }}>
                         <View className="mb-4 flex-row items-center justify-between px-1">
                             <Text className="text-base font-bold" style={{ color: colors.text }}>Nhà hảo tâm hàng đầu</Text>
@@ -457,7 +515,7 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
                                         Chưa có nhà hảo tâm hiển thị
                                     </Text>
                                     <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
-                                        Khi có donation completed, danh sách top donor sẽ được cập nhật từ API quỹ.
+                                        Khi có giao dịch ủng hộ thành công, danh sách nhà hảo tâm sẽ được cập nhật tự động.
                                     </Text>
                                 </View>
                             ) : (

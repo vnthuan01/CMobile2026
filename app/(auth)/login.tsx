@@ -120,7 +120,7 @@ export default function LoginScreen() {
               >
                 <Ionicons name="heart-outline" size={16} color={dangerRed} />
                 <Text className="font-semibold" style={{ color: dangerRed }}>
-                  Donation
+                  Ủng hộ
                 </Text>
               </TouchableOpacity>
             </View>
