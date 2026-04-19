@@ -23,6 +23,7 @@ type PublicationPayload =
   | {
       notification?: AppNotification;
       data?: AppNotification;
+      payload?: AppNotification;
     }
   | null
   | undefined;
@@ -37,6 +38,7 @@ function parseNotificationPayload(
   const normalized =
     (payload as { notification?: AppNotification }).notification ??
     (payload as { data?: AppNotification }).data ??
+    (payload as { payload?: AppNotification }).payload ??
     (payload as AppNotification);
 
   if (!normalized?.notificationId || !normalized?.type) {
@@ -75,11 +77,21 @@ export function useNotificationRealtime() {
   const isConnectedRef = useRef(false);
   const subscriptionRef = useRef<Subscription | null>(null);
   const renewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notificationPollRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
   const clearRenewTimer = () => {
     if (renewTimerRef.current) {
       clearTimeout(renewTimerRef.current);
       renewTimerRef.current = null;
+    }
+  };
+
+  const clearNotificationPoll = () => {
+    if (notificationPollRef.current) {
+      clearInterval(notificationPollRef.current);
+      notificationPollRef.current = null;
     }
   };
 
@@ -116,8 +128,20 @@ export function useNotificationRealtime() {
     }
   };
 
+  const startNotificationPolling = () => {
+    clearNotificationPoll();
+
+    // Keep unread badge in sync even if websocket publication is delayed/missed.
+    notificationPollRef.current = setInterval(() => {
+      if (AppState.currentState === 'active') {
+        void syncNotificationState();
+      }
+    }, 8000);
+  };
+
   const teardownConnection = () => {
     clearRenewTimer();
+    clearNotificationPoll();
     isConnectedRef.current = false;
     setConnected(false);
 
@@ -131,6 +155,7 @@ export function useNotificationRealtime() {
   const handlePublication = (payload: PublicationPayload) => {
     const notification = parseNotificationPayload(payload);
     if (!notification) {
+      void syncNotificationState();
       return;
     }
 
@@ -149,6 +174,9 @@ export function useNotificationRealtime() {
         showInfoToast(notification.title, notification.message);
       }
     }
+
+    // Ensure unread count is reconciled with server state after realtime update.
+    void syncNotificationState();
   };
 
   const scheduleRenew = (expiresAt?: string) => {
@@ -219,9 +247,11 @@ export function useNotificationRealtime() {
 
       subscriptionRef.current = subscription;
       clientRef.current = client;
+      startNotificationPolling();
     } catch {
       isConnectedRef.current = false;
       setConnected(false);
+      startNotificationPolling();
     }
   };
 

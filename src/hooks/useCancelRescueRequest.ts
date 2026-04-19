@@ -6,6 +6,8 @@ import {
 import { extractApiErrorMessage } from '../utils/apiError';
 import { showApiErrorToast } from '../utils/apiToast';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
+import { rescueRequestKeys } from './useMyRescueRequests';
+import { requestTrackingKeys } from './useRequestTracking';
 
 export interface CancelRescueRequestMutationInput {
   requestId: string;
@@ -20,13 +22,37 @@ export function useCancelRescueRequest() {
   return useMutation({
     mutationFn: ({ requestId, payload }: CancelRescueRequestMutationInput) =>
       cancelRescueRequest(requestId, payload),
-    onSuccess: (_result: unknown, variables: CancelRescueRequestMutationInput) => {
-      queryClient.invalidateQueries({ queryKey: ['rescueRequests'] });
+    onSuccess: (
+      result: unknown,
+      variables: CancelRescueRequestMutationInput,
+    ) => {
+      const latestStatus = String(
+        (result as { rescueRequestStatus?: string } | null | undefined)
+          ?.rescueRequestStatus ?? '',
+      )
+        .trim()
+        .toLowerCase();
+
+      queryClient.invalidateQueries({ queryKey: rescueRequestKeys.all });
+      queryClient.invalidateQueries({ queryKey: requestTrackingKeys.all });
       queryClient.invalidateQueries({
         queryKey: ['rescueRequestDetail', variables.requestId],
       });
+      queryClient.invalidateQueries({
+        queryKey: requestTrackingKeys.detail(variables.requestId),
+      });
 
-      showSuccessToast('Huỷ yêu cầu thành công', 'Yêu cầu cứu hộ đã được huỷ.');
+      if (latestStatus === 'cancelled' || latestStatus === 'canceled') {
+        showSuccessToast(
+          'Huỷ yêu cầu thành công',
+          'Yêu cầu cứu hộ đã được huỷ.',
+        );
+      } else {
+        showSuccessToast(
+          'Đã gửi yêu cầu hủy',
+          'Hệ thống đang cập nhật trạng thái hủy. Vui lòng kiểm tra lại sau vài giây.',
+        );
+      }
     },
     onError: async (
       error: unknown,
