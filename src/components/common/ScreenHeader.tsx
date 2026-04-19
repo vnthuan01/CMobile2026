@@ -32,6 +32,7 @@ export default function ScreenHeader({
 }: ScreenHeaderProps) {
   const { top } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const sideSlotWidth = 96;
 
   const bgColor = backgroundColor ?? colors.card;
   const txtColor = titleColor ?? colors.text;
@@ -54,21 +55,21 @@ export default function ScreenHeader({
       className={showBottomBorder ? 'border-b' : ''}
     >
       <View className="flex-row items-center">
-        {onBack ? (
-          <TouchableOpacity
-            onPress={onBack}
-            style={{ width: 40, height: 40, backgroundColor: backButtonBg }}
-            className="items-center justify-center rounded-full"
-          >
-            <Ionicons
-              name="arrow-back-outline"
-              size={22}
-              color={colors.primary}
-            />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
+        <View style={{ width: sideSlotWidth, alignItems: 'flex-start' }}>
+          {onBack ? (
+            <TouchableOpacity
+              onPress={onBack}
+              style={{ width: 40, height: 40, backgroundColor: backButtonBg }}
+              className="items-center justify-center rounded-full"
+            >
+              <Ionicons
+                name="arrow-back-outline"
+                size={22}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
         <View className="flex-1 items-center">
           <Text
@@ -89,13 +90,7 @@ export default function ScreenHeader({
           ) : null}
         </View>
 
-        <View
-          style={{
-            minWidth: 40,
-            width: resolvedRightAction ? undefined : 40,
-          }}
-          className="items-end"
-        >
+        <View style={{ width: sideSlotWidth }} className="items-end">
           {resolvedRightAction}
         </View>
       </View>

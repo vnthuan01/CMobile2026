@@ -13,6 +13,7 @@ import {
 } from '@/src/services/rescueService';
 import { useAuthStore } from '@/src/store/authStore';
 import type { PriorityCriteria } from '@/src/types/rescue';
+import { getScreenScaleConfig, scaleSize } from '@/src/utils/responsive';
 import {
   showErrorToast,
   showSuccessToast,
@@ -28,6 +29,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -82,6 +84,9 @@ export default function RequestRescueScreen({
   onBack,
 }: RequestRescueScreenProps) {
   const { bottom } = useSafeAreaInsets();
+  const { width, height, fontScale } = useWindowDimensions();
+  const screenScale = getScreenScaleConfig(width, height, fontScale);
+  const addPhotoSize = Math.max(80, scaleSize(88, screenScale));
   const { colors } = useTheme();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { dialogProps, showDialog } = useDialog();
@@ -481,7 +486,10 @@ export default function RequestRescueScreen({
             <SectionTitle title="Vị trí hiện tại" colors={colors} noMargin />
             <View
               className="flex-row items-center gap-1 rounded-full px-2 py-1"
-              style={{ backgroundColor: `${colors.status.completed}18` }}
+              style={{
+                backgroundColor: `${colors.status.completed}18`,
+                minWidth: Math.max(74, scaleSize(82, screenScale)),
+              }}
             >
               <Ionicons
                 name="location"
@@ -490,7 +498,7 @@ export default function RequestRescueScreen({
               />
               <Text
                 className="text-xs font-medium"
-                style={{ color: colors.status.completed }}
+                style={{ color: colors.status.completed, textAlign: 'center' }}
               >
                 Tự động
               </Text>
@@ -761,8 +769,12 @@ export default function RequestRescueScreen({
               <TouchableOpacity
                 onPress={pickImage}
                 disabled={uploadingImages}
-                className="h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed"
-                style={{ borderColor: colors.border }}
+                className="items-center justify-center rounded-xl border-2 border-dashed"
+                style={{
+                  width: addPhotoSize,
+                  height: addPhotoSize,
+                  borderColor: colors.border,
+                }}
               >
                 {uploadingImages ? (
                   <ActivityIndicator color={colors.primary} />
@@ -775,7 +787,10 @@ export default function RequestRescueScreen({
                     />
                     <Text
                       className="mt-1 text-xs"
-                      style={{ color: colors.textSecondary }}
+                      style={{
+                        color: colors.textSecondary,
+                        textAlign: 'center',
+                      }}
                     >
                       Thêm ảnh
                     </Text>

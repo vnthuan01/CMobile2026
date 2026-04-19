@@ -1,26 +1,27 @@
 import '@/global.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
-  Slot,
-  useRootNavigationState,
-  useRouter,
-  useSegments,
+    Slot,
+    useRootNavigationState,
+    useRouter,
+    useSegments,
 } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Easing,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Animated,
+    Easing,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
-  configureReanimatedLogger,
-  ReanimatedLogLevel,
+    configureReanimatedLogger,
+    ReanimatedLogLevel,
 } from 'react-native-reanimated';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -36,6 +37,18 @@ configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
   strict: true,
 });
+
+const textDefaults = Text as unknown as {
+  defaultProps?: Record<string, unknown>;
+};
+textDefaults.defaultProps = textDefaults.defaultProps ?? {};
+textDefaults.defaultProps.allowFontScaling = false;
+
+const textInputDefaults = TextInput as unknown as {
+  defaultProps?: Record<string, unknown>;
+};
+textInputDefaults.defaultProps = textInputDefaults.defaultProps ?? {};
+textInputDefaults.defaultProps.allowFontScaling = false;
 
 void SplashScreen.preventAutoHideAsync().catch(() => {
   // Ignore when already prevented or unavailable.

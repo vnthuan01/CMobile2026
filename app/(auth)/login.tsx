@@ -2,6 +2,7 @@ import '@/global.css';
 import { AppDialog } from '@/src/components/common/AppDialog';
 import { SosFloatingButton } from '@/src/components/common/SosFloatingButton';
 import { useLogin } from '@/src/hooks/useAuthActions';
+import { getScreenScaleConfig } from '@/src/utils/responsive';
 import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -26,7 +27,8 @@ import {
 export default function LoginScreen() {
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
+  const screenScale = getScreenScaleConfig(width, height, fontScale);
   const loginMutation = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,11 +37,18 @@ export default function LoginScreen() {
   const [successDialogVisible, setSuccessDialogVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('Đăng nhập thành công');
   const loading = loginMutation.isPending;
-  const isShortScreen = height < 700;
-  const fieldHeight = isShortScreen ? 46 : 52;
+  const isShortScreen = screenScale.isCompactHeight;
+  const fieldHeight = Math.round((isShortScreen ? 46 : 52) * screenScale.scale);
   const fieldRadius = 16;
-  const fieldFontSize = isShortScreen ? 15 : 16;
-  const fieldIconSize = isShortScreen ? 18 : 20;
+  const fieldFontSize = Math.round(
+    (isShortScreen ? 15 : 16) * screenScale.scale,
+  );
+  const fieldIconSize = Math.round(
+    (isShortScreen ? 18 : 20) * screenScale.scale,
+  );
+  const sosSize = 78;
+  const sosBottomOffset = bottom + 28;
+  const scrollBottomPadding = sosBottomOffset + sosSize + 20;
 
   const dangerRed = '#E52521';
   const neutralLine = '#E6E6E6';
@@ -96,13 +105,20 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
-            paddingBottom: isShortScreen ? 24 : 36,
+            paddingBottom: Math.max(
+              isShortScreen ? 24 : 36,
+              scrollBottomPadding,
+            ),
           }}
           keyboardShouldPersistTaps="handled"
         >
           <View
-            className="w-full self-center px-5"
-            style={{ paddingTop: isShortScreen ? 10 : 18 }}
+            className="w-full self-center"
+            style={{
+              paddingTop: isShortScreen ? 10 : 18,
+              paddingHorizontal: screenScale.horizontalPadding,
+              maxWidth: screenScale.contentMaxWidth,
+            }}
           >
             <View className="mb-4 mt-2 flex-row items-center justify-end">
               <TouchableOpacity
@@ -127,14 +143,23 @@ export default function LoginScreen() {
 
             <View style={{ marginBottom: isShortScreen ? 20 : 24 }}>
               <Text
-                className="mt-2 text-[46px] font-extrabold"
-                style={{ color: '#1F2937', lineHeight: 52 }}
+                className="mt-2 font-extrabold"
+                style={{
+                  color: '#1F2937',
+                  lineHeight: Math.round(52 * screenScale.scale),
+                  fontSize: Math.round(46 * screenScale.scale),
+                }}
               >
                 Đăng nhập
               </Text>
-              <Text className="mt-2 text-base" style={{ color: '#4B5563' }}>
-                Kết nối để nhận hỗ trợ khẩn cấp và cập nhật tình{`\n`}hình thiên
-                tai.
+              <Text
+                className="mt-2 text-base"
+                style={{
+                  color: '#4B5563',
+                  lineHeight: Math.round(24 * screenScale.scale),
+                }}
+              >
+                Kết nối để nhận hỗ trợ khẩn cấp và cập nhật tình hình thiên tai.
               </Text>
             </View>
 
@@ -265,18 +290,17 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <View className="mt-6 items-center">
-                <View className="mb-4 w-full flex-row items-center">
+                <View className="mb-4 w-full items-center justify-center">
                   <View
-                    className="h-px flex-1"
+                    className="h-px w-full"
                     style={{ backgroundColor: neutralLine }}
                   />
-                  <Text className="mx-3 text-sm" style={{ color: '#6B7280' }}>
-                    Hoặc đăng nhập bằng
+                  <Text
+                    className="absolute px-3 text-sm"
+                    style={{ color: '#6B7280', backgroundColor: '#FFFFFF' }}
+                  >
+                    Hoặc đăng nhập
                   </Text>
-                  <View
-                    className="h-px flex-1"
-                    style={{ backgroundColor: neutralLine }}
-                  />
                 </View>
 
                 <TouchableOpacity
@@ -302,13 +326,22 @@ export default function LoginScreen() {
 
             <Pressable
               className="items-center"
-              style={{ marginTop: isShortScreen ? 24 : 32 }}
+              style={{
+                marginTop: isShortScreen ? 24 : 32,
+                width: '100%',
+              }}
               onPress={() => router.push('/register')}
             >
-              <Text className="text-sm" style={{ color: '#6B7280' }}>
+              <Text
+                className="text-sm"
+                style={{ color: '#6B7280', textAlign: 'center' }}
+              >
                 Chưa có tài khoản?
               </Text>
-              <Text className="mt-1 font-bold" style={{ color: dangerRed }}>
+              <Text
+                className="mt-1 font-bold"
+                style={{ color: dangerRed, textAlign: 'center' }}
+              >
                 Đăng ký ngay
               </Text>
             </Pressable>
@@ -332,8 +365,8 @@ export default function LoginScreen() {
 
       <SosFloatingButton
         align="center"
-        size={78}
-        bottom={bottom + 28}
+        size={sosSize}
+        bottom={sosBottomOffset}
         onPress={() => router.push('/sos-request')}
       />
     </SafeAreaView>
