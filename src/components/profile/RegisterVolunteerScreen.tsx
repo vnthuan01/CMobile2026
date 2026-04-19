@@ -4,52 +4,58 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import {
-  useCampaignDetail,
-  useVolunteerRegistrationCampaigns,
+    useCampaignDetail,
+    useVolunteerRegistrationCampaigns,
 } from '@/src/hooks/useDonation';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
-  useCreateVolunteerProfile,
-  useResubmitVolunteerProfile,
-  useVolunteerSkills,
+    useCreateVolunteerProfile,
+    useResubmitVolunteerProfile,
+    useVolunteerSkills,
 } from '@/src/hooks/useVolunteerActions';
 import type { CampaignListItem } from '@/src/services/donationService';
 import {
-  CampaignResourceType,
-  getCampaignDetail,
+    CampaignResourceType,
+    getCampaignDetail,
 } from '@/src/services/donationService';
 import {
-  CreateVolunteerCertificateRequest,
-  CreateVolunteerRequest,
-  ResubmitVolunteerProfileRequest,
-  SkillResponse,
-  TeamRolePreference,
-  VolunteerProfileResponse,
+    CreateVolunteerCertificateRequest,
+    CreateVolunteerRequest,
+    ResubmitVolunteerProfileRequest,
+    SkillResponse,
+    TeamRolePreference,
+    VolunteerProfileResponse,
 } from '@/src/services/volunteerService';
 import { useProfileFlowStore } from '@/src/store/profileFlowStore';
 import {
-  showErrorToast,
-  showSuccessToast,
-  showWarningToast,
+    getScreenScaleConfig,
+    scaleFont,
+    scaleSize,
+} from '@/src/utils/responsive';
+import {
+    showErrorToast,
+    showSuccessToast,
+    showWarningToast,
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, {
-  DateTimePickerAndroid,
-  DateTimePickerEvent,
+    DateTimePickerAndroid,
+    DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { useQueries } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 
 interface RegisterVolunteerScreenProps {
@@ -226,6 +232,8 @@ export default function RegisterVolunteerScreen({
   initialProfile,
 }: RegisterVolunteerScreenProps) {
   const bottomInset = useBottomContentInset(24);
+  const { width, height, fontScale } = useWindowDimensions();
+  const screenScale = getScreenScaleConfig(width, height, fontScale);
   const router = useRouter();
   const { colors } = useTheme();
   const { dialogProps, showDialog } = useDialog();
@@ -1039,13 +1047,18 @@ export default function RegisterVolunteerScreen({
                   onPress={() => setTeamRolePreference(role.value)}
                   className="rounded-full border px-4 py-2"
                   style={{
+                    alignSelf: 'flex-start',
+                    minHeight: scaleSize(38, screenScale),
                     borderColor: active ? colors.primary : colors.border,
                     backgroundColor: active ? colors.primary : colors.card,
                   }}
                 >
                   <Text
                     className="text-sm font-medium"
-                    style={{ color: active ? colors.white : colors.text }}
+                    style={{
+                      color: active ? colors.white : colors.text,
+                      fontSize: scaleFont(14, screenScale),
+                    }}
                   >
                     {role.label}
                   </Text>
@@ -1080,13 +1093,18 @@ export default function RegisterVolunteerScreen({
                     onPress={() => toggleSkill(skill.skillId)}
                     className="rounded-full border px-3 py-2"
                     style={{
+                      alignSelf: 'flex-start',
+                      minHeight: scaleSize(38, screenScale),
                       borderColor: active ? colors.primary : colors.border,
                       backgroundColor: active ? colors.primary : colors.card,
                     }}
                   >
                     <Text
                       className="text-sm font-medium"
-                      style={{ color: active ? colors.white : colors.text }}
+                      style={{
+                        color: active ? colors.white : colors.text,
+                        fontSize: scaleFont(14, screenScale),
+                      }}
                     >
                       {getLocalizedSkillName(skill.name, skill.code)}
                     </Text>
