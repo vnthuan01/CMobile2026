@@ -72,6 +72,9 @@ export type TeamTrackingPointResponse = TeamTrackingHeartbeatResponse;
 export interface RescueBatchItem {
   rescueBatchItemId: string;
   rescueRequestId: string;
+  vehicleId?: string | null;
+  vehicleName?: string | null;
+  vehicleLicensePlate?: string | null;
   disasterType: string;
   rescueRequestType: 'Normal' | 'Emergency' | string;
   priorityPoint?: number | null;
@@ -106,6 +109,9 @@ export interface RescueActiveBatchResponse {
 
 export interface RescueTeamHistoryRequestItem {
   requestId: string;
+  vehicleId?: string | null;
+  vehicleName?: string | null;
+  vehicleLicensePlate?: string | null;
   address: string;
   description?: string | null;
   note?: string | null;
