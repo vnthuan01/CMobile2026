@@ -250,6 +250,7 @@ export default function RegisterVolunteerScreen({
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
   const [skills, setSkills] = useState<SkillResponse[]>([]);
+  const [hasNoCertificates, setHasNoCertificates] = useState(false);
   const [certificates, setCertificates] = useState<
     CreateVolunteerCertificateRequest[]
   >([{ ...EMPTY_CERT }]);
@@ -391,6 +392,7 @@ export default function RegisterVolunteerScreen({
           }))
         : [{ ...EMPTY_CERT }],
     );
+    setHasNoCertificates(!initialProfile.certificates?.length);
   }, [initialProfile]);
 
   useEffect(() => {
@@ -621,42 +623,44 @@ export default function RegisterVolunteerScreen({
       return false;
     }
 
-    for (const cert of certificates) {
-      if (
-        !cert.name.trim() ||
-        !cert.issuedBy.trim() ||
-        !cert.issuedDate.trim() ||
-        !cert.fileUrl.trim()
-      ) {
-        showWarningToast(
-          'Thiếu thông tin',
-          'Vui lòng điền đủ thông tin chứng chỉ bắt buộc.',
-        );
-        return false;
-      }
+    if (!hasNoCertificates) {
+      for (const cert of certificates) {
+        if (
+          !cert.name.trim() ||
+          !cert.issuedBy.trim() ||
+          !cert.issuedDate.trim() ||
+          !cert.fileUrl.trim()
+        ) {
+          showWarningToast(
+            'Thiếu thông tin',
+            'Vui lòng điền đủ thông tin chứng chỉ bắt buộc hoặc chọn không có chứng chỉ.',
+          );
+          return false;
+        }
 
-      if (!/^https?:\/\//i.test(cert.fileUrl.trim())) {
-        showWarningToast(
-          'Dữ liệu chưa hợp lệ',
-          'File URL của chứng chỉ phải là link hợp lệ (http/https).',
-        );
-        return false;
-      }
+        if (!/^https?:\/\//i.test(cert.fileUrl.trim())) {
+          showWarningToast(
+            'Dữ liệu chưa hợp lệ',
+            'File URL của chứng chỉ phải là link hợp lệ (http/https).',
+          );
+          return false;
+        }
 
-      if (!isValidDateOnly(cert.issuedDate.trim())) {
-        showWarningToast(
-          'Dữ liệu chưa hợp lệ',
-          'Ngày cấp chứng chỉ phải đúng định dạng YYYY-MM-DD.',
-        );
-        return false;
-      }
+        if (!isValidDateOnly(cert.issuedDate.trim())) {
+          showWarningToast(
+            'Dữ liệu chưa hợp lệ',
+            'Ngày cấp chứng chỉ phải đúng định dạng YYYY-MM-DD.',
+          );
+          return false;
+        }
 
-      if (cert.expiryDate?.trim() && !isValidDateOnly(cert.expiryDate.trim())) {
-        showWarningToast(
-          'Dữ liệu chưa hợp lệ',
-          'Ngày hết hạn chứng chỉ phải đúng định dạng YYYY-MM-DD.',
-        );
-        return false;
+        if (cert.expiryDate?.trim() && !isValidDateOnly(cert.expiryDate.trim())) {
+          showWarningToast(
+            'Dữ liệu chưa hợp lệ',
+            'Ngày hết hạn chứng chỉ phải đúng định dạng YYYY-MM-DD.',
+          );
+          return false;
+        }
       }
     }
 
@@ -675,13 +679,15 @@ export default function RegisterVolunteerScreen({
       yearsOfExperience: yearsOfExperience.trim()
         ? Number(yearsOfExperience)
         : null,
-      certificates: certificates.map((c) => ({
-        name: c.name.trim(),
-        issuedBy: c.issuedBy.trim(),
-        issuedDate: c.issuedDate.trim(),
-        expiryDate: c.expiryDate?.trim() || null,
-        fileUrl: c.fileUrl.trim(),
-      })),
+      certificates: hasNoCertificates
+        ? []
+        : certificates.map((c) => ({
+            name: c.name.trim(),
+            issuedBy: c.issuedBy.trim(),
+            issuedDate: c.issuedDate.trim(),
+            expiryDate: c.expiryDate?.trim() || null,
+            fileUrl: c.fileUrl.trim(),
+          })),
     };
 
     try {
@@ -1108,14 +1114,49 @@ export default function RegisterVolunteerScreen({
             <Text className="text-sm font-semibold text-text-secondary">
               Chứng chỉ
             </Text>
-            <TouchableOpacity onPress={addCertificate}>
-              <Text className="font-semibold text-primary">
-                + Thêm chứng chỉ
-              </Text>
-            </TouchableOpacity>
+            {!hasNoCertificates ? (
+              <TouchableOpacity onPress={addCertificate}>
+                <Text className="font-semibold text-primary">
+                  + Thêm chứng chỉ
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
-          {certificates.map((cert, index) => (
+          <TouchableOpacity
+            onPress={() => {
+              setHasNoCertificates((prev) => {
+                const next = !prev;
+                if (!next && certificates.length === 0) {
+                  setCertificates([{ ...EMPTY_CERT }]);
+                }
+                return next;
+              });
+            }}
+            className="mb-3 flex-row items-center gap-3 rounded-xl border px-4 py-3"
+            style={{
+              borderColor: hasNoCertificates ? colors.primary : colors.border,
+              backgroundColor: colors.card,
+            }}
+          >
+            <View
+              className="h-5 w-5 items-center justify-center rounded border"
+              style={{
+                borderColor: hasNoCertificates ? colors.primary : colors.border,
+                backgroundColor: hasNoCertificates ? colors.primary : 'transparent',
+              }}
+            >
+              {hasNoCertificates ? (
+                <Ionicons name="checkmark" size={14} color={colors.white} />
+              ) : null}
+            </View>
+            <Text className="flex-1 text-sm font-medium" style={{ color: colors.text }}>
+              Tôi không có chứng chỉ
+            </Text>
+          </TouchableOpacity>
+
+          {!hasNoCertificates
+            ? certificates.map((cert, index) => (
             <View
               key={index}
               className="mb-3 rounded-xl border p-3"
@@ -1239,7 +1280,17 @@ export default function RegisterVolunteerScreen({
                   </View>
                 )}
             </View>
-          ))}
+          ))
+            : (
+              <View
+                className="rounded-xl border border-dashed px-4 py-4"
+                style={{ borderColor: colors.border, backgroundColor: colors.card }}
+              >
+                <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                  Bạn đã chọn không có chứng chỉ. Hệ thống sẽ bỏ qua phần chứng chỉ khi gửi hồ sơ.
+                </Text>
+              </View>
+            )}
         </View>
 
         <View className="px-4 pt-2">

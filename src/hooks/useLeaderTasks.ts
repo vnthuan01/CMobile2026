@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { leaderTaskService } from '../services/leaderTaskService';
+import { teamKeys } from './useMyTeam';
 import type {
   AssignMemberTaskRequest,
   ChangeCampaignTaskStatusRequest,
@@ -27,7 +28,6 @@ export function useCampaignTeams(campaignId?: string | null) {
       return result.data ?? [];
     },
     enabled: !!campaignId,
-    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -43,7 +43,6 @@ export function useCampaignTasks(
       return result.data;
     },
     enabled: !!campaignId,
-    staleTime: 1000 * 30,
   });
 }
 
@@ -59,43 +58,58 @@ export function useCampaignTaskDetail(campaignTaskId?: string | null) {
   });
 }
 
-export function useCreateCampaignTask(campaignId: string) {
+export function useCreateCampaignTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (request: CreateCampaignTaskRequest) => {
+    mutationFn: async ({ campaignId, request }: { campaignId: string; request: CreateCampaignTaskRequest }) => {
       const result = await leaderTaskService.createCampaignTask(campaignId, request);
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
+      ]);
+    },
   });
 }
 
-export function useUpdateCampaignTask(campaignTaskId: string) {
+export function useUpdateCampaignTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (request: UpdateCampaignTaskRequest) => {
+    mutationFn: async ({ campaignTaskId, request }: { campaignTaskId: string; request: UpdateCampaignTaskRequest }) => {
       const result = await leaderTaskService.updateCampaignTask(campaignTaskId, request);
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
+      ]);
+    },
   });
 }
 
-export function useChangeCampaignTaskStatus(campaignTaskId: string) {
+export function useChangeCampaignTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (request: ChangeCampaignTaskStatusRequest) => {
+    mutationFn: async ({ campaignTaskId, request }: { campaignTaskId: string; request: ChangeCampaignTaskStatusRequest }) => {
       const result = await leaderTaskService.changeCampaignTaskStatus(campaignTaskId, request);
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
+      ]);
+    },
   });
 }
 
-export function useDeleteCampaignTask(campaignId: string) {
+export function useDeleteCampaignTask() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (campaignTaskId: string) => {
@@ -103,21 +117,28 @@ export function useDeleteCampaignTask(campaignId: string) {
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: leaderTaskKeys.tasks(campaignId, undefined),
-      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
+      ]);
+    },
   });
 }
 
-export function useAssignMemberTask(campaignTaskId: string) {
+export function useAssignMemberTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (request: AssignMemberTaskRequest) => {
+    mutationFn: async ({ campaignTaskId, request }: { campaignTaskId: string; request: AssignMemberTaskRequest }) => {
       const result = await leaderTaskService.assignMemberTask(campaignTaskId, request);
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
+        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
+      ]);
+    },
   });
 }

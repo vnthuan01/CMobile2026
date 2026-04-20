@@ -12,6 +12,8 @@ export function useRescueRequestDetail(requestId: string | null) {
     queryKey: rescueDetailKeys.detail(requestId ?? ''),
     queryFn: () => fetchRescueRequestDetail(requestId!),
     enabled: !!requestId,
-    staleTime: 1000 * 15, // detail refreshes faster: 15s
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
   });
 }

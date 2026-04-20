@@ -2,6 +2,8 @@ import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import TaskCard, { type TaskItem } from '@/src/components/common/TaskCard';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
+import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import {
   useCampaignTaskDetail,
   useCampaignTasks,
@@ -56,6 +58,8 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   const user = useAuthStore((s) => s.user);
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
+  const { data: fallbackAssignedCampaigns, isLoading: isCampaignsLoading } = useAssignedCampaigns(team?.teamId ?? '', !!team?.teamId);
+  const { activeCampaign, campaignId } = useActiveAssignedCampaign(team, null, fallbackAssignedCampaigns || []);
   
   const isLeader = useMemo(() => {
     if (!user?.id || !team?.leader?.userId) return false;
@@ -63,7 +67,6 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   }, [team?.leader?.userId, user?.id]);
 
   const teamMode = myTeamData?.teamMode ?? 'rescue';
-  const campaignId = team?.assignedCampaigns?.[0]?.campaignId ?? null;
 
   const { data: campaignTeams = [] } = useCampaignTeams(
     teamMode === 'relief' ? campaignId : null,
@@ -104,7 +107,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
         contentContainerStyle={{ padding: 16, paddingBottom: bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {isTeamLoading || isTasksLoading ? (
+        {isTeamLoading || isCampaignsLoading || isTasksLoading ? (
           <View className="items-center py-12">
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
@@ -122,7 +125,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
             <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
               <Text className="text-xs font-semibold text-white/80">Chiến dịch hiện tại</Text>
               <Text className="mt-2 text-2xl font-bold text-white">
-                {team?.assignedCampaigns?.[0]?.campaignName || team?.name || 'Đội cứu trợ'}
+                {activeCampaign?.campaignName || team?.name || 'Đội cứu trợ'}
               </Text>
               <Text className="mt-2 text-sm text-white/80">
                 Xem công việc của đội và phần việc thành viên được giao bởi nhóm trưởng.

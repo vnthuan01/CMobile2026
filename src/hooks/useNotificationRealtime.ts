@@ -95,30 +95,20 @@ export function useNotificationRealtime() {
     }
   };
 
-  const invalidateRescueQueries = (referenceId?: string | null) => {
-    queryClient.invalidateQueries({ queryKey: rescueRequestKeys.all });
-    queryClient.invalidateQueries({ queryKey: rescueDetailKeys.all });
-    queryClient.invalidateQueries({ queryKey: requestTrackingKeys.all });
-
-    queryClient.refetchQueries({ queryKey: rescueRequestKeys.all, type: 'active' });
-    queryClient.refetchQueries({ queryKey: rescueDetailKeys.all, type: 'active' });
-    queryClient.refetchQueries({ queryKey: requestTrackingKeys.all, type: 'active' });
+  const invalidateAllData = (referenceId?: string | null) => {
+    // Invalidate everything to ensure full consistency
+    queryClient.invalidateQueries();
+    
+    // Explicitly refetch active queries to provide immediate feedback
+    queryClient.refetchQueries({ type: 'active' });
 
     if (referenceId) {
+      // Prioritize specific detail views if we have a reference ID
       queryClient.invalidateQueries({
         queryKey: rescueDetailKeys.detail(referenceId),
       });
       queryClient.invalidateQueries({
         queryKey: requestTrackingKeys.detail(referenceId),
-      });
-
-      queryClient.refetchQueries({
-        queryKey: rescueDetailKeys.detail(referenceId),
-        type: 'active',
-      });
-      queryClient.refetchQueries({
-        queryKey: requestTrackingKeys.detail(referenceId),
-        type: 'active',
       });
     }
   };
@@ -177,7 +167,7 @@ export function useNotificationRealtime() {
     }
 
     upsertNotification(notification);
-    invalidateRescueQueries(notification.referenceId ?? null);
+    invalidateAllData(notification.referenceId ?? null);
 
     if (AppState.currentState === 'active') {
       const toastType = getNotificationToastType(notification.type);

@@ -3,9 +3,9 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useCurrentTeam } from '@/src/hooks/useTeamOverview';
-import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { TeamDetailResponse, TeamSkillResponse } from '@/src/services/teamService';
 import { useAuthStore } from '@/src/store/authStore';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useEffect, useMemo, useState } from 'react';
@@ -110,19 +110,19 @@ export default function MyCurrentTeamScreen({
 
   const summaryConfig = teamMode === 'relief'
     ? {
-        title: 'Đội cứu trợ đang phụ trách',
-        description:
-          'Theo dõi phân công, hỗ trợ nhu yếu phẩm và phối hợp công việc trong chiến dịch.',
-        ctaLabel: isLeader ? 'Mở điều phối cứu trợ' : 'Xem công việc của đội',
-        ctaIcon: 'cube-outline' as const,
-      }
+      title: 'Đội cứu trợ đang phụ trách',
+      description:
+        'Theo dõi phân công, hỗ trợ nhu yếu phẩm và phối hợp công việc trong chiến dịch.',
+      ctaLabel: isLeader ? 'Phân công' : 'Xem công việc của đội',
+      ctaIcon: 'cube-outline' as const,
+    }
     : {
-        title: 'Đội cứu hộ đang trực',
-        description:
-          'Sẵn sàng di chuyển, phối hợp hiện trường và xử lý nhiệm vụ đang mở.',
-        ctaLabel: isLeader ? 'Mở nhiệm vụ hiện tại' : 'Xem nhiệm vụ chung',
-        ctaIcon: 'flash-outline' as const,
-      };
+      title: 'Đội cứu hộ đang trực',
+      description:
+        'Sẵn sàng di chuyển, phối hợp hiện trường và xử lý nhiệm vụ đang mở.',
+      ctaLabel: isLeader ? 'Mở nhiệm vụ hiện tại' : 'Xem nhiệm vụ chung',
+      ctaIcon: 'flash-outline' as const,
+    };
 
   const renderSkillChips = (skills?: TeamSkillResponse[]) => {
     if (!skills || skills.length === 0) {
@@ -468,9 +468,9 @@ export default function MyCurrentTeamScreen({
                 </Text>
               </TouchableOpacity>
 
-              {team?.leader?.email ? (
+              {!isLeader && !!team?.leader?.email && (
                 <TouchableOpacity
-                  onPress={() => openEmail(team.leader?.email)}
+                  onPress={() => openEmail(team?.leader?.email)}
                   className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
                   style={{ backgroundColor: colors.primary }}
                 >
@@ -483,7 +483,7 @@ export default function MyCurrentTeamScreen({
                     Liên hệ trưởng nhóm
                   </Text>
                 </TouchableOpacity>
-              ) : null}
+              )}
             </View>
           </View>
         </ScrollView>

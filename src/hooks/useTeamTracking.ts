@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { teamService } from '../services/teamService';
 import type { TeamTrackingHeartbeatRequest } from '../types/team';
 import { showApiErrorToast, showApiResultToast } from '../utils/apiToast';
@@ -29,12 +29,15 @@ export function useTeamTrackingLatest(
       };
     },
     enabled: enabled && !!teamId,
-    staleTime: 1000 * 10,
-    refetchInterval: 1000 * 15,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    refetchInterval: 15000,
   });
 }
 
 export function useSendTeamTrackingHeartbeat() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       teamId,
@@ -44,6 +47,7 @@ export function useSendTeamTrackingHeartbeat() {
       payload: TeamTrackingHeartbeatRequest;
     }) => teamService.sendTrackingHeartbeat(teamId, payload),
     onSuccess: (result: Awaited<ReturnType<typeof teamService.sendTrackingHeartbeat>>) => {
+      queryClient.invalidateQueries({ queryKey: teamTrackingKeys.all });
       if (!result?.success) {
         showApiResultToast(result, {
           showSuccess: false,

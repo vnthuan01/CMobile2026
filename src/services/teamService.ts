@@ -11,8 +11,14 @@ import type {
 
 const normalizeTeamMode = (team: any): TeamMode => {
   const rawTeamType = String(team?.teamType ?? team?.type ?? '').trim().toLowerCase();
-  const campaignTypes = Array.isArray(team?.assignedCampaigns)
-    ? team.assignedCampaigns.map((campaign: any) =>
+  const assignedCampaignSources = [
+    ...(Array.isArray(team?.assignedCampaigns) ? team.assignedCampaigns : []),
+    ...(Array.isArray(team?.campaignTeams) ? team.campaignTeams : []),
+    ...(Array.isArray(team?.teamCampaigns) ? team.teamCampaigns : []),
+  ];
+
+  const campaignTypes = assignedCampaignSources.length
+    ? assignedCampaignSources.map((campaign: any) =>
         String(campaign?.campaignType ?? campaign?.type ?? '').trim().toLowerCase(),
       )
     : [];
@@ -30,14 +36,51 @@ const normalizeTeamMode = (team: any): TeamMode => {
 };
 
 const normalizeAssignedCampaigns = (team: any): AssignedCampaignSummary[] => {
-  if (!Array.isArray(team?.assignedCampaigns)) return [];
-  return team.assignedCampaigns.map((campaign: any) => ({
-    campaignId: String(campaign?.campaignId ?? campaign?.id ?? ''),
-    campaignName: campaign?.campaignName ?? campaign?.name ?? null,
-    campaignType: campaign?.campaignType ?? campaign?.type ?? null,
-    role: campaign?.role ?? null,
+  const sources = [
+    ...(Array.isArray(team?.assignedCampaigns) ? team.assignedCampaigns : []),
+    ...(Array.isArray(team?.campaignTeams) ? team.campaignTeams : []),
+    ...(Array.isArray(team?.teamCampaigns) ? team.teamCampaigns : []),
+  ];
+
+  if (sources.length === 0) return [];
+
+  const normalized = sources.map((campaign: any) => ({
+    campaignId: String(
+      campaign?.campaignId ??
+        campaign?.id ??
+        campaign?.campaign?.campaignId ??
+        campaign?.campaign?.id ??
+        campaign?.campaignTeam?.campaignId ??
+        campaign?.campaignTeam?.campaign?.campaignId ??
+        '',
+    ),
+    campaignName:
+      campaign?.campaignName ??
+      campaign?.name ??
+      campaign?.campaign?.campaignName ??
+      campaign?.campaign?.name ??
+      campaign?.campaignTeam?.campaignName ??
+      campaign?.campaignTeam?.campaign?.campaignName ??
+      null,
+    campaignType:
+      campaign?.campaignType ??
+      campaign?.type ??
+      campaign?.campaign?.campaignType ??
+      campaign?.campaign?.type ??
+      campaign?.campaignTeam?.campaignType ??
+      campaign?.campaignTeam?.campaign?.campaignType ??
+      null,
+    role: campaign?.role ?? campaign?.teamRole ?? campaign?.campaignTeam?.role ?? null,
     status: campaign?.status ?? null,
   }));
+
+  return normalized
+    .filter((campaign) => campaign.campaignId)
+    .reduce<AssignedCampaignSummary[]>((acc, campaign) => {
+      if (acc.some((item) => item.campaignId === campaign.campaignId)) return acc;
+      acc.push(campaign);
+      return acc;
+    }, []);
 };
 
 const normalizeTeam = (team: TeamDetailResponse | null): TeamDetailResponse | null => {
@@ -175,6 +218,43 @@ export const teamService = {
       data: null,
       status: 404,
       message: 'Không tìm thấy endpoint Team tracking/latest.',
+    };
+  },
+
+  getAssignedCampaigns: async (teamId: string) => {
+    const routes = [
+      `/Team/${teamId}/assigned-campaigns`,
+      `/api/Team/${teamId}/assigned-campaigns`,
+    ];
+
+    for (const route of routes) {
+      try {
+        const response = await api.get<AssignedCampaignSummary[]>(route);
+        return {
+          success: response.status === 200,
+          data: Array.isArray(response.data) ? response.data : [],
+          message: 'Lấy danh sách chiến dịch được gán thành công',
+        };
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          return {
+            success: false,
+            data: [] as AssignedCampaignSummary[],
+            status: error?.response?.status,
+            message: extractApiErrorMessage(
+              error,
+              'Không thể tải danh sách chiến dịch được gán của team.',
+            ),
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      data: [] as AssignedCampaignSummary[],
+      status: 404,
+      message: 'Không tìm thấy endpoint Team assigned-campaigns.',
     };
   },
 };

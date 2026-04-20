@@ -1,5 +1,7 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
+import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { CampaignTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse } from '@/src/types/leaderTask';
 import { useRouter } from 'expo-router';
@@ -12,7 +14,8 @@ type Props = {
 export default function ReliefHomeContent({ team }: Props) {
   const router = useRouter();
   const { colors } = useTheme();
-  const campaignId = team?.assignedCampaigns?.[0]?.campaignId ?? null;
+  const { data: fallbackAssignedCampaigns, isLoading: isCampaignsLoading } = useAssignedCampaigns(team?.teamId ?? '', !!team?.teamId);
+  const { activeCampaign, campaignId } = useActiveAssignedCampaign(team, null, fallbackAssignedCampaigns || []);
   const { data: reliefCampaignTeams = [] } = useCampaignTeams(campaignId);
   const myReliefCampaignTeam = reliefCampaignTeams.find(
     (item: CampaignTeamResponse) => item.teamId === team?.teamId,
@@ -53,7 +56,7 @@ export default function ReliefHomeContent({ team }: Props) {
 
       <View className="mt-6 px-4">
         <Card colors={colors.border} bg={colors.card}>
-          {isLoading ? (
+          {isCampaignsLoading || isLoading ? (
             <View className="items-center py-8">
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
@@ -61,7 +64,7 @@ export default function ReliefHomeContent({ team }: Props) {
             <>
               <Text className="text-lg font-bold" style={{ color: colors.text }}>Công việc của đội</Text>
               <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-                {team?.assignedCampaigns?.[0]?.campaignName || 'Chiến dịch hiện tại'}
+                {activeCampaign?.campaignName || 'Chiến dịch hiện tại'}
               </Text>
               <View className="mt-4 flex-row gap-3">
                 <MiniInfo label="Tổng việc" value={String(reliefTasks.length)} />

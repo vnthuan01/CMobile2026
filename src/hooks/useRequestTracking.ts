@@ -26,7 +26,12 @@ export function useRequestTrackingDetail(requestId: string) {
 
       return { detail, teamLocation };
     },
-    refetchInterval: 15000,
-    staleTime: 10000,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    refetchInterval: (query: { state: { data?: { detail?: { rescueRequestStatus?: string } } } }) => {
+      const status = query.state.data?.detail?.rescueRequestStatus;
+      return status && ['Assigned', 'InProgress'].includes(status) ? 10000 : false;
+    },
   });
 }

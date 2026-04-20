@@ -10,7 +10,7 @@ export const citizenProfileKeys = {
 
 export function useCitizenProfile(
   enabled = true,
-  refetchInterval: number | false = false,
+  _legacyRefetchInterval: number | false = false,
 ) {
   return useQuery({
     queryKey: citizenProfileKeys.me(),
@@ -24,8 +24,9 @@ export function useCitizenProfile(
       return result;
     },
     enabled,
-    refetchInterval,
-    refetchOnMount: 'always',
+    staleTime: 1000 * 60,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
     select: (result: CitizenProfileResult) => ({
       profile: result.data,
       errorMessage: null,

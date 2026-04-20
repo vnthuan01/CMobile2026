@@ -15,7 +15,7 @@ export const volunteerProfileKeys = {
 
 export function useMyVolunteerProfile(
   enabled = true,
-  refetchInterval: number | false = false,
+  _legacyRefetchInterval: number | false = false,
 ) {
   return useQuery({
     queryKey: volunteerProfileKeys.myProfile(),
@@ -29,7 +29,9 @@ export function useMyVolunteerProfile(
       return result;
     },
     enabled,
-    refetchInterval,
+    staleTime: 1000 * 60,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
     select: (result: VolunteerProfileResult) => ({
       profile: result.data,
       errorMessage: null,
@@ -50,6 +52,8 @@ export function useAllSkills(enabled = true) {
       return result.data;
     },
     enabled,
-    staleTime: 1000 * 60 * 10, // skills rarely change: 10 min
+    staleTime: 1000 * 60 * 5,
+    refetchOnMount: false,
+    refetchOnReconnect: true,
   });
 }

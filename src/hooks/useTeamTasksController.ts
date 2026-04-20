@@ -563,7 +563,7 @@ export function useTeamTasksController() {
 
     sendHeartbeat();
 
-    const intervalMs = 90000;
+    const intervalMs = 30000;
     setHeartbeatIntervalMs(intervalMs);
 
     if (heartbeatIntervalRef.current) {

@@ -48,7 +48,6 @@ export function useVolunteerRegistrationCampaigns(enabled = true) {
     queryKey: donationKeys.volunteerRegistrationCampaigns,
     queryFn: () => getVolunteerRegistrationCampaigns(),
     enabled,
-    staleTime: 1000 * 60 * 10,
   });
 }
 
@@ -57,7 +56,6 @@ export function useCampaignDetail(campaignId?: string, enabled = true) {
     queryKey: donationKeys.campaignDetail(campaignId || ''),
     queryFn: () => getCampaignDetail(campaignId || ''),
     enabled: enabled && !!campaignId,
-    staleTime: 0,
   });
 }
 
@@ -67,7 +65,6 @@ export function useCampaignDetailsMap(campaignIds: string[]) {
       queryKey: donationKeys.campaignDetail(campaignId),
       queryFn: () => getCampaignDetail(campaignId),
       enabled: !!campaignId,
-      staleTime: 0,
     })),
   });
 
@@ -87,7 +84,6 @@ export function useFundContributions() {
     queryKey: donationKeys.contributions,
     queryFn: () => getFundContributions(),
     refetchInterval: 10000,
-    staleTime: 0,
   });
 }
 
@@ -97,7 +93,6 @@ export function useCampaignDonationSummary(campaignId?: string) {
     queryFn: () => getCampaignDonationSummary(campaignId || ''),
     enabled: !!campaignId,
     refetchInterval: 8000,
-    staleTime: 0,
   });
 }
 
@@ -122,7 +117,6 @@ export function useDonationStatus(donationId?: string, enabled = true) {
       const status = Number(query.state.data?.status ?? -1);
       return status === DonationStatus.Pending ? 5000 : false;
     },
-    staleTime: 0,
   });
 }
 

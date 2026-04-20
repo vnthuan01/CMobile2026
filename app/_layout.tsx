@@ -1,5 +1,5 @@
 import '@/global.css';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import {
     Slot,
     useRootNavigationState,
@@ -11,6 +11,8 @@ import { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
+    AppState,
+    type AppStateStatus,
     Easing,
     StatusBar,
     StyleSheet,
@@ -111,6 +113,18 @@ function RootLayoutContent() {
     useState(isLoading);
   const [hasCompletedStartupPhase, setHasCompletedStartupPhase] =
     useState(false);
+
+  useEffect(() => {
+    const onAppStateChange = (status: AppStateStatus) => {
+      focusManager.setFocused(status === 'active');
+    };
+
+    const subscription = AppState.addEventListener('change', onAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   //check theo group
   const inAuthRoute = segments[0] === '(auth)';

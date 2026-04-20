@@ -25,8 +25,6 @@ export function useMyRescueRequests({
     queryKey: rescueRequestKeys.myList(pageNumber, pageSize),
     queryFn: () => fetchMyRescueRequests({ pageNumber, pageSize }),
     enabled,
-    refetchInterval: 8000,
-    refetchIntervalInBackground: false,
     select: (data: MyRescueRequestsResult) =>
       data.data ?? ([] as MyRescueRequestItem[]),
   });

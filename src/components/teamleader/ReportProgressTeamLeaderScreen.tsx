@@ -2,6 +2,7 @@ import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import StickyFooterButton from '@/src/components/common/StickyFooterButton';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useCampaignTaskDetail, useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { CampaignTaskStatus, MemberTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse, type MemberTaskResponse } from '@/src/types/leaderTask';
@@ -29,7 +30,7 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
   const [summaryNote, setSummaryNote] = useState('');
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
-  const campaignId = (team as any)?.assignedCampaigns?.[0]?.campaignId ?? null;
+  const { campaignId } = useActiveAssignedCampaign(team);
   const { data: campaignTeams = [] } = useCampaignTeams(campaignId);
   const myCampaignTeam = campaignTeams.find((item: CampaignTeamResponse) => item.teamId === team?.teamId) ?? campaignTeams[0];
   const { data: taskData, isLoading: isTasksLoading } = useCampaignTasks(campaignId, {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Modal, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Pressable, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 
 interface DropdownItem {
@@ -12,6 +12,7 @@ interface CustomDropdownProps {
   selectedValue: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
+  title?: string;
 }
 
 export default function CustomDropdown({
@@ -19,9 +20,11 @@ export default function CustomDropdown({
   selectedValue,
   onValueChange,
   placeholder = '-- Chọn --',
+  title = 'Chọn mục',
 }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { colors } = useTheme();
+  const { height } = useWindowDimensions();
 
   const selectedLabel =
     items.find((item) => item.value === selectedValue)?.label || placeholder;
@@ -51,19 +54,22 @@ export default function CustomDropdown({
       <Modal
         visible={isOpen}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setIsOpen(false)}
       >
-        <TouchableOpacity
-          className="flex-1 bg-black/50"
-          activeOpacity={1}
-          onPress={() => setIsOpen(false)}
-        >
-          <View className="flex-1 justify-end">
+        <View className="flex-1 justify-end bg-black/50">
+          <Pressable className="flex-1" onPress={() => setIsOpen(false)} />
+          <View>
             <View
-              className="max-h-96 rounded-t-2xl"
-              style={{ backgroundColor: colors.card }}
+              className="rounded-t-3xl"
+              style={{ backgroundColor: colors.card, height: Math.min(height * 0.78, 640) }}
             >
+              <View className="items-center pt-3">
+                <View
+                  className="h-1.5 w-14 rounded-full"
+                  style={{ backgroundColor: colors.border }}
+                />
+              </View>
               {/* Header */}
               <View
                 className="p-5"
@@ -73,7 +79,7 @@ export default function CustomDropdown({
                   className="font-inter text-lg font-bold"
                   style={{ color: colors.text }}
                 >
-                  Chọn mẫu xe
+                  {title}
                 </Text>
               </View>
 
@@ -113,10 +119,11 @@ export default function CustomDropdown({
                   </TouchableOpacity>
                 )}
                 scrollEnabled
+                showsVerticalScrollIndicator={false}
               />
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </>
   );

@@ -23,7 +23,9 @@ export function useVolunteerSkills(enabled = true) {
       };
     },
     enabled,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 5,
+    refetchOnMount: false,
+    refetchOnReconnect: true,
   });
 }
 

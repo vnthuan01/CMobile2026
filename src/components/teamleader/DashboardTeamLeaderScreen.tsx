@@ -2,6 +2,7 @@ import '@/global.css';
 import MemberCard, { type TeamMember } from '@/src/components/common/MemberCard';
 import StickyFooterButton from '@/src/components/common/StickyFooterButton';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { CampaignTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse } from '@/src/types/leaderTask';
@@ -38,7 +39,7 @@ export default function DashboardTeamLeaderScreen({
 
   const team = myTeamData?.team;
   const teamMode = myTeamData?.teamMode ?? 'rescue';
-  const campaignId = (team as any)?.assignedCampaigns?.[0]?.campaignId ?? null;
+  const { campaignId } = useActiveAssignedCampaign(team);
   const { data: campaignTeams = [] } = useCampaignTeams(campaignId);
   const myCampaignTeam = campaignTeams.find((item: CampaignTeamResponse) => item.teamId === team?.teamId) ?? campaignTeams[0];
   const { data: taskData, isLoading: isTasksLoading } = useCampaignTasks(campaignId, {

@@ -15,6 +15,5 @@ export function usePriorityCriteria(
     queryKey: rescueMetaKeys.priorityCriteria(disasterType),
     queryFn: () => fetchPriorityCriteria(disasterType),
     enabled,
-    staleTime: 1000 * 60 * 5,
   });
 }

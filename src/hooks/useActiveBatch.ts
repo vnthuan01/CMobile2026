@@ -23,7 +23,9 @@ export function useActiveBatch(teamId: string | null | undefined) {
       };
     },
     enabled: !!teamId,
-    staleTime: 1000 * 20, // active ops refresh often: 20s
-    refetchInterval: 1000 * 30, // auto-poll every 30s when mounted
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    refetchInterval: 15000,
   });
 }
