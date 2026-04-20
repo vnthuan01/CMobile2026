@@ -8,9 +8,11 @@ import {
   getDonationStatus,
   getFundContributions,
   getFundraisingCampaigns,
+  processDonationPaymentReturn,
   getVolunteerRegistrationCampaigns,
   type CampaignListParams,
   type DonationCheckoutPayload,
+  type DonationPaymentReturnParams,
 } from '../services/donationService';
 import { showApiErrorToast } from '../utils/apiToast';
 
@@ -63,6 +65,8 @@ export function useFundContributions() {
   return useQuery({
     queryKey: donationKeys.contributions,
     queryFn: () => getFundContributions(),
+    refetchInterval: 10000,
+    staleTime: 0,
   });
 }
 
@@ -71,6 +75,8 @@ export function useCampaignDonationSummary(campaignId?: string) {
     queryKey: donationKeys.campaignSummary(campaignId || ''),
     queryFn: () => getCampaignDonationSummary(campaignId || ''),
     enabled: !!campaignId,
+    refetchInterval: 8000,
+    staleTime: 0,
   });
 }
 
@@ -96,5 +102,15 @@ export function useDonationStatus(donationId?: string, enabled = true) {
       return status === DonationStatus.Pending ? 5000 : false;
     },
     staleTime: 0,
+  });
+}
+
+export function useProcessDonationPaymentReturn() {
+  return useMutation({
+    mutationFn: (params: DonationPaymentReturnParams) =>
+      processDonationPaymentReturn(params),
+    onError: () => {
+      // Keep donate-result flow resilient; status polling can still resolve final state.
+    },
   });
 }

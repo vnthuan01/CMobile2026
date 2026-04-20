@@ -100,12 +100,25 @@ export function useNotificationRealtime() {
     queryClient.invalidateQueries({ queryKey: rescueDetailKeys.all });
     queryClient.invalidateQueries({ queryKey: requestTrackingKeys.all });
 
+    queryClient.refetchQueries({ queryKey: rescueRequestKeys.all, type: 'active' });
+    queryClient.refetchQueries({ queryKey: rescueDetailKeys.all, type: 'active' });
+    queryClient.refetchQueries({ queryKey: requestTrackingKeys.all, type: 'active' });
+
     if (referenceId) {
       queryClient.invalidateQueries({
         queryKey: rescueDetailKeys.detail(referenceId),
       });
       queryClient.invalidateQueries({
         queryKey: requestTrackingKeys.detail(referenceId),
+      });
+
+      queryClient.refetchQueries({
+        queryKey: rescueDetailKeys.detail(referenceId),
+        type: 'active',
+      });
+      queryClient.refetchQueries({
+        queryKey: requestTrackingKeys.detail(referenceId),
+        type: 'active',
       });
     }
   };

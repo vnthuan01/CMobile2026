@@ -14206,11 +14206,6 @@
             "format": "uuid",
             "nullable": true
           },
-          "driverUserId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
           "notes": {
             "maxLength": 1000,
             "type": "string",

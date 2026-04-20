@@ -1,11 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDonationStatus } from '@/src/hooks/useDonation';
+import {
+  donationKeys,
+  useDonationStatus,
+  useProcessDonationPaymentReturn,
+} from '@/src/hooks/useDonation';
 import { useTheme } from '@/src/context/ThemeContext';
 import { DonationStatus } from '@/src/services/donationService';
+import { useQueryClient } from '@tanstack/react-query';
 
 type ResultState =
   | 'checking'
@@ -31,19 +36,87 @@ const mapQueryStatusToState = (status?: string): ResultState => {
 
 export default function DonateResultScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { top, bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
   const params = useLocalSearchParams();
 
   const donationId = toSingleParam(params.donationId);
   const campaignId = toSingleParam(params.campaignId);
-  const queryStatus = toSingleParam(params.paymentStatus) || toSingleParam(params.status);
+  const callbackStatus = toSingleParam(params.status);
+  const queryStatus = toSingleParam(params.paymentStatus) || callbackStatus;
+  const code = toSingleParam(params.code);
+  const id = toSingleParam(params.id);
+  const rawCancel = toSingleParam(params.cancel);
+  const orderCodeRaw = toSingleParam(params.orderCode);
+
+  const hasProcessedPaymentReturnRef = useRef(false);
+  const { mutateAsync: processPaymentReturn } = useProcessDonationPaymentReturn();
+
+  const parsedCancel = useMemo(() => {
+    if (!rawCancel) return undefined;
+    const normalized = rawCancel.trim().toLowerCase();
+    if (['true', '1', 'yes'].includes(normalized)) return true;
+    if (['false', '0', 'no'].includes(normalized)) return false;
+    return undefined;
+  }, [rawCancel]);
+
+  const parsedOrderCode = useMemo(() => {
+    if (!orderCodeRaw) return undefined;
+    const value = Number(orderCodeRaw);
+    return Number.isFinite(value) ? value : undefined;
+  }, [orderCodeRaw]);
 
   const {
     data: donationStatus,
     isFetching: isFetchingDonationStatus,
     isLoading: isLoadingDonationStatus,
   } = useDonationStatus(donationId, !!donationId);
+
+  useEffect(() => {
+    const normalizedStatus = (queryStatus || '').trim().toLowerCase();
+    const shouldProcessReturn =
+      normalizedStatus === 'success' ||
+      normalizedStatus === 'completed' ||
+      normalizedStatus === 'paid';
+
+    const hasRequiredGatewayParams = !!(code || id);
+
+    if (
+      !shouldProcessReturn ||
+      !hasRequiredGatewayParams ||
+      hasProcessedPaymentReturnRef.current
+    ) {
+      return;
+    }
+
+    hasProcessedPaymentReturnRef.current = true;
+
+    void processPaymentReturn({
+      code,
+      id,
+      cancel: parsedCancel,
+      status: callbackStatus,
+      orderCode: parsedOrderCode,
+    }).finally(() => {
+      void queryClient.invalidateQueries({ queryKey: donationKeys.contributions });
+      if (campaignId) {
+        void queryClient.invalidateQueries({
+          queryKey: donationKeys.campaignSummary(campaignId),
+        });
+      }
+    });
+  }, [
+    callbackStatus,
+    campaignId,
+    code,
+    id,
+    parsedCancel,
+    parsedOrderCode,
+    processPaymentReturn,
+    queryClient,
+    queryStatus,
+  ]);
 
   const resultState = useMemo<ResultState>(() => {
     if (donationId) {
