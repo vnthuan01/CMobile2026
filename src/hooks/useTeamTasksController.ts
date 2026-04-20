@@ -1,26 +1,26 @@
 import { useSendTeamTrackingHeartbeat } from '@/src/hooks/useTeamTracking';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
-  completeRescueOperation,
-  fetchRescueRequestDetail,
-  updateRescueOperationStatus,
+    completeRescueOperation,
+    fetchRescueRequestDetail,
+    updateRescueOperationStatus,
 } from '@/src/services/rescueService';
 import {
-  RescueActiveBatchResponse,
-  RescueBatchItem,
-  RescueTeamHistoryBatch,
-  rescueTeamService,
+    RescueActiveBatchResponse,
+    RescueBatchItem,
+    RescueTeamHistoryBatch,
+    rescueTeamService,
 } from '@/src/services/rescueTeamService';
 import {
-  TeamDetailResponse,
-  TeamTrackingHeartbeatRequest,
-  teamService,
+    TeamDetailResponse,
+    TeamTrackingHeartbeatRequest,
+    teamService,
 } from '@/src/services/teamService';
 import { useAuthStore } from '@/src/store/authStore';
 import {
-  showErrorToast,
-  showSuccessToast,
-  showWarningToast,
+    showErrorToast,
+    showSuccessToast,
+    showWarningToast,
 } from '@/src/utils/toast';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -101,6 +101,9 @@ const mapHistoryBatches = (
         ): RescueBatchItem => ({
           rescueBatchItemId: `${historyBatch.rescueBatchId}-${request.requestId}`,
           rescueRequestId: request.requestId,
+          vehicleId: request.vehicleId ?? null,
+          vehicleName: request.vehicleName ?? null,
+          vehicleLicensePlate: request.vehicleLicensePlate ?? null,
           disasterType: request.disasterType,
           rescueRequestType: normalizeRescueRequestType(
             request.rescueRequestType,

@@ -277,6 +277,37 @@ export default function TeamTasksScreen({
     return String(Math.round(value));
   };
 
+  const getVehicleLabel = (
+    item: Pick<
+      RescueBatchItem,
+      'vehicleName' | 'vehicleLicensePlate' | 'vehicleId'
+    >,
+  ) => {
+    const vehicleName = String(item.vehicleName ?? '').trim();
+    const vehicleLicensePlate = String(item.vehicleLicensePlate ?? '').trim();
+    const hasVehicle = Boolean(
+      vehicleName || vehicleLicensePlate || item.vehicleId,
+    );
+
+    if (!hasVehicle) {
+      return 'Chưa điều phối';
+    }
+
+    if (vehicleName && vehicleLicensePlate) {
+      return `${vehicleName} - ${vehicleLicensePlate}`;
+    }
+
+    if (vehicleName) {
+      return vehicleName;
+    }
+
+    if (vehicleLicensePlate) {
+      return vehicleLicensePlate;
+    }
+
+    return 'Chưa điều phối';
+  };
+
   const renderLeaderMissionActions = (mission: RescueBatchItem | null) => {
     const isActiveMission =
       !!mission &&
@@ -552,6 +583,27 @@ export default function TeamTasksScreen({
                       ).text
                     }
                   />
+                </View>
+
+                <View
+                  className="mt-4 rounded-xl border px-4 py-3"
+                  style={{
+                    borderColor: colors.border,
+                    backgroundColor: colors.surface,
+                  }}
+                >
+                  <Text
+                    className="text-xs font-semibold"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Phương tiện
+                  </Text>
+                  <Text
+                    className="mt-1 text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
+                    {getVehicleLabel(selectedMission)}
+                  </Text>
                 </View>
 
                 <View className="mt-4 flex-row gap-3">
@@ -856,6 +908,12 @@ export default function TeamTasksScreen({
                           Địa chỉ: {item.address || 'Chưa có địa chỉ'}
                         </Text>
                         <Text
+                          className="mt-1 text-sm"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Xe sử dụng: {getVehicleLabel(item)}
+                        </Text>
+                        <Text
                           className="mt-2 text-sm font-medium"
                           style={{ color: colors.text }}
                         >
@@ -1091,6 +1149,12 @@ export default function TeamTasksScreen({
                                 style={{ color: colors.textSecondary }}
                               >
                                 Địa chỉ: {item.address || 'Chưa có địa chỉ'}
+                              </Text>
+                              <Text
+                                className="text-sm"
+                                style={{ color: colors.textSecondary }}
+                              >
+                                Xe đã dùng: {getVehicleLabel(item)}
                               </Text>
 
                               <View className="mt-2 gap-1.5">

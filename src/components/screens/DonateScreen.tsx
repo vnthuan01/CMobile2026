@@ -1,24 +1,24 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import {
-    donationKeys,
-    useCampaignDonationSummary,
-    useCreateDonationCheckout,
-    useDonationStatus,
-    useFundContributions,
-    useFundraisingCampaigns,
+  donationKeys,
+  useCampaignDonationSummary,
+  useCreateDonationCheckout,
+  useDonationStatus,
+  useFundContributions,
+  useFundraisingCampaigns,
 } from '@/src/hooks/useDonation';
 import {
-    CampaignResourceType,
-    CampaignType,
-    DonationStatus,
+  CampaignResourceType,
+  CampaignType,
+  DonationStatus,
 } from '@/src/services/donationService';
 import { useAuthStore } from '@/src/store/authStore';
 import { showApiErrorToast } from '@/src/utils/apiToast';
 import { getScreenScaleConfig } from '@/src/utils/responsive';
 import {
-    showErrorToast,
-    showInfoToast,
-    showSuccessToast,
+  showErrorToast,
+  showInfoToast,
+  showSuccessToast,
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -26,15 +26,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    ImageBackground,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
