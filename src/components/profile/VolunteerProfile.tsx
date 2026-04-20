@@ -1,6 +1,7 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import { useMyTeam } from '@/src/hooks/useMyTeam';
 import {
   useAllSkills,
   useMyVolunteerProfile,
@@ -21,26 +22,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 
 interface VolunteerProfileProps {
+  isLeader?: boolean;
   onEdit?: () => void;
   onBack?: () => void;
   onLogout?: () => void;
   onNavigate?: (
     screen:
+      | '/tasks'
       | '/profile/my-volunteer-profile'
       | '/profile/requests'
       | '/profile/tasks'
       | '/profile/settings'
       | '/profile/help'
       | '/profile/change-password'
-      | '/profile/progress-rescue'
-      | '/profile/progress-relief'
       | '/profile/dashboard-leader'
-      | '/profile/report-leader'
       | '/profile/my-team',
   ) => void;
 }
 
 export default function VolunteerProfile({
+  isLeader = false,
   onEdit,
   onBack,
   onLogout,
@@ -52,9 +53,11 @@ export default function VolunteerProfile({
   const user = useAuthStore((s) => s.user);
   const profileQuery = useCitizenProfile(Boolean(user));
   const volunteerProfileQuery = useMyVolunteerProfile(Boolean(user));
+  const myTeamQuery = useMyTeam(Boolean(user));
   const allSkillsQuery = useAllSkills(Boolean(user));
   const profile = profileQuery.data?.profile ?? null;
   const volunteerProfile = volunteerProfileQuery.data?.profile ?? null;
+  const teamMode = myTeamQuery.data?.teamMode ?? 'rescue';
   const allSkills = useMemo(
     () => (allSkillsQuery.data ?? []) as SkillResponse[],
     [allSkillsQuery.data],
@@ -220,7 +223,7 @@ export default function VolunteerProfile({
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-col gap-4">
-          {/* Skills */}
+          {/* Team */}
           <View
             className="rounded-2xl border p-5 shadow-sm"
             style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
@@ -248,6 +251,36 @@ export default function VolunteerProfile({
               </TouchableOpacity>
             </View>
           </View>
+
+          {isLeader ? (
+            <View
+              className="rounded-2xl border p-5 shadow-sm"
+              style={{ borderColor: neutralBorder, backgroundColor: cardBg }}
+            >
+              <View className="flex-row items-center justify-between gap-4">
+                <View className="flex-1">
+                  <Text className="text-base font-bold" style={{ color: colors.text }}>
+                    Dashboard nhóm trưởng
+                  </Text>
+                  <Text className="mt-1 text-xs leading-relaxed" style={{ color: colors.textSecondary }}>
+                    {teamMode === 'relief'
+                      ? 'Theo dõi tiến độ công việc và phân công cho từng thành viên.'
+                      : 'Điều hành đội cứu hộ và theo dõi nhiệm vụ chung của nhóm.'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() =>
+                    teamMode === 'relief'
+                      ? onNavigate?.('/profile/dashboard-leader')
+                      : onNavigate?.('/tasks')
+                  }
+                  className="rounded-xl bg-primary px-4 py-2.5"
+                >
+                  <Text className="font-semibold text-white">Mở</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
 
           {/* Skills */}
           <View
@@ -498,7 +531,9 @@ export default function VolunteerProfile({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => onNavigate?.('/profile/tasks')}
+                onPress={() =>
+                  onNavigate?.(teamMode === 'relief' ? '/profile/tasks' : '/tasks')
+                }
                 className="flex-row items-center gap-4 border-b p-4"
                 style={{ borderColor: neutralBorder }}
               >
@@ -513,13 +548,15 @@ export default function VolunteerProfile({
                     className="text-sm font-semibold"
                     style={{ color: colors.text }}
                   >
-                    Theo dõi nhiệm vụ
+                    {teamMode === 'relief' ? 'Công việc của đội' : 'Trung tâm nhiệm vụ'}
                   </Text>
                   <Text
                     className="text-xs"
                     style={{ color: colors.textSecondary }}
                   >
-                    Xem và cập nhật trạng thái nhiệm vụ
+                    {teamMode === 'relief'
+                      ? 'Xem công việc được giao trong chiến dịch'
+                      : 'Xem và cập nhật trạng thái nhiệm vụ cứu hộ'}
                   </Text>
                 </View>
                 <Ionicons
@@ -529,141 +566,41 @@ export default function VolunteerProfile({
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => onNavigate?.('/profile/progress-rescue')}
-                className="flex-row items-center gap-4 border-b p-4"
-                style={{ borderColor: neutralBorder }}
-              >
-                <View
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `${colors.status.error}18` }}
+              {isLeader && teamMode === 'relief' ? (
+                <TouchableOpacity
+                  onPress={() => onNavigate?.('/profile/dashboard-leader')}
+                  className="flex-row items-center gap-4 border-b p-4"
+                  style={{ borderColor: neutralBorder }}
                 >
-                  <Ionicons name="boat" size={18} color={colors.status.error} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="text-sm font-semibold"
-                    style={{ color: colors.text }}
+                  <View
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: `${iconAccent}18` }}
                   >
-                    Tiến độ cứu hộ
-                  </Text>
-                  <Text
-                    className="text-xs"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Báo cáo tiến độ nhiệm vụ cứu hộ
-                  </Text>
-                </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => onNavigate?.('/profile/progress-relief')}
-                className="flex-row items-center gap-4 border-b p-4"
-                style={{ borderColor: neutralBorder }}
-              >
-                <View
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `${colors.status.pending}18` }}
-                >
+                    <Ionicons name="people" size={18} color={iconAccent} />
+                  </View>
+                  <View className="flex-1">
+                    <Text
+                      className="text-sm font-semibold"
+                      style={{ color: colors.text }}
+                    >
+                      {teamMode === 'relief' ? 'Bảng điều phối nhóm' : 'Điều hành đội'}
+                    </Text>
+                    <Text
+                      className="text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {teamMode === 'relief'
+                        ? 'Quản lý nhóm và phân công công việc'
+                        : 'Theo dõi đội và mở nhanh nhiệm vụ chung'}
+                    </Text>
+                  </View>
                   <Ionicons
-                    name="cube"
-                    size={18}
-                    color={colors.status.pending}
+                    name="chevron-forward"
+                    size={20}
+                    color={colors.textSecondary}
                   />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="text-sm font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Tiến độ cứu trợ
-                  </Text>
-                  <Text
-                    className="text-xs"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Báo cáo tiến độ phân phối hàng cứu trợ
-                  </Text>
-                </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => onNavigate?.('/profile/dashboard-leader')}
-                className="flex-row items-center gap-4 border-b p-4"
-                style={{ borderColor: neutralBorder }}
-              >
-                <View
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `${iconAccent}18` }}
-                >
-                  <Ionicons name="people" size={18} color={iconAccent} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="text-sm font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Dashboard nhóm trưởng
-                  </Text>
-                  <Text
-                    className="text-xs"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Quản lý nhóm và phân công nhiệm vụ
-                  </Text>
-                </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => onNavigate?.('/profile/report-leader')}
-                className="flex-row items-center gap-4 border-b p-4"
-                style={{ borderColor: neutralBorder }}
-              >
-                <View
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `${colors.status.completed}18` }}
-                >
-                  <Ionicons
-                    name="stats-chart"
-                    size={18}
-                    color={colors.status.completed}
-                  />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="text-sm font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Báo cáo tổng hợp
-                  </Text>
-                  <Text
-                    className="text-xs"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Gửi báo cáo tổng hợp của nhóm
-                  </Text>
-                </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
+                </TouchableOpacity>
+              ) : null}
 
               <TouchableOpacity
                 onPress={() => onNavigate?.('/profile/change-password')}

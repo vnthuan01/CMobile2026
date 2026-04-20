@@ -23,15 +23,28 @@ export interface TeamMemberSummary extends TeamUserSummary {
   joinedAt: string;
 }
 
+export type TeamMode = 'rescue' | 'relief';
+
+export interface AssignedCampaignSummary {
+  campaignId: string;
+  campaignName?: string | null;
+  campaignType?: string | number | null;
+  role?: string | number | null;
+  status?: string | number | null;
+}
+
 export interface TeamDetailResponse {
   teamId: string;
   name: string;
   description: string | null;
   contactPhone: string | null;
   status: 'Draft' | 'Active' | 'Inactive' | string;
+  teamType?: string | number | null;
+  teamMode?: TeamMode;
   moderator: TeamUserSummary | null;
   leader: TeamLeaderSummary | null;
   members: TeamMemberSummary[];
+  assignedCampaigns?: AssignedCampaignSummary[];
   createdAt: string;
   updatedAt: string;
 }

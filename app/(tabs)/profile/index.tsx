@@ -13,12 +13,10 @@ type CitizenProfileRoute =
   | '/profile/help';
 
 type VolunteerProfileRoute =
+  | '/tasks'
   | '/profile/my-team'
   | '/profile/tasks'
-  | '/profile/progress-rescue'
-  | '/profile/progress-relief'
   | '/profile/dashboard-leader'
-  | '/profile/report-leader'
   | '/profile/requests'
   | '/profile/change-password'
   | '/profile/settings'
@@ -31,6 +29,7 @@ export default function ProfileIndexScreen() {
 
   const role = (user?.role ?? '').toLowerCase();
   const isVolunteer = role === 'volunteer' || role === 'leader';
+  const isLeader = role === 'leader';
 
   const handleLogout = async () => {
     await logout();
@@ -42,6 +41,7 @@ export default function ProfileIndexScreen() {
       onLogout={handleLogout}
       onNavigate={(route: string) => router.push(route as any)}
       onEdit={() => router.push('/profile/edit' as any)}
+      isLeader={isLeader}
     />
   ) : (
     <CitizenProfile

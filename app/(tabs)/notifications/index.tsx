@@ -1,11 +1,11 @@
 import Header from '@/src/components/header/header';
+import {
+  useMarkAllNotificationsAsRead,
+  useMarkNotificationAsRead,
+  useNotifications,
+} from '@/src/hooks/useNotifications';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
-import {
-    fetchNotifications,
-    markAllNotificationsAsRead,
-    markNotificationAsRead,
-} from '@/src/services/notificationService';
 import { useAuthStore } from '@/src/store/authStore';
 import { useNotificationStore } from '@/src/store/notificationStore';
 import type { AppNotification } from '@/src/types/notification';
@@ -58,6 +58,9 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [markAllLoading, setMarkAllLoading] = useState(false);
   const userRole = useAuthStore((state) => state.user?.role ?? '');
+  const notificationsQuery = useNotifications({ pageNumber: 1, pageSize: 50 }, true);
+  const markReadMutation = useMarkNotificationAsRead();
+  const markAllMutation = useMarkAllNotificationsAsRead();
 
   const items = useNotificationStore((state) => state.items);
   const unreadCount = useNotificationStore((state) => state.unreadCount);
@@ -81,13 +84,10 @@ export default function NotificationsScreen() {
       }
 
       try {
-        const response = await fetchNotifications({
-          pageNumber: 1,
-          pageSize: 50,
-        });
+        const response = await notificationsQuery.refetch();
         const filteredItems = filterNotificationsForRole(
           userRole,
-          response.data ?? [],
+          response.data?.data ?? [],
         );
         setNotifications(filteredItems);
         const unread = filteredItems.filter(
@@ -113,7 +113,7 @@ export default function NotificationsScreen() {
       if (!item.isRead) {
         markAsReadLocal(item.notificationId);
         try {
-          await markNotificationAsRead(item.notificationId);
+          await markReadMutation.mutateAsync(item.notificationId);
         } catch {
           void loadNotifications();
         }
@@ -138,7 +138,7 @@ export default function NotificationsScreen() {
     markAllAsReadLocal();
 
     try {
-      await markAllNotificationsAsRead();
+      await markAllMutation.mutateAsync();
     } catch {
       void loadNotifications();
     } finally {

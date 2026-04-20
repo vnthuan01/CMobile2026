@@ -5,6 +5,7 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import WebViewMap from '@/src/components/common/WebViewMap';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
+import { useRescueTeamActions } from '@/src/hooks/useRescueTeamActions';
 import { useTeamTasksController } from '@/src/hooks/useTeamTasksController';
 import {
   RescueBatchItem as BaseRescueBatchItem,
@@ -74,6 +75,7 @@ export default function TeamTasksScreen({
     refreshing,
     errorMessage,
     historyBatches,
+    filteredHistoryBatches,
     routeCoordinates,
     teamName,
     isSyncingEta,
@@ -110,7 +112,13 @@ export default function TeamTasksScreen({
     historyBatches as (RescueActiveBatchResponse & {
       items: RescueBatchItem[];
     })[];
+  const filteredHistoryBatchesWithPriority =
+    filteredHistoryBatches as (RescueActiveBatchResponse & {
+      items: RescueBatchItem[];
+      filteredItems: RescueBatchItem[];
+    })[];
   const autoOpenedMapRef = useRef(false);
+  const { callReporter } = useRescueTeamActions();
 
   useEffect(() => {
     if (!openMapOnLoad || autoOpenedMapRef.current || loading) return;
@@ -608,11 +616,7 @@ export default function TeamTasksScreen({
 
                 <View className="mt-4 flex-row gap-3">
                   <TouchableOpacity
-                    onPress={() =>
-                      rescueTeamService.openCallReporter(
-                        selectedMission.reporterPhone,
-                      )
-                    }
+                    onPress={() => callReporter(selectedMission.reporterPhone)}
                     className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
                     style={{ borderColor: colors.border }}
                   >
@@ -1041,14 +1045,8 @@ export default function TeamTasksScreen({
                   Lịch sử đã xử lý
                 </Text>
 
-                {historyBatchesWithPriority.map((historyBatch) => {
-                  const historyItems = rescueTeamService.getFilteredItems(
-                    historyBatch.items,
-                    filter,
-                  ) as RescueBatchItem[];
-
-                  if (historyItems.length === 0) return null;
-
+                {filteredHistoryBatchesWithPriority.map((historyBatch) => {
+                  const historyItems = historyBatch.filteredItems;
                   return (
                     <View key={historyBatch.rescueBatchId} className="gap-3">
                       <View
@@ -1200,11 +1198,7 @@ export default function TeamTasksScreen({
                                 </Text>
                               </View>
                               <TouchableOpacity
-                                onPress={() =>
-                                  rescueTeamService.openCallReporter(
-                                    item.reporterPhone,
-                                  )
-                                }
+                                onPress={() => callReporter(item.reporterPhone)}
                                 className="h-10 w-10 items-center justify-center rounded-full"
                                 style={{ backgroundColor: colors.surface }}
                               >

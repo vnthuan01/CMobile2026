@@ -1,13 +1,11 @@
 import '@/global.css';
 import ViewRequestRescueScreen from '@/src/features/rescue/screens/ViewRequestRescueScreen';
-import {
-  fetchMyRescueRequests,
-  MyRescueRequestItem,
-} from '@/src/services/rescueService';
+import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
 import { useTheme } from '@/src/context/ThemeContext';
+import type { MyRescueRequestItem } from '@/src/types/rescue';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -31,29 +29,15 @@ export default function CitizenHome() {
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { data: requests = [], isLoading: loading } = useMyRescueRequests({
+    pageNumber: 1,
+    pageSize: 20,
+  });
   const [currentScreen, setCurrentScreen] = useState<UserScreen>('home');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
     null,
   );
-  const [requests, setRequests] = useState<MyRescueRequestItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<RequestFilter>('all');
-
-  useEffect(() => {
-    const loadRequests = async () => {
-      try {
-        const response = await fetchMyRescueRequests({
-          pageNumber: 1,
-          pageSize: 20,
-        });
-        setRequests(response.data || []);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadRequests();
-  }, []);
 
   const filteredRequests = useMemo(() => {
     const processingStatuses = [
@@ -63,22 +47,22 @@ export default function CitizenHome() {
       'InProgress',
     ];
     if (filter === 'processing') {
-      return requests.filter((r) =>
+      return requests.filter((r: MyRescueRequestItem) =>
         processingStatuses.includes(r.rescueRequestStatus),
       );
     }
     if (filter === 'completed') {
-      return requests.filter((r) => r.rescueRequestStatus === 'Completed');
+      return requests.filter((r: MyRescueRequestItem) => r.rescueRequestStatus === 'Completed');
     }
     if (filter === 'cancelled') {
-      return requests.filter((r) => r.rescueRequestStatus === 'Cancelled');
+      return requests.filter((r: MyRescueRequestItem) => r.rescueRequestStatus === 'Cancelled');
     }
     return requests;
   }, [filter, requests]);
 
   const activeRequest = useMemo(
     () =>
-      requests.find((r) =>
+      requests.find((r: MyRescueRequestItem) =>
         ['Pending', 'Verified', 'Assigned', 'InProgress'].includes(
           r.rescueRequestStatus,
         ),
@@ -88,7 +72,7 @@ export default function CitizenHome() {
 
   const historyRequests = useMemo(
     () =>
-      requests.filter((r) =>
+      requests.filter((r: MyRescueRequestItem) =>
         ['Completed', 'Cancelled'].includes(r.rescueRequestStatus),
       ),
     [requests],
@@ -291,7 +275,7 @@ export default function CitizenHome() {
                   </Text>
                 </View>
               ) : (
-                filteredRequests.map((item) => {
+                filteredRequests.map((item: MyRescueRequestItem) => {
                   const statusUi = getStatusUi(item.rescueRequestStatus);
                   return (
                     <TouchableOpacity
@@ -344,7 +328,7 @@ export default function CitizenHome() {
             <View className="mt-6 px-4">
               <Text className="mb-3 text-base font-bold" style={{ color: colors.text }}>Lịch sử</Text>
               <View className="gap-3">
-                {historyRequests.slice(0, 3).map((item) => {
+                {historyRequests.slice(0, 3).map((item: MyRescueRequestItem) => {
                   const statusUi = getStatusUi(item.rescueRequestStatus);
                   return (
                     <TouchableOpacity

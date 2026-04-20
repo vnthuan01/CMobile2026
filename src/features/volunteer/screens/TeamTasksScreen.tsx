@@ -1,1 +1,1 @@
-export { default } from '@/src/components/volunteer/TeamTasksScreen';
+export { default } from '@/src/features/volunteer/screens/RescueMissionCenterScreen';

@@ -805,7 +805,7 @@ export default function RequestRescueScreen({
       {/* ── Sticky Footer ───────────────────────────────────────────────── */}
       <View
         style={{
-          paddingBottom: bottom + 16,
+          paddingBottom: bottom - 12,
           backgroundColor: colors.card,
           borderTopColor: colors.border,
         }}
@@ -852,6 +852,17 @@ export default function RequestRescueScreen({
               style={{ color: colors.textSecondary }}
             >
               Hệ thống sẽ ghi nhận yêu cầu của bạn
+            </Text>
+          </View>
+        )}
+        {rescueType === 1 && (
+          <View className="mt-1 flex-row items-center justify-center gap-1">
+            <Ionicons name="sparkles" size={13} color={colors.textSecondary} />
+            <Text
+              className="text-center text-xs"
+              style={{ color: colors.textSecondary }}
+            >
+              Điều phối viên sẽ ghi nhận yêu cầu khẩn cấp của bạn
             </Text>
           </View>
         )}

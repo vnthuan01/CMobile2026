@@ -97,3 +97,15 @@ export function useResetForgotPassword() {
     },
   });
 }
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: authService.changePassword,
+    onError: (error: unknown) => {
+      showApiErrorToast(error, {
+        errorTitle: 'Đổi mật khẩu thất bại',
+        errorMessage: 'Không thể đổi mật khẩu.',
+      });
+    },
+  });
+}

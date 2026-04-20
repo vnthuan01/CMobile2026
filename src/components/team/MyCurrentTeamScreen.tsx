@@ -35,6 +35,7 @@ export default function MyCurrentTeamScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const team = (currentTeamQuery.data?.team as TeamDetailResponse | null) ?? null;
+  const teamMode = currentTeamQuery.data?.teamMode ?? 'rescue';
   const loading = currentTeamQuery.isLoading && !refreshing;
   const errorMessage = currentTeamQuery.error?.message ?? null;
   const emptyState = currentTeamQuery.data?.isEmpty ?? false;
@@ -106,6 +107,22 @@ export default function MyCurrentTeamScreen({
       label: role ? (normalized === 'member' ? 'Thành viên' : String(role)) : 'Thành viên',
     };
   };
+
+  const summaryConfig = teamMode === 'relief'
+    ? {
+        title: 'Đội cứu trợ đang phụ trách',
+        description:
+          'Theo dõi phân công, hỗ trợ nhu yếu phẩm và phối hợp công việc trong chiến dịch.',
+        ctaLabel: isLeader ? 'Mở điều phối cứu trợ' : 'Xem công việc của đội',
+        ctaIcon: 'cube-outline' as const,
+      }
+    : {
+        title: 'Đội cứu hộ đang trực',
+        description:
+          'Sẵn sàng di chuyển, phối hợp hiện trường và xử lý nhiệm vụ đang mở.',
+        ctaLabel: isLeader ? 'Mở nhiệm vụ hiện tại' : 'Xem nhiệm vụ chung',
+        ctaIcon: 'flash-outline' as const,
+      };
 
   const renderSkillChips = (skills?: TeamSkillResponse[]) => {
     if (!skills || skills.length === 0) {
@@ -216,11 +233,12 @@ export default function MyCurrentTeamScreen({
             {isLeader ? (
               <View className="mb-4 rounded-2xl border p-4" style={{ borderColor: `${colors.status.incoming}33`, backgroundColor: `${colors.status.incoming}14` }}>
                 <Text className="text-base font-bold" style={{ color: colors.status.incoming }}>
-                  Bạn đang là trưởng nhóm của nhóm này
+                  {teamMode === 'relief' ? 'Bạn đang là trưởng nhóm cứu trợ' : 'Bạn đang là trưởng nhóm cứu hộ'}
                 </Text>
                 <Text className="mt-1 text-sm" style={{ color: colors.status.incoming }}>
-                  Theo dõi thành viên, điều phối liên lạc và đi nhanh sang nhiệm
-                  vụ hiện tại.
+                  {teamMode === 'relief'
+                    ? 'Theo dõi thành viên và điều phối công việc được giao trong chiến dịch.'
+                    : 'Theo dõi thành viên, điều phối liên lạc và đi nhanh sang nhiệm vụ hiện tại.'}
                 </Text>
               </View>
             ) : null}
@@ -249,6 +267,20 @@ export default function MyCurrentTeamScreen({
               </View>
 
               <View className="mt-4 flex-row flex-wrap gap-3">
+                <View className="w-full rounded-2xl bg-white/10 px-4 py-3">
+                  <Text className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                    {summaryConfig.title}
+                  </Text>
+                  <Text className="mt-1 text-sm leading-5 text-white/90">
+                    {summaryConfig.description}
+                  </Text>
+                </View>
+                <View className="bg-white/12 rounded-2xl px-3 py-2">
+                  <Text className="text-xs text-white/70">Loại đội</Text>
+                  <Text className="mt-1 text-sm font-bold text-white">
+                    {teamMode === 'relief' ? 'Cứu trợ' : 'Cứu hộ'}
+                  </Text>
+                </View>
                 <View className="bg-white/12 rounded-2xl px-3 py-2">
                   <Text className="text-xs text-white/70">Thành viên</Text>
                   <Text className="mt-1 text-lg font-bold text-white">
@@ -323,9 +355,9 @@ export default function MyCurrentTeamScreen({
                       className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
                       style={{ backgroundColor: colors.primary }}
                     >
-                      <Ionicons name="map-outline" size={18} color={colors.white} />
+                      <Ionicons name={summaryConfig.ctaIcon} size={18} color={colors.white} />
                       <Text className="font-semibold text-white">
-                        {isLeader ? 'Xem nhiệm vụ hiện tại' : 'Xem nhiệm vụ'}
+                        {summaryConfig.ctaLabel}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -427,12 +459,12 @@ export default function MyCurrentTeamScreen({
                 style={{ borderColor: colors.border, backgroundColor: colors.card }}
               >
                 <Ionicons
-                  name="list-outline"
+                  name={teamMode === 'relief' ? 'clipboard-outline' : 'list-outline'}
                   size={18}
                   color={colors.primary}
                 />
                 <Text className="font-semibold" style={{ color: colors.text }}>
-                  Xem nhiệm vụ nhóm
+                  {teamMode === 'relief' ? 'Xem phân công cứu trợ' : 'Xem nhiệm vụ nhóm'}
                 </Text>
               </TouchableOpacity>
 

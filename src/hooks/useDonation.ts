@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
 import {
   getCampaignDetail,
   createDonationCheckout,
@@ -59,6 +59,27 @@ export function useCampaignDetail(campaignId?: string, enabled = true) {
     enabled: enabled && !!campaignId,
     staleTime: 0,
   });
+}
+
+export function useCampaignDetailsMap(campaignIds: string[]) {
+  const queries = useQueries({
+    queries: campaignIds.map((campaignId) => ({
+      queryKey: donationKeys.campaignDetail(campaignId),
+      queryFn: () => getCampaignDetail(campaignId),
+      enabled: !!campaignId,
+      staleTime: 0,
+    })),
+  });
+
+  const dataMap: Record<string, unknown> = {};
+  campaignIds.forEach((campaignId, index) => {
+    dataMap[campaignId] = queries[index]?.data ?? null;
+  });
+
+  return {
+    queries,
+    dataMap,
+  };
 }
 
 export function useFundContributions() {

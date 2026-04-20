@@ -1011,6 +1011,20 @@ export function useTeamTasksController() {
     ],
   );
 
+  const filteredHistoryBatches = useMemo(
+    () =>
+      historyBatches
+        .map((historyBatch) => ({
+          ...historyBatch,
+          filteredItems: rescueTeamService.getFilteredItems(
+            historyBatch.items,
+            filter,
+          ) as RescueBatchItem[],
+        }))
+        .filter((historyBatch) => historyBatch.filteredItems.length > 0),
+    [filter, historyBatches],
+  );
+
   return {
     screen,
     setScreen,
@@ -1026,6 +1040,7 @@ export function useTeamTasksController() {
     errorMessage,
     cachedBatch,
     historyBatches,
+    filteredHistoryBatches,
     routeCoordinates,
     teamId,
     teamName,

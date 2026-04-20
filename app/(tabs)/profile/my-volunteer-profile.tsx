@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function ProfileMyVolunteerProfileRoute() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ submitted?: string }>();
+  const params = useLocalSearchParams();
   const setVolunteerDraft = useProfileFlowStore.getState().setVolunteerDraft;
 
   return (

@@ -30,6 +30,7 @@ export function useMyTeam(enabled = true) {
 
       return {
         team: result.data,
+        teamMode: result.data?.teamMode ?? 'rescue',
         isEmpty: false,
         errorMessage: null,
       };

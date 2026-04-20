@@ -1,342 +1,302 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
-import TaskCard, { TaskItem } from '@/src/components/common/TaskCard';
+import TaskCard, { type TaskItem } from '@/src/components/common/TaskCard';
 import { useTheme } from '@/src/context/ThemeContext';
+import {
+  useAssignMemberTask,
+  useCampaignTaskDetail,
+  useCampaignTasks,
+  useCampaignTeams,
+  useChangeCampaignTaskStatus,
+  useCreateCampaignTask,
+  useDeleteCampaignTask,
+} from '@/src/hooks/useLeaderTasks';
+import { useMyTeam } from '@/src/hooks/useMyTeam';
+import { CampaignTaskStatus, TaskPriority, type CampaignTaskDetailResponse, type CampaignTaskResponse, type CampaignTeamResponse, type MemberTaskResponse } from '@/src/types/leaderTask';
+import type { TeamMemberSummary } from '@/src/types/team';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AllocateTaskScreenProps {
-    onBack?: () => void;
+  onBack?: () => void;
 }
 
-const MOCK_TASKS: TaskItem[] = [
-    {
-        id: '1',
-        title: 'Khảo sát địa hình',
-        description: 'Kiểm tra khu vực ngập lụt',
-        priority: 'medium',
-        status: 'done',
-        assignee: 'Hùng Nguyễn',
-    },
-    {
-        id: '2',
-        title: 'Vận chuyển gạo',
-        description: 'Chuyển 50 bao gạo từ kho bãi đến điểm tập kết.',
-        priority: 'high',
-        status: 'pending',
-        assignee: 'Minh Trí',
-        assigneeCount: 2,
-    },
-    {
-        id: '3',
-        title: 'Phát thuốc men',
-        description: 'Phân phát bộ sơ cứu cho các hộ bị cô lập.',
-        priority: 'emergency',
-        status: 'pending',
-        assignee: 'Lan Anh',
-    },
-    {
-        id: '4',
-        title: 'Báo cáo cuối ngày',
-        description: 'Tổng hợp số liệu và gửi về trung tâm.',
-        priority: 'low',
-        status: 'unassigned',
-    },
-];
-
 const PRIORITY_OPTIONS = [
-    { id: 'low', label: 'Thấp', color: '#6b7280' },
-    { id: 'medium', label: 'Trung bình', color: '#1565C0' },
-    { id: 'high', label: 'Cao', color: '#F05A53' },
-    { id: 'emergency', label: 'Khẩn cấp', color: '#D32F2F' },
+  { id: TaskPriority.Low, label: 'Thấp', color: '#6b7280' },
+  { id: TaskPriority.Medium, label: 'Trung bình', color: '#1565C0' },
+  { id: TaskPriority.High, label: 'Cao', color: '#F05A53' },
+  { id: TaskPriority.Critical, label: 'Khẩn cấp', color: '#D32F2F' },
 ];
 
-const MOCK_TEAM = [
-    { name: 'Minh Trí', initials: 'MT', selected: true },
-    { name: 'Thanh Hà', initials: 'TH', selected: false },
-    { name: 'Quốc Bảo', initials: 'QB', selected: false },
+const STATUS_OPTIONS = [
+  { id: CampaignTaskStatus.Planned, label: 'Kế hoạch' },
+  { id: CampaignTaskStatus.InProgress, label: 'Đang làm' },
+  { id: CampaignTaskStatus.Blocked, label: 'Bị chặn' },
+  { id: CampaignTaskStatus.Completed, label: 'Hoàn thành' },
+  { id: CampaignTaskStatus.Cancelled, label: 'Đã hủy' },
 ];
+
+const initialsOf = (name?: string) =>
+  (name || '?')
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('');
+
+const toTaskItem = (task: CampaignTaskResponse): TaskItem => ({
+  id: task.campaignTaskId,
+  title: task.title,
+  description: task.description || 'Không có mô tả',
+  priority:
+    task.priority === TaskPriority.Low
+      ? 'low'
+      : task.priority === TaskPriority.High
+        ? 'high'
+        : task.priority === TaskPriority.Critical
+          ? 'emergency'
+          : 'medium',
+  status:
+    task.status === CampaignTaskStatus.Completed
+      ? 'done'
+      : task.status === CampaignTaskStatus.Planned
+        ? 'unassigned'
+        : 'pending',
+  assignee: task.campaignTeamName,
+  assigneeCount: 1,
+});
 
 export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) {
-    const { bottom } = useSafeAreaInsets();
-    const { colors, isDark } = useTheme();
-    const [selectedPriority, setSelectedPriority] = useState('medium');
-    const [taskName, setTaskName] = useState('');
-    const [selectedMembers, setSelectedMembers] = useState<string[]>(['Minh Trí']);
+  const { bottom } = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
+  const team = myTeamData?.team;
+  const teamMode = myTeamData?.teamMode ?? 'rescue';
+  const campaignId = (team as any)?.assignedCampaigns?.[0]?.campaignId ?? null;
+  const { data: campaignTeams = [] } = useCampaignTeams(campaignId);
+  const myCampaignTeam = campaignTeams.find((item: CampaignTeamResponse) => item.teamId === team?.teamId) ?? campaignTeams[0];
+  const { data: taskData, isLoading: isTasksLoading, refetch } = useCampaignTasks(campaignId, {
+    pageIndex: 1,
+    pageSize: 50,
+    campaignTeamId: myCampaignTeam?.campaignTeamId,
+  });
 
-    const toggleMember = (name: string) => {
-        setSelectedMembers(prev =>
-            prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
-        );
-    };
+  const tasks = taskData?.items ?? [];
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const { data: taskDetail, isLoading: isDetailLoading } = useCampaignTaskDetail(selectedTaskId);
 
-    return (
-        <View className="flex-1" style={{ backgroundColor: colors.background }}>
-            {/* Header */}
-            <ScreenHeader
-                title="Phân công Nhiệm vụ"
-                onBack={onBack}
-                backgroundColor={colors.secondary}
-                titleColor="#fff"
-                rightAction={
-                    <TouchableOpacity className="h-10 w-10 items-center justify-center rounded-full">
-                        <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
-                    </TouchableOpacity>
-                }
-            />
+  useEffect(() => {
+    if (!selectedTaskId && tasks.length > 0) {
+      setSelectedTaskId(tasks[0].campaignTaskId);
+    }
+  }, [selectedTaskId, tasks]);
 
-            <ScrollView
-                contentContainerStyle={{ paddingBottom: bottom + 40 }}
-                className="flex-1"
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Main Mission */}
-                <View className="p-4 gap-4">
-                    <Text className="text-xl font-bold leading-tight" style={{ color: colors.text }}>
-                        Nhiệm vụ Chính
-                    </Text>
+  const createTaskMutation = useCreateCampaignTask(campaignId || '');
+  const deleteTaskMutation = useDeleteCampaignTask(campaignId || '');
+  const assignMemberTaskMutation = useAssignMemberTask(selectedTaskId || '');
+  const changeStatusMutation = useChangeCampaignTaskStatus(selectedTaskId || '');
 
-                    {/* Mission Hero Card */}
-                    <View
-                        className="h-48 rounded-xl overflow-hidden items-center justify-center shadow-md"
-                        style={{ backgroundColor: isDark ? '#374151' : '#d1d5db' }}
-                    >
-                        <View className="absolute inset-0 items-start justify-end p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-                            <View className="rounded px-2 py-1 mb-2 border" style={{ backgroundColor: '#D32F2F', borderColor: '#991b1b' }}>
-                                <Text className="text-xs font-semibold text-white">Khẩn cấp</Text>
-                            </View>
-                            <Text className="text-white text-xl font-bold leading-tight mb-1">
-                                Cứu trợ lương thực tại Xã A
-                            </Text>
-                            <View className="flex-row items-center">
-                                <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.9)" />
-                                <Text className="text-sm ml-1" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                                    Hết hạn: 14:00 hôm nay
-                                </Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity
-                            className="absolute top-3 right-3 p-2 rounded-full border"
-                            style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.3)' }}
-                        >
-                            <Ionicons name="map-outline" size={20} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
+  const [selectedPriority, setSelectedPriority] = useState(TaskPriority.Medium);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [subTaskTitle, setSubTaskTitle] = useState('');
+  const [subTaskNote, setSubTaskNote] = useState('');
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(team?.members?.[0]?.userId ?? null);
 
-                    {/* Progress Card */}
-                    <View
-                        className="rounded-xl border p-4 shadow-sm"
-                        style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                    >
-                        <View className="flex-row justify-between items-center mb-2">
-                            <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                                Tiến độ phân công
-                            </Text>
-                            <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                                2/6 hoàn thành
-                            </Text>
-                        </View>
-                        <View className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}>
-                            <View className="h-full rounded-full" style={{ width: '35%', backgroundColor: colors.secondary }} />
-                        </View>
-                    </View>
-                </View>
+  const memberOptions = useMemo(() => team?.members ?? [], [team?.members]);
 
-                {/* Task List */}
-                <View className="px-4 pb-4">
-                    <View className="flex-row justify-between items-center mb-4">
-                        <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                            Danh sách công việc
-                        </Text>
-                        <TouchableOpacity className="flex-row items-center px-2 py-1 rounded">
-                            <Ionicons name="filter-outline" size={18} color={colors.secondary} />
-                            <Text className="text-sm font-medium ml-1" style={{ color: colors.secondary }}>
-                                Lọc
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                    <View className="gap-3">
-                        {MOCK_TASKS.map((task) => (
-                            <TaskCard key={task.id} task={task} />
-                        ))}
-                    </View>
-                </View>
+  const handleCreateTask = async () => {
+    if (!campaignId || !myCampaignTeam?.campaignTeamId) {
+      showErrorToast('Thiếu campaign', 'Không tìm thấy chiến dịch hiện tại của nhóm.');
+      return;
+    }
+    if (!title.trim()) {
+      showErrorToast('Thiếu tiêu đề', 'Vui lòng nhập tên nhiệm vụ.');
+      return;
+    }
+    try {
+      await createTaskMutation.mutateAsync({
+        campaignTeamId: myCampaignTeam.campaignTeamId,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        startDate: new Date().toISOString(),
+        dueDate: dueDate.trim() || undefined,
+        priority: selectedPriority,
+      });
+      showSuccessToast('Đã tạo nhiệm vụ');
+      setTitle('');
+      setDescription('');
+      setDueDate('');
+      refetch();
+    } catch (error: any) {
+      showErrorToast('Không thể tạo nhiệm vụ', error?.message);
+    }
+  };
 
-                {/* FAB */}
-                <View className="absolute bottom-24 right-6 z-40">
-                    <TouchableOpacity
-                        className="h-14 w-14 items-center justify-center rounded-full shadow-lg"
-                        style={{
-                            backgroundColor: colors.primary,
-                            shadowColor: colors.primary,
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.4,
-                            shadowRadius: 8,
-                            elevation: 8,
-                        }}
-                    >
-                        <Ionicons name="add" size={32} color="#fff" />
-                    </TouchableOpacity>
-                </View>
+  const handleAssignSubtask = async () => {
+    if (!selectedTaskId || !selectedMemberId || !subTaskTitle.trim()) {
+      showErrorToast('Thiếu dữ liệu', 'Chọn thành viên và nhập tên nhiệm vụ con.');
+      return;
+    }
+    try {
+      await assignMemberTaskMutation.mutateAsync({
+        volunteerProfileId: selectedMemberId,
+        subTaskTitle: subTaskTitle.trim(),
+        taskNote: subTaskNote.trim() || undefined,
+      });
+      showSuccessToast('Đã giao nhiệm vụ con');
+      setSubTaskTitle('');
+      setSubTaskNote('');
+    } catch (error: any) {
+      showErrorToast('Không thể giao việc', error?.message);
+    }
+  };
 
-                {/* New Subtask Form */}
-                <View
-                    className="mx-4 mb-8 mt-6 rounded-t-xl border p-5 shadow-md"
-                    style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                >
-                    {/* Drag handle */}
-                    <View className="self-center mb-4 mt-[-4px]">
-                        <View
-                            className="h-1.5 w-12 rounded-full"
-                            style={{ backgroundColor: isDark ? '#4b5563' : '#d1d5db' }}
-                        />
-                    </View>
+  const handleDeleteTask = async () => {
+    if (!selectedTaskId) return;
+    try {
+      await deleteTaskMutation.mutateAsync(selectedTaskId);
+      showSuccessToast('Đã xóa nhiệm vụ');
+      setSelectedTaskId(null);
+      refetch();
+    } catch (error: any) {
+      showErrorToast('Không thể xóa nhiệm vụ', error?.message);
+    }
+  };
 
-                    <Text className="font-bold text-lg mb-4" style={{ color: colors.text }}>
-                        Thêm nhiệm vụ con mới
-                    </Text>
+  const handleChangeStatus = async (status: CampaignTaskStatus) => {
+    if (!selectedTaskId) return;
+    try {
+      await changeStatusMutation.mutateAsync({ status });
+      showSuccessToast('Đã cập nhật trạng thái');
+      refetch();
+    } catch (error: any) {
+      showErrorToast('Không thể cập nhật trạng thái', error?.message);
+    }
+  };
 
-                    <View className="gap-4">
-                        {/* Task name */}
-                        <View>
-                            <Text className="text-sm font-medium mb-1" style={{ color: colors.textSecondary }}>
-                                Tên công việc
-                            </Text>
-                            <TextInput
-                                value={taskName}
-                                onChangeText={setTaskName}
-                                placeholder="Nhập tên công việc..."
-                                placeholderTextColor={colors.textSecondary}
-                                className="w-full rounded-lg border p-2.5 text-sm"
-                                style={{
-                                    backgroundColor: isDark ? '#1f2937' : '#f9fafb',
-                                    borderColor: colors.border,
-                                    color: colors.text,
-                                }}
-                            />
-                        </View>
+  return (
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <ScreenHeader title="Phân công công việc" onBack={onBack} backgroundColor={colors.secondary} titleColor="#fff" />
 
-                        {/* Priority */}
-                        <View>
-                            <Text className="text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
-                                Mức độ ưu tiên
-                            </Text>
-                            <View className="flex-row gap-2">
-                                {PRIORITY_OPTIONS.map((p) => (
-                                    <TouchableOpacity
-                                        key={p.id}
-                                        onPress={() => setSelectedPriority(p.id)}
-                                        className="flex-1 flex-col items-center justify-center p-2 rounded-lg border"
-                                        style={{
-                                            borderColor: selectedPriority === p.id ? p.color : colors.border,
-                                            backgroundColor: selectedPriority === p.id
-                                                ? `${p.color}10`
-                                                : 'transparent',
-                                        }}
-                                    >
-                                        <View
-                                            className="h-3 w-3 rounded-full mb-1"
-                                            style={{ backgroundColor: p.color }}
-                                        />
-                                        <Text
-                                            className="text-[10px] font-medium"
-                                            style={{
-                                                color: selectedPriority === p.id ? p.color : colors.textSecondary,
-                                                fontWeight: selectedPriority === p.id ? '700' : '500',
-                                            }}
-                                        >
-                                            {p.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-
-                        {/* Assign members */}
-                        <View>
-                            <Text className="text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
-                                Giao cho thành viên
-                            </Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={{ gap: 16, paddingBottom: 8 }}
-                            >
-                                {MOCK_TEAM.map((member) => {
-                                    const isSelected = selectedMembers.includes(member.name);
-                                    return (
-                                        <TouchableOpacity
-                                            key={member.name}
-                                            onPress={() => toggleMember(member.name)}
-                                            className="flex-col items-center shrink-0"
-                                            style={{ opacity: isSelected ? 1 : 0.6 }}
-                                        >
-                                            <View className="relative">
-                                                <View
-                                                    className="h-12 w-12 items-center justify-center rounded-full border-2"
-                                                    style={{
-                                                        backgroundColor: isDark ? '#374151' : '#e5e7eb',
-                                                        borderColor: isSelected ? colors.secondary : 'transparent',
-                                                    }}
-                                                >
-                                                    <Text className="text-sm font-bold" style={{ color: colors.textSecondary }}>
-                                                        {member.initials}
-                                                    </Text>
-                                                </View>
-                                                {isSelected && (
-                                                    <View
-                                                        className="absolute bottom-0 right-0 h-5 w-5 items-center justify-center rounded-full border-2"
-                                                        style={{ backgroundColor: colors.secondary, borderColor: colors.card }}
-                                                    >
-                                                        <Ionicons name="checkmark" size={10} color="#fff" />
-                                                    </View>
-                                                )}
-                                            </View>
-                                            <Text
-                                                className="text-xs mt-1"
-                                                style={{
-                                                    color: isSelected ? colors.secondary : colors.textSecondary,
-                                                    fontWeight: isSelected ? '600' : '400',
-                                                }}
-                                            >
-                                                {member.name}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                                {/* Add button */}
-                                <TouchableOpacity className="flex-col items-center shrink-0" style={{ opacity: 0.6 }}>
-                                    <View
-                                        className="h-12 w-12 items-center justify-center rounded-full"
-                                        style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
-                                    >
-                                        <Ionicons name="people-outline" size={22} color={colors.textSecondary} />
-                                    </View>
-                                    <Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>Thêm</Text>
-                                </TouchableOpacity>
-                            </ScrollView>
-                        </View>
-
-                        {/* Submit */}
-                        <TouchableOpacity
-                            className="w-full flex-row items-center justify-center rounded-lg py-3 mt-2 shadow-lg"
-                            style={{
-                                backgroundColor: colors.primary,
-                                shadowColor: colors.primary,
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.3,
-                                shadowRadius: 8,
-                                elevation: 6,
-                            }}
-                        >
-                            <Ionicons name="send" size={18} color="#fff" />
-                            <Text className="text-white font-bold ml-2">Tạo nhiệm vụ</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </ScrollView>
+      <ScrollView contentContainerStyle={{ paddingBottom: bottom + 40 }} className="flex-1" showsVerticalScrollIndicator={false}>
+        {teamMode !== 'relief' ? (
+          <View className="m-4 rounded-xl border border-dashed p-4" style={{ borderColor: colors.border }}>
+            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              Chỉ áp dụng cho đội cứu trợ
+            </Text>
+            <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
+              Đội cứu hộ dùng nhiệm vụ chung của team và không phân rã thành công việc riêng cho từng thành viên tại màn hình này.
+            </Text>
+          </View>
+        ) : null}
+        <View className="p-4 gap-4">
+          <Text className="text-xl font-bold leading-tight" style={{ color: colors.text }}>Công việc của đội</Text>
+          <View className="rounded-xl border p-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>Chiến dịch</Text>
+            <Text className="mt-1 text-base font-bold" style={{ color: colors.text }}>
+              {myCampaignTeam?.campaignName || myCampaignTeam?.teamName || team?.name || 'Chưa có campaign'}
+            </Text>
+            <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+              {tasks.length} nhiệm vụ • {taskDetail?.completedMemberTaskCount ?? 0}/{taskDetail?.memberTaskCount ?? 0} nhiệm vụ con hoàn thành
+            </Text>
+          </View>
         </View>
-    );
+
+        <View className="px-4 pb-4">
+          <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>Danh sách công việc</Text>
+          {isTeamLoading || isTasksLoading ? (
+            <View className="items-center py-10"><ActivityIndicator size="large" color={colors.primary} /></View>
+          ) : tasks.length === 0 ? (
+            <View className="rounded-xl border border-dashed p-4" style={{ borderColor: colors.border }}>
+              <Text style={{ color: colors.textSecondary }}>Chưa có task nào cho đội này.</Text>
+            </View>
+          ) : (
+            <View className="gap-3">
+              {tasks.map((task: CampaignTaskResponse) => (
+                <TaskCard key={task.campaignTaskId} task={toTaskItem(task)} onPress={() => setSelectedTaskId(task.campaignTaskId)} />
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View className="mx-4 mb-4 rounded-xl border p-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+          <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>Tạo công việc mới</Text>
+          <View className="gap-3">
+            <TextInput value={title} onChangeText={setTitle} placeholder="Tên công việc" placeholderTextColor={colors.textSecondary} className="rounded-lg border p-3" style={{ borderColor: colors.border, color: colors.text }} />
+            <TextInput value={description} onChangeText={setDescription} placeholder="Mô tả" placeholderTextColor={colors.textSecondary} className="rounded-lg border p-3" style={{ borderColor: colors.border, color: colors.text }} />
+            <TextInput value={dueDate} onChangeText={setDueDate} placeholder="Hạn hoàn thành (ISO, tuỳ chọn)" placeholderTextColor={colors.textSecondary} className="rounded-lg border p-3" style={{ borderColor: colors.border, color: colors.text }} />
+            <View className="flex-row gap-2">
+              {PRIORITY_OPTIONS.map((option) => (
+                <TouchableOpacity key={option.id} onPress={() => setSelectedPriority(option.id)} className="flex-1 rounded-lg border p-2 items-center" style={{ borderColor: selectedPriority === option.id ? option.color : colors.border }}>
+                  <Text style={{ color: selectedPriority === option.id ? option.color : colors.textSecondary }}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity onPress={handleCreateTask} className="rounded-lg py-3 items-center" style={{ backgroundColor: colors.primary }}>
+              <Text className="font-bold text-white">Tạo công việc</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View className="mx-4 mb-8 rounded-xl border p-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+          <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>Chi tiết nhiệm vụ đang chọn</Text>
+          {isDetailLoading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : !taskDetail ? (
+            <Text style={{ color: colors.textSecondary }}>Chọn một task để xem chi tiết.</Text>
+          ) : (
+            <View className="gap-3">
+              <Text className="text-base font-bold" style={{ color: colors.text }}>{taskDetail.title}</Text>
+              <Text style={{ color: colors.textSecondary }}>{taskDetail.description || 'Không có mô tả'}</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {STATUS_OPTIONS.map((status) => (
+                  <TouchableOpacity key={status.id} onPress={() => handleChangeStatus(status.id)} className="rounded-full border px-3 py-1.5" style={{ borderColor: colors.border }}>
+                    <Text style={{ color: colors.textSecondary }}>{status.label}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity onPress={handleDeleteTask} className="rounded-full border px-3 py-1.5" style={{ borderColor: '#ef4444' }}>
+                  <Text style={{ color: '#ef4444' }}>Xóa</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text className="mt-2 text-sm font-semibold" style={{ color: colors.text }}>Công việc thành viên</Text>
+              {((taskDetail as CampaignTaskDetailResponse).memberTasks || []).map((memberTask: MemberTaskResponse) => (
+                <View key={memberTask.memberTaskId} className="rounded-lg border p-3" style={{ borderColor: colors.border }}>
+                  <Text className="font-semibold" style={{ color: colors.text }}>{memberTask.subTaskTitle}</Text>
+                  <Text style={{ color: colors.textSecondary }}>{memberTask.volunteerName}</Text>
+                </View>
+              ))}
+
+              <View className="mt-2 gap-3">
+                <TextInput value={subTaskTitle} onChangeText={setSubTaskTitle} placeholder="Tên công việc giao cho thành viên" placeholderTextColor={colors.textSecondary} className="rounded-lg border p-3" style={{ borderColor: colors.border, color: colors.text }} />
+                <TextInput value={subTaskNote} onChangeText={setSubTaskNote} placeholder="Ghi chú" placeholderTextColor={colors.textSecondary} className="rounded-lg border p-3" style={{ borderColor: colors.border, color: colors.text }} />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                  {memberOptions.map((member: TeamMemberSummary) => {
+                    const selected = selectedMemberId === member.userId;
+                    return (
+                      <TouchableOpacity key={member.userId} onPress={() => setSelectedMemberId(member.userId)} className="items-center" style={{ opacity: selected ? 1 : 0.65 }}>
+                        <View className="h-12 w-12 items-center justify-center rounded-full border-2" style={{ borderColor: selected ? colors.secondary : 'transparent', backgroundColor: isDark ? '#374151' : '#e5e7eb' }}>
+                          <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>{initialsOf(member.displayName)}</Text>
+                        </View>
+                        <Text className="mt-1 text-xs" style={{ color: selected ? colors.secondary : colors.textSecondary }}>{member.displayName}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                <TouchableOpacity onPress={handleAssignSubtask} className="flex-row items-center justify-center rounded-lg py-3" style={{ backgroundColor: colors.secondary }}>
+                  <Ionicons name="send" size={16} color="#fff" />
+                  <Text className="ml-2 font-bold text-white">Giao việc cho thành viên</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
 }

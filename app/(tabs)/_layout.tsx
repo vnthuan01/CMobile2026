@@ -3,6 +3,7 @@ import {
   getTabBarBottomPadding,
   getTabBarHeight,
 } from '@/src/hooks/useBottomContentInset';
+import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
@@ -19,6 +20,8 @@ const ICON_SIZE = 24;
 export default function TabsLayout() {
   const user = useAuthStore((s) => s.user);
   const role = (user?.role ?? '').toLowerCase();
+  const { data: myTeamData } = useMyTeam(role === 'volunteer');
+  const teamMode = myTeamData?.teamMode ?? 'rescue';
   const { bottom } = useSafeAreaInsets();
   /* ================= THEME ================= */
   const { colors, isDark } = useTheme();
@@ -142,9 +145,13 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="tasks"
           options={{
-            title: 'Nhiệm vụ',
+            title: teamMode === 'relief' ? 'Công việc' : 'Nhiệm vụ',
             tabBarIcon: ({ color }: TabIconProps) => (
-              <Ionicons name="list-outline" size={ICON_SIZE} color={color} />
+              <Ionicons
+                name={teamMode === 'relief' ? 'clipboard-outline' : 'list-outline'}
+                size={ICON_SIZE}
+                color={color}
+              />
             ),
           }}
         />

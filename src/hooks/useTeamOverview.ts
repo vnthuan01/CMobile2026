@@ -23,6 +23,7 @@ export function useCurrentTeam(enabled = true) {
         if (isEmpty) {
           return {
             team: null,
+            teamMode: 'rescue' as const,
             isEmpty: true,
           };
         }
@@ -32,6 +33,7 @@ export function useCurrentTeam(enabled = true) {
 
       return {
         team: result.data,
+        teamMode: result.data?.teamMode ?? 'rescue',
         isEmpty: false,
       };
     },
@@ -56,6 +58,7 @@ export function useVolunteerHomeOverview(enabled = true) {
             team: null,
             batch: null,
             operationStatusMap: {} as Record<string, string>,
+            teamMode: 'rescue' as const,
             isEmpty: true,
           };
         }
@@ -68,6 +71,7 @@ export function useVolunteerHomeOverview(enabled = true) {
           team: null,
           batch: null,
           operationStatusMap: {} as Record<string, string>,
+          teamMode: teamResult.data?.teamMode ?? 'rescue',
           isEmpty: true,
         };
       }
@@ -85,6 +89,7 @@ export function useVolunteerHomeOverview(enabled = true) {
           team: teamResult.data,
           batch: null,
           operationStatusMap: {} as Record<string, string>,
+          teamMode: teamResult.data?.teamMode ?? 'rescue',
           isEmpty: false,
         };
       }
@@ -107,8 +112,11 @@ export function useVolunteerHomeOverview(enabled = true) {
         operationStatusMap: Object.fromEntries(
           statusEntries.filter((entry) => Boolean(entry[1])) as Array<readonly [string, string]>,
         ),
+        teamMode: teamResult.data?.teamMode ?? 'rescue',
         isEmpty: false,
       };
     },
   });
 }
+
+export const useTeamOverview = useVolunteerHomeOverview;

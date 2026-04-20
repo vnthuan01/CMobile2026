@@ -1,8 +1,8 @@
-import TeamTasksScreen from '@/src/features/volunteer/screens/TeamTasksScreen';
+import ReliefTasksScreen from '@/src/features/volunteer/screens/ReliefTasksScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProfileTasksRoute() {
   const router = useRouter();
 
-  return <TeamTasksScreen onBack={() => router.replace('/profile')} />;
+  return <ReliefTasksScreen onBack={() => router.replace('/profile/my-team' as any)} />;
 }

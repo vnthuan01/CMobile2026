@@ -4,8 +4,10 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import {
-    useCampaignDetail,
-    useVolunteerRegistrationCampaigns,
+  useCampaignDetail,
+  useCampaignDetailsMap,
+  useCampaigns,
+  useVolunteerRegistrationCampaigns,
 } from '@/src/hooks/useDonation';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
 import {
@@ -15,8 +17,8 @@ import {
 } from '@/src/hooks/useVolunteerActions';
 import type { CampaignListItem } from '@/src/services/donationService';
 import {
-    CampaignResourceType,
-    getCampaignDetail,
+  CampaignResourceType,
+  type CampaignDetail,
 } from '@/src/services/donationService';
 import {
     CreateVolunteerCertificateRequest,
@@ -42,7 +44,6 @@ import DateTimePicker, {
     DateTimePickerAndroid,
     DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import { useQueries } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -265,13 +266,9 @@ export default function RegisterVolunteerScreen({
   const skillsLoading = skillsQuery.isLoading;
   const campaigns = campaignsQuery.data?.items ?? [];
   const campaignsLoading = campaignsQuery.isLoading;
-  const campaignSummaryQueries = useQueries({
-    queries: campaigns.map((campaign: CampaignListItem) => ({
-      queryKey: ['donation', 'campaign-detail', campaign.campaignId],
-      queryFn: () => getCampaignDetail(campaign.campaignId),
-      staleTime: 0,
-    })),
-  });
+  const { dataMap: campaignSummaryMap } = useCampaignDetailsMap(
+    campaigns.map((campaign: CampaignListItem) => campaign.campaignId),
+  );
   const selectedCampaignDetailQuery = useCampaignDetail(
     selectedCampaignId || undefined,
     !!selectedCampaignId,
@@ -285,15 +282,6 @@ export default function RegisterVolunteerScreen({
   const loading =
     createVolunteerProfileMutation.isPending ||
     resubmitVolunteerProfileMutation.isPending;
-
-  const campaignSummaryMap = useMemo(() => {
-    const summaryMap: Record<string, any> = {};
-    campaigns.forEach((campaign: CampaignListItem, index: number) => {
-      summaryMap[campaign.campaignId] =
-        campaignSummaryQueries[index]?.data ?? null;
-    });
-    return summaryMap;
-  }, [campaignSummaryQueries, campaigns]);
 
   const sortedCampaigns = useMemo(() => {
     const getPriority = (status: number) => {
@@ -325,8 +313,8 @@ export default function RegisterVolunteerScreen({
       const priorityDiff = getPriority(a.status) - getPriority(b.status);
       if (priorityDiff !== 0) return priorityDiff;
 
-      const aSummary = campaignSummaryMap[a.campaignId];
-      const bSummary = campaignSummaryMap[b.campaignId];
+      const aSummary = campaignSummaryMap[a.campaignId] as CampaignDetail | null;
+      const bSummary = campaignSummaryMap[b.campaignId] as CampaignDetail | null;
       const aPeopleGoal = (aSummary?.goals || []).find(
         (goal: any) => goal.resourceType === CampaignResourceType.People,
       );

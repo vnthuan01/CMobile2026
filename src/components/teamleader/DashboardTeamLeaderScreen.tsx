@@ -1,268 +1,197 @@
 import '@/global.css';
-import MemberCard, { TeamMember } from '@/src/components/common/MemberCard';
+import MemberCard, { type TeamMember } from '@/src/components/common/MemberCard';
 import StickyFooterButton from '@/src/components/common/StickyFooterButton';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
+import { useMyTeam } from '@/src/hooks/useMyTeam';
+import { CampaignTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse } from '@/src/types/leaderTask';
+import type { TeamMemberSummary } from '@/src/types/team';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface DashboardTeamLeaderScreenProps {
-    onBack?: () => void;
-    onAllocateTask?: () => void;
-    onViewMissionDetail?: () => void;
+  onBack?: () => void;
+  onAllocateTask?: () => void;
+  onViewMissionDetail?: () => void;
 }
 
-const FILTER_CHIPS = ['Tất cả', 'Sẵn sàng', 'Y tế', 'Cứu hộ', 'Hậu cần'];
+const FILTER_CHIPS = ['Tất cả', 'Sẵn sàng'];
 
-const MOCK_MEMBERS: TeamMember[] = [
-    { id: '1', name: 'Nguyễn Văn A', role: 'Y tế', status: 'ready', distance: 'Cách 500m', initials: 'NA' },
-    { id: '2', name: 'Trần Thị B', role: 'Hậu cần', status: 'busy', location: 'Tại trạm chỉ huy', initials: 'TB' },
-    { id: '3', name: 'Lê Văn C', role: 'Cứu hộ', status: 'ready', distance: 'Cách 1.2km', initials: 'LC' },
-    { id: '4', name: 'Phạm Văn D', role: 'Lái xe', status: 'break', location: 'Đang về trạm', initials: 'PD' },
-    { id: '5', name: 'Hoàng Thị E', role: 'Y tế', status: 'ready', distance: 'Cách 300m', initials: 'HE' },
-];
+const initialsOf = (name?: string) =>
+  (name || '?')
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('');
 
 export default function DashboardTeamLeaderScreen({
-    onBack,
-    onAllocateTask,
-    onViewMissionDetail,
+  onAllocateTask,
+  onViewMissionDetail,
 }: DashboardTeamLeaderScreenProps) {
-    const { top, bottom } = useSafeAreaInsets();
-    const { colors, isDark } = useTheme();
-    const [activeChip, setActiveChip] = useState(0);
+  const { top, bottom } = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const [activeChip, setActiveChip] = useState(0);
+  const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
 
-    const filteredMembers = activeChip === 0
-        ? MOCK_MEMBERS
-        : activeChip === 1
-            ? MOCK_MEMBERS.filter(m => m.status === 'ready')
-            : MOCK_MEMBERS.filter(m => m.role === FILTER_CHIPS[activeChip]);
+  const team = myTeamData?.team;
+  const teamMode = myTeamData?.teamMode ?? 'rescue';
+  const campaignId = (team as any)?.assignedCampaigns?.[0]?.campaignId ?? null;
+  const { data: campaignTeams = [] } = useCampaignTeams(campaignId);
+  const myCampaignTeam = campaignTeams.find((item: CampaignTeamResponse) => item.teamId === team?.teamId) ?? campaignTeams[0];
+  const { data: taskData, isLoading: isTasksLoading } = useCampaignTasks(campaignId, {
+    pageIndex: 1,
+    pageSize: 50,
+    campaignTeamId: myCampaignTeam?.campaignTeamId,
+  });
 
-    return (
-        <View className="flex-1" style={{ backgroundColor: colors.background }}>
-            {/* Header */}
-            <View
-                style={{
-                    paddingTop: top,
-                    backgroundColor: colors.card,
-                    borderBottomColor: colors.border,
-                }}
-                className="flex-row items-center justify-between border-b px-4 pb-2 shadow-sm"
-            >
-                <View className="flex-row items-center gap-3">
-                    <View
-                        className="h-10 w-10 items-center justify-center rounded-full"
-                        style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderWidth: 2, borderColor: `${colors.primary}30` }}
-                    >
-                        <Text className="text-sm font-bold" style={{ color: colors.textSecondary }}>LM</Text>
-                    </View>
-                    <View>
-                        <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
-                            Xin chào,
-                        </Text>
-                        <Text className="text-base font-bold leading-tight" style={{ color: colors.text }}>
-                            Lê Văn Minh
-                        </Text>
-                    </View>
-                </View>
-                <TouchableOpacity className="relative h-10 w-10 items-center justify-center rounded-full">
-                    <Ionicons name="notifications-outline" size={24} color={colors.textSecondary} />
-                    <View
-                        className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2"
-                        style={{ backgroundColor: colors.primary, borderColor: colors.card }}
-                    />
+  const members: TeamMember[] = useMemo(() => {
+    const source = team?.members ?? [];
+    return source.map((member: TeamMemberSummary) => ({
+      id: member.userId,
+      name: member.displayName,
+      role: member.skills?.[0]?.name ?? member.role ?? 'Thành viên',
+      status: member.role === 'Leader' ? 'busy' : 'ready',
+      location: member.email,
+      initials: initialsOf(member.displayName),
+    }));
+  }, [team?.members]);
+
+  const filteredMembers = activeChip === 1
+    ? members.filter((member) => member.status === 'ready')
+    : members;
+
+  const taskItems = taskData?.items ?? [];
+  const completed = taskItems.filter((task: CampaignTaskResponse) => task.status === CampaignTaskStatus.Completed).length;
+  const inProgress = taskItems.filter((task: CampaignTaskResponse) => task.status === CampaignTaskStatus.InProgress).length;
+  const progress = taskItems.length ? Math.round((completed / taskItems.length) * 100) : 0;
+  const currentTask = taskItems[0];
+
+  return (
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View
+        style={{ paddingTop: top, backgroundColor: colors.card, borderBottomColor: colors.border }}
+        className="flex-row items-center justify-between border-b px-4 pb-2 shadow-sm"
+      >
+        <View className="flex-row items-center gap-3">
+          <View
+            className="h-10 w-10 items-center justify-center rounded-full"
+            style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderWidth: 2, borderColor: `${colors.primary}30` }}
+          >
+            <Text className="text-sm font-bold" style={{ color: colors.textSecondary }}>
+              {initialsOf(team?.leader?.displayName || team?.name)}
+            </Text>
+          </View>
+          <View>
+            <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>Nhóm trưởng</Text>
+            <Text className="text-base font-bold leading-tight" style={{ color: colors.text }}>
+              {team?.leader?.displayName || team?.name || 'Chưa có team'}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity className="relative h-10 w-10 items-center justify-center rounded-full">
+          <Ionicons name="notifications-outline" size={24} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: bottom + 100 }} className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
+        {isTeamLoading || isTasksLoading ? (
+          <View className="items-center justify-center py-20">
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : teamMode !== 'relief' ? (
+          <View className="rounded-2xl border border-dashed p-5" style={{ borderColor: colors.border }}>
+            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              Màn hình này dành cho đội cứu trợ
+            </Text>
+            <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
+              Đội cứu hộ sử dụng nhiệm vụ chung của nhóm tại Trung tâm nhiệm vụ thay vì phân công công việc cá nhân.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <View className="mb-6">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-lg font-bold" style={{ color: colors.text }}>Nhiệm vụ hiện tại</Text>
+                <TouchableOpacity onPress={onViewMissionDetail} className="flex-row items-center gap-1">
+                  <Text className="text-sm font-medium" style={{ color: colors.secondary }}>Chi tiết</Text>
+                  <Ionicons name="arrow-forward" size={14} color={colors.secondary} />
                 </TouchableOpacity>
+              </View>
+
+              <View className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <Text className="text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                  {myCampaignTeam?.teamName || team?.name || 'Đội hiện tại'}
+                </Text>
+                <Text className="mt-2 text-lg font-bold leading-tight" style={{ color: colors.text }}>
+                  {currentTask?.title || 'Chưa có nhiệm vụ nào'}
+                </Text>
+                <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                  {currentTask?.description || 'Hãy tạo hoặc phân công task mới cho chiến dịch hiện tại.'}
+                </Text>
+
+                <View className="mb-4 mt-4">
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>Tiến độ chung</Text>
+                    <Text className="text-sm font-bold" style={{ color: colors.primary }}>{progress}%</Text>
+                  </View>
+                  <View className="h-2.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}>
+                    <View className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: colors.primary }} />
+                  </View>
+                </View>
+
+                <View className="flex-row items-center justify-between border-t pt-3" style={{ borderTopColor: colors.border }}>
+                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                    {completed}/{taskItems.length} hoàn thành
+                  </Text>
+                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                    {inProgress} đang xử lý
+                  </Text>
+                </View>
+              </View>
             </View>
 
-            <ScrollView
-                contentContainerStyle={{ paddingBottom: bottom + 100 }}
-                className="flex-1 px-4 pt-4"
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Current Mission Section */}
-                <View className="mb-6">
-                    <View className="flex-row items-center justify-between mb-3">
-                        <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                            Nhiệm vụ hiện tại
-                        </Text>
-                        <TouchableOpacity
-                            onPress={onViewMissionDetail}
-                            className="flex-row items-center gap-1"
-                        >
-                            <Text className="text-sm font-medium" style={{ color: colors.secondary }}>
-                                Chi tiết
-                            </Text>
-                            <Ionicons name="arrow-forward" size={14} color={colors.secondary} />
-                        </TouchableOpacity>
-                    </View>
+            <View>
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                  Thành viên nhóm <Text style={{ color: colors.textSecondary }}>({members.length})</Text>
+                </Text>
+              </View>
 
-                    <View
-                        className="rounded-2xl border p-5 shadow-sm"
-                        style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                    >
-                        <View className="flex-row gap-4 mb-4">
-                            <View
-                                className="h-20 w-20 shrink-0 items-center justify-center rounded-xl shadow-sm"
-                                style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
-                            >
-                                <Ionicons name="water" size={36} color="#6b7280" />
-                            </View>
-                            <View className="flex-1 flex-col justify-between py-0.5">
-                                <View>
-                                    <View
-                                        className="self-start rounded-full border px-2.5 py-0.5 mb-1.5"
-                                        style={{
-                                            backgroundColor: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2',
-                                            borderColor: isDark ? 'rgba(220,38,38,0.3)' : '#fecaca',
-                                        }}
-                                    >
-                                        <Text className="text-xs font-bold" style={{ color: colors.primary }}>
-                                            Ưu tiên cao
-                                        </Text>
-                                    </View>
-                                    <Text className="text-lg font-bold leading-tight" style={{ color: colors.text }}>
-                                        Cứu trợ vùng lũ A
-                                    </Text>
-                                    <View className="flex-row items-center gap-1 mt-1.5">
-                                        <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-                                        <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                                            Huyện Lệ Thủy, Quảng Bình
-                                        </Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 16 }}>
+                {FILTER_CHIPS.map((chip, i) => (
+                  <TouchableOpacity
+                    key={chip}
+                    onPress={() => setActiveChip(i)}
+                    className="shrink-0 items-center justify-center rounded-full px-4 py-1.5 border"
+                    style={{
+                      backgroundColor: activeChip === i ? (isDark ? '#fff' : '#111418') : colors.card,
+                      borderColor: activeChip === i ? 'transparent' : colors.border,
+                    }}
+                  >
+                    <Text className="text-sm font-medium" style={{ color: activeChip === i ? (isDark ? '#111418' : '#fff') : colors.textSecondary }}>{chip}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
 
-                        {/* Progress */}
-                        <View className="mb-4">
-                            <View className="flex-row justify-between mb-1">
-                                <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
-                                    Tiến độ chung
-                                </Text>
-                                <Text className="text-sm font-bold" style={{ color: colors.primary }}>
-                                    65%
-                                </Text>
-                            </View>
-                            <View
-                                className="h-2.5 w-full rounded-full overflow-hidden"
-                                style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}
-                            >
-                                <View
-                                    className="h-full rounded-full"
-                                    style={{
-                                        width: '65%',
-                                        backgroundColor: colors.primary,
-                                    }}
-                                />
-                            </View>
-                        </View>
+              <View className="gap-3">
+                {filteredMembers.map((member) => <MemberCard key={member.id} member={member} />)}
+                {filteredMembers.length === 0 ? (
+                  <View className="rounded-2xl border border-dashed p-5" style={{ borderColor: colors.border }}>
+                    <Text style={{ color: colors.textSecondary }}>Chưa có thành viên phù hợp.</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          </>
+        )}
+      </ScrollView>
 
-                        {/* Footer info */}
-                        <View
-                            className="flex-row items-center justify-between border-t pt-3"
-                            style={{ borderTopColor: colors.border }}
-                        >
-                            <View className="flex-row items-center">
-                                {['NA', 'TB', 'LC'].map((initials, i) => (
-                                    <View
-                                        key={i}
-                                        className="h-8 w-8 items-center justify-center rounded-full border-2"
-                                        style={{
-                                            backgroundColor: isDark ? '#374151' : '#e5e7eb',
-                                            borderColor: colors.card,
-                                            marginLeft: i > 0 ? -8 : 0,
-                                            zIndex: 3 - i,
-                                        }}
-                                    >
-                                        <Text className="text-[10px] font-bold" style={{ color: colors.textSecondary }}>
-                                            {initials}
-                                        </Text>
-                                    </View>
-                                ))}
-                                <View
-                                    className="h-8 w-8 items-center justify-center rounded-full border-2 ml-[-8px]"
-                                    style={{
-                                        backgroundColor: isDark ? 'rgba(21,101,192,0.2)' : '#e3f2fd',
-                                        borderColor: colors.card,
-                                    }}
-                                >
-                                    <Text className="text-xs font-bold" style={{ color: colors.secondary }}>
-                                        +9
-                                    </Text>
-                                </View>
-                            </View>
-                            <View className="flex-row items-center gap-1">
-                                <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                                <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                                    Cập nhật 15p trước
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Team Members Section */}
-                <View>
-                    <View className="flex-row items-center justify-between mb-3">
-                        <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                            Thành viên nhóm{' '}
-                            <Text className="text-base font-normal" style={{ color: colors.textSecondary }}>
-                                (12)
-                            </Text>
-                        </Text>
-                        <Ionicons name="search" size={22} color={colors.textSecondary} />
-                    </View>
-
-                    {/* Filter Chips */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{ gap: 8, paddingBottom: 16 }}
-                    >
-                        {FILTER_CHIPS.map((chip, i) => (
-                            <TouchableOpacity
-                                key={i}
-                                onPress={() => setActiveChip(i)}
-                                className="shrink-0 items-center justify-center rounded-full px-4 py-1.5 border"
-                                style={{
-                                    backgroundColor: activeChip === i
-                                        ? (isDark ? '#fff' : '#111418')
-                                        : colors.card,
-                                    borderColor: activeChip === i ? 'transparent' : colors.border,
-                                }}
-                            >
-                                <Text
-                                    className="text-sm font-medium"
-                                    style={{
-                                        color: activeChip === i
-                                            ? (isDark ? '#111418' : '#fff')
-                                            : colors.textSecondary,
-                                    }}
-                                >
-                                    {chip}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Member List */}
-                    <View className="gap-3">
-                        {filteredMembers.map((member) => (
-                            <MemberCard key={member.id} member={member} />
-                        ))}
-                    </View>
-                </View>
-
-                <View className="h-20" />
-            </ScrollView>
-
-            {/* Sticky Footer */}
-            <StickyFooterButton
-                title="Phân công nhiệm vụ"
-                icon="add-circle"
-                backgroundColor={colors.secondary}
-                onPress={onAllocateTask}
-            />
-        </View>
-    );
+      {teamMode === 'relief' ? (
+        <StickyFooterButton title="Phân công công việc" icon="add-circle" backgroundColor={colors.secondary} onPress={onAllocateTask} />
+      ) : null}
+    </View>
+  );
 }

@@ -1,11 +1,54 @@
 import api from './api';
 import { extractApiErrorMessage } from '../utils/apiError';
 import type {
+  AssignedCampaignSummary,
   TeamDetailResponse,
+  TeamMode,
   TeamTrackingHeartbeatRequest,
   TeamTrackingHeartbeatResponse,
   TeamTrackingPointResponse,
 } from '../types/team';
+
+const normalizeTeamMode = (team: any): TeamMode => {
+  const rawTeamType = String(team?.teamType ?? team?.type ?? '').trim().toLowerCase();
+  const campaignTypes = Array.isArray(team?.assignedCampaigns)
+    ? team.assignedCampaigns.map((campaign: any) =>
+        String(campaign?.campaignType ?? campaign?.type ?? '').trim().toLowerCase(),
+      )
+    : [];
+
+  if (
+    rawTeamType.includes('relief') ||
+    rawTeamType.includes('cứu trợ') ||
+    rawTeamType === '1' ||
+    campaignTypes.some((type: string) => type.includes('relief') || type === '1')
+  ) {
+    return 'relief';
+  }
+
+  return 'rescue';
+};
+
+const normalizeAssignedCampaigns = (team: any): AssignedCampaignSummary[] => {
+  if (!Array.isArray(team?.assignedCampaigns)) return [];
+  return team.assignedCampaigns.map((campaign: any) => ({
+    campaignId: String(campaign?.campaignId ?? campaign?.id ?? ''),
+    campaignName: campaign?.campaignName ?? campaign?.name ?? null,
+    campaignType: campaign?.campaignType ?? campaign?.type ?? null,
+    role: campaign?.role ?? null,
+    status: campaign?.status ?? null,
+  }));
+};
+
+const normalizeTeam = (team: TeamDetailResponse | null): TeamDetailResponse | null => {
+  if (!team) return null;
+  const normalized = team as TeamDetailResponse & Record<string, any>;
+  return {
+    ...normalized,
+    assignedCampaigns: normalizeAssignedCampaigns(normalized),
+    teamMode: normalizeTeamMode(normalized),
+  };
+};
 
 export type {
   TeamSkillResponse,
@@ -27,7 +70,7 @@ export const teamService = {
         const response = await api.get<TeamDetailResponse>(route);
         return {
           success: response.status === 200,
-          data: response.data,
+          data: normalizeTeam(response.data),
           message: 'Lấy thông tin team thành công',
         };
       } catch (error: any) {

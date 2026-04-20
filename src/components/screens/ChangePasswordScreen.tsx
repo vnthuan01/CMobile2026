@@ -2,6 +2,7 @@ import '@/global.css';
 import AppDialog, { useDialog } from '@/src/components/common/AppDialog';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useChangePassword } from '@/src/hooks/useAuthActions';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { authService } from '@/src/services/authService';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
@@ -35,6 +36,7 @@ export default function ChangePasswordScreen({
   const bottomInset = useBottomContentInset(24);
   const { colors, isDark } = useTheme();
   const { dialogProps, showDialog } = useDialog();
+  const changePasswordMutation = useChangePassword();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -126,7 +128,7 @@ export default function ChangePasswordScreen({
   const submitChangePassword = async () => {
     setIsSubmitting(true);
 
-    const result = await authService.changePassword({
+    const result = await changePasswordMutation.mutateAsync({
       currentPassword,
       newPassword,
     });

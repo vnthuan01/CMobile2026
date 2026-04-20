@@ -22,10 +22,7 @@ export default function ResetPasswordScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const resetForgotPasswordMutation = useResetForgotPassword();
-  const params = useLocalSearchParams<{
-    email?: string;
-    resetToken?: string;
-  }>();
+  const params = useLocalSearchParams();
 
   const email = Array.isArray(params.email) ? params.email[0] : params.email;
   const resetToken = Array.isArray(params.resetToken)
