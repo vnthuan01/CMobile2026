@@ -8,6 +8,7 @@ import {
   useCampaignTeams,
 } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
+import { useAuthStore } from '@/src/store/authStore';
 import {
   CampaignTaskStatus,
   TaskPriority,
@@ -17,6 +18,7 @@ import {
   type MemberTaskResponse,
 } from '@/src/types/leaderTask';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,8 +52,16 @@ const toTaskItem = (task: CampaignTaskResponse): TaskItem => ({
 export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
+  
+  const isLeader = useMemo(() => {
+    if (!user?.id || !team?.leader?.userId) return false;
+    return user.id === team.leader.userId;
+  }, [team?.leader?.userId, user?.id]);
+
   const teamMode = myTeamData?.teamMode ?? 'rescue';
   const campaignId = team?.assignedCampaigns?.[0]?.campaignId ?? null;
 
@@ -124,6 +134,16 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                 <SummaryChip label="Bị chặn" value={String(blocked)} />
                 <SummaryChip label="Hoàn thành" value={String(completed)} />
               </View>
+
+              {isLeader ? (
+                <TouchableOpacity
+                  onPress={() => router.push('/profile/allocate-task' as any)}
+                  className="mt-4 flex-row items-center justify-center rounded-xl bg-white/20 py-3"
+                >
+                  <Ionicons name="construct-outline" size={18} color="#fff" />
+                  <Text className="ml-2 font-bold text-white">Quản lý & phân phối nhiệm vụ</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
@@ -250,3 +270,4 @@ function formatDate(value?: string | null) {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('vi-VN');
 }
+
