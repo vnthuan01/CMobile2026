@@ -28,6 +28,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -55,6 +56,15 @@ export default function RegisterScreen() {
   ];
   const isPasswordStrongEnough = hasUppercase && hasNumber && hasSpecial;
 
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    if (/\s/.test(value)) {
+      setUsernameError('Tên tài khoản không được chứa dấu cách.');
+      return;
+    }
+    setUsernameError(null);
+  };
+
   const handleRegister = async () => {
     if (
       !fullName.trim() ||
@@ -69,6 +79,14 @@ export default function RegisterScreen() {
       showErrorToast('Thiếu thông tin', msg);
       return;
     }
+
+    if (/\s/.test(username)) {
+      const msg = 'Tên tài khoản không được chứa dấu cách.';
+      setUsernameError(msg);
+      return;
+    }
+
+    setUsernameError(null);
 
     if (password !== confirmPassword) {
       const msg = 'Mật khẩu xác nhận không khớp.';
@@ -211,10 +229,26 @@ export default function RegisterScreen() {
                     placeholder="Nhập tên tài khoản"
                     placeholderTextColor="#9CA3AF"
                     value={username}
-                    onChangeText={setUsername}
+                    onChangeText={handleUsernameChange}
                     editable={!loading}
                   />
                 </View>
+
+                {!!usernameError && (
+                  <View className="mt-2 flex-row items-center">
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={16}
+                      color={dangerRed}
+                    />
+                    <Text
+                      className="ml-1 flex-1 text-sm"
+                      style={{ color: dangerRed }}
+                    >
+                      {usernameError}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <View className="mb-3">
