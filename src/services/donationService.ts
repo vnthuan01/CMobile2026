@@ -119,6 +119,8 @@ export interface DonationCheckoutPayload {
   amount: number;
   donorName: string;
   message?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface DonationCheckoutResponse {
@@ -150,6 +152,14 @@ export interface FundContribution {
   campaignName?: string;
   createdAt?: string;
   note?: string;
+}
+
+export interface DonationPaymentReturnParams {
+  code?: string;
+  id?: string;
+  cancel?: boolean;
+  status?: string;
+  orderCode?: number;
 }
 
 export async function getCampaignDonationSummary(campaignId: string) {
@@ -204,5 +214,14 @@ export async function getDonationStatus(donationId: string) {
 
 export async function getFundContributions() {
   const response = await api.get<FundContribution[]>('/funds/contributions');
+  return response.data;
+}
+
+export async function processDonationPaymentReturn(
+  params: DonationPaymentReturnParams,
+) {
+  const response = await api.get('/donations/payment-return', {
+    params,
+  });
   return response.data;
 }

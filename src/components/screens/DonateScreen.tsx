@@ -22,6 +22,7 @@ import {
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -37,6 +38,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface DonateScreenProps {
   onBack?: () => void;
@@ -134,6 +137,11 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
   const [guestPhone, setGuestPhone] = useState('');
   const [message, setMessage] = useState('');
   const [donationId, setDonationId] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
+    typeof campaignIdParam === 'string' && campaignIdParam.trim().length > 0
+      ? campaignIdParam
+      : null,
+  );
   const donorName = useMemo(() => {
     if (isLoggedIn) {
       return (
@@ -152,9 +160,7 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
   const { data: fundContributions, isLoading: isLoadingFundContributions } =
     useFundContributions();
   const activeFundraisingCampaignId =
-    typeof campaignIdParam === 'string' && campaignIdParam.trim().length > 0
-      ? campaignIdParam
-      : fundraisingCampaigns?.items?.[0]?.campaignId;
+    selectedCampaignId || fundraisingCampaigns?.items?.[0]?.campaignId;
   const { data: campaignSummary, isLoading: isLoadingCampaignSummary } =
     useCampaignDonationSummary(activeFundraisingCampaignId);
   const { mutateAsync: createCheckout, isPending: isCreatingCheckout } =
@@ -200,10 +206,67 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
       });
   }, [campaignSummary?.campaignId, fundContributions]);
 
+  const campaignContributionTotal = useMemo(() => {
+    if (!activeFundraisingCampaignId) {
+      return 0;
+    }
+
+    return (fundContributions || [])
+      .filter((item: any) => item.campaignId === activeFundraisingCampaignId)
+      .reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0);
+  }, [activeFundraisingCampaignId, fundContributions]);
+
+  const displayedTotalMoneyReceived = useMemo(() => {
+    const summaryReceived = Number(campaignSummary?.totalMoneyReceived || 0);
+    const goalReceived = Number(moneyGoal?.receivedAmount || 0);
+
+    return Math.max(summaryReceived, goalReceived, campaignContributionTotal, 0);
+  }, [campaignContributionTotal, campaignSummary?.totalMoneyReceived, moneyGoal?.receivedAmount]);
+
+  const displayedProgressPercent = useMemo(() => {
+    const summaryProgress = Number(moneyGoal?.progressPercent || 0);
+    if (summaryProgress > 0) {
+      return Math.max(0, Math.min(summaryProgress, 100));
+    }
+
+    const targetAmount = Number(moneyGoal?.targetAmount || 0);
+    if (targetAmount <= 0) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      Math.min((displayedTotalMoneyReceived / targetAmount) * 100, 100),
+    );
+  }, [displayedTotalMoneyReceived, moneyGoal?.progressPercent, moneyGoal?.targetAmount]);
+
   const donationStatusUi =
     DONATION_STATUS_UI[
       Number(donationStatus?.status ?? DonationStatus.Pending)
     ];
+
+  useEffect(() => {
+    const campaignItems = fundraisingCampaigns?.items ?? [];
+    if (!campaignItems.length) {
+      return;
+    }
+
+    setSelectedCampaignId((prev) => {
+      if (prev && campaignItems.some((item: any) => item.campaignId === prev)) {
+        return prev;
+      }
+
+      if (
+        typeof campaignIdParam === 'string' &&
+        campaignIdParam.trim().length > 0 &&
+        campaignItems.some((item: any) => item.campaignId === campaignIdParam)
+      ) {
+        return campaignIdParam;
+      }
+
+      return campaignItems[0]?.campaignId ?? null;
+    });
+  }, [campaignIdParam, fundraisingCampaigns?.items]);
 
   useEffect(() => {
     if (!shouldRefresh || hasHandledRefresh.current) return;
@@ -232,7 +295,9 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
       } finally {
         router.replace({
           pathname: '/donate',
-          params: campaignIdParam ? { campaignId: campaignIdParam } : {},
+          params: activeFundraisingCampaignId
+            ? { campaignId: activeFundraisingCampaignId }
+            : {},
         });
       }
     };
@@ -240,7 +305,6 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
     void refreshDonationData();
   }, [
     activeFundraisingCampaignId,
-    campaignIdParam,
     queryClient,
     router,
     shouldRefresh,
@@ -334,22 +398,28 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
 
     try {
       const encodedCampaignId = encodeURIComponent(campaignSummary.campaignId);
-      const returnUrl = `reliefcare://donate-result?paymentStatus=success&campaignId=${encodedCampaignId}`;
-      const cancelUrl = `reliefcare://donate-result?paymentStatus=cancelled&campaignId=${encodedCampaignId}`;
-
       const checkout = await createCheckout({
         campaignId: campaignSummary.campaignId,
         amount: normalizedAmount,
         donorName,
         message: message.trim() || undefined,
-        returnUrl,
-        cancelUrl,
       });
 
       setDonationId(checkout.donationId);
 
+      const encodedDonationId = encodeURIComponent(checkout.donationId);
+      const returnUrl = `reliefcare://donate-result?paymentStatus=success&campaignId=${encodedCampaignId}&donationId=${encodedDonationId}`;
+      const cancelUrl = `reliefcare://donate-result?paymentStatus=cancelled&campaignId=${encodedCampaignId}&donationId=${encodedDonationId}`;
+
       if (checkout.checkoutUrl) {
-        await WebBrowser.openBrowserAsync(checkout.checkoutUrl);
+        const checkoutUrl = new URL(checkout.checkoutUrl);
+        checkoutUrl.searchParams.set('returnUrl', returnUrl);
+        checkoutUrl.searchParams.set('cancelUrl', cancelUrl);
+
+        await WebBrowser.openAuthSessionAsync(
+          checkoutUrl.toString(),
+          Linking.createURL('/donate-result'),
+        );
         showInfoToast(
           'Đã mở trang thanh toán',
           'Ứng dụng sẽ tự kiểm tra trạng thái ủng hộ sau khi bạn quay lại.',
@@ -495,8 +565,8 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
             <View className="mt-4 flex-col gap-2">
               <View className="flex-row justify-between">
                 <Text className="text-sm font-bold text-primary">
-                  {campaignSummary
-                    ? `${formatCurrency(campaignSummary.totalMoneyReceived || 0)} VND`
+                  {activeFundraisingCampaignId
+                    ? `${formatCurrency(displayedTotalMoneyReceived)} VND`
                     : '--'}
                 </Text>
                 <Text
@@ -516,11 +586,63 @@ export default function DonateScreen({ onBack }: DonateScreenProps) {
                 <View
                   className="h-full rounded-full bg-accent"
                   style={{
-                    width: `${Math.max(0, Math.min(Number(moneyGoal?.progressPercent || 0), 100))}%`,
+                    width: `${displayedProgressPercent}%`,
                   }}
                 />
               </View>
             </View>
+          </View>
+
+          {/* Campaign Picker */}
+          <View>
+            <Text
+              className="mb-3 px-1 text-lg font-bold"
+              style={{ color: colors.text }}
+            >
+              Chọn chiến dịch gây quỹ
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="flex-row gap-2 pb-1"
+            >
+              {(fundraisingCampaigns?.items ?? []).map((campaign: any) => {
+                const isActive =
+                  selectedCampaignId === campaign.campaignId ||
+                  (!selectedCampaignId &&
+                    campaign.campaignId === activeFundraisingCampaignId);
+
+                return (
+                  <Touchable
+                    key={campaign.campaignId}
+                    onPress={() => setSelectedCampaignId(campaign.campaignId)}
+                    className="mr-2 rounded-xl border px-4 py-3"
+                    style={{
+                      minWidth: Math.max(220, Math.round(220 * screenScale.scale)),
+                      borderColor: isActive ? colors.accent : colors.border,
+                      backgroundColor: isActive ? `${colors.accent}1A` : colors.card,
+                    }}
+                  >
+                    <Text
+                      className="text-sm font-bold"
+                      numberOfLines={2}
+                      style={{ color: isActive ? colors.accent : colors.text }}
+                    >
+                      {campaign.name || 'Chiến dịch gây quỹ'}
+                    </Text>
+                    <Text
+                      className="mt-1 text-xs"
+                      numberOfLines={1}
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {campaign.startDate && campaign.endDate
+                        ? `${new Date(campaign.startDate).toLocaleDateString('vi-VN')} - ${new Date(campaign.endDate).toLocaleDateString('vi-VN')}`
+                        : 'Đang mở quyên góp'}
+                    </Text>
+                  </Touchable>
+                );
+              })}
+            </ScrollView>
           </View>
 
           {/* Donation Amount */}
