@@ -2,12 +2,18 @@ interface UploadImageResponse {
   secure_url?: string;
 }
 
+interface UploadFileResult {
+  success: boolean;
+  url: string | null;
+  message: string;
+}
+
 export const uploadService = {
-  uploadImageToCloudinary: async (
+  uploadFileToCloudinary: async (
     localUri: string,
     fileName?: string,
     mimeType?: string,
-  ) => {
+  ): Promise<UploadFileResult> => {
     try {
       const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
       const uploadPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
@@ -23,14 +29,16 @@ export const uploadService = {
 
       const formData = new FormData();
       formData.append('upload_preset', uploadPreset);
+      formData.append('resource_type', 'auto');
       formData.append('file', {
         uri: localUri,
         type: mimeType || 'image/jpeg',
-        name: fileName || `upload_${Date.now()}.jpg`,
+        name: fileName || `upload_${Date.now()}`,
       } as any);
 
+      const resourceType = mimeType?.startsWith('video/') ? 'video' : 'auto';
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
         {
           method: 'POST',
           body: formData,
@@ -62,5 +70,13 @@ export const uploadService = {
         message: error.message || 'Upload ảnh thất bại',
       };
     }
+  },
+
+  uploadImageToCloudinary: async (
+    localUri: string,
+    fileName?: string,
+    mimeType?: string,
+  ) => {
+    return uploadService.uploadFileToCloudinary(localUri, fileName, mimeType);
   },
 };

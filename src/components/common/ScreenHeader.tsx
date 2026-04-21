@@ -37,7 +37,13 @@ export default function ScreenHeader({
   const bgColor = backgroundColor ?? colors.card;
   const txtColor = titleColor ?? colors.text;
   const resolvedRightAction = rightAction ?? rightComponent ?? null;
-  const backButtonBg = isDark ? colors.surface : `${colors.primary}15`;
+  const isPrimaryHeader = bgColor === colors.primary;
+  const backButtonBg = isPrimaryHeader
+    ? 'rgba(255,255,255,0.16)'
+    : isDark
+      ? colors.surface
+      : `${colors.primary}15`;
+  const backIconColor = isPrimaryHeader ? '#fff' : colors.primary;
 
   return (
     <View
@@ -65,7 +71,7 @@ export default function ScreenHeader({
               <Ionicons
                 name="arrow-back-outline"
                 size={22}
-                color={colors.primary}
+                color={backIconColor}
               />
             </TouchableOpacity>
           ) : null}

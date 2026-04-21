@@ -52,6 +52,14 @@ export interface AssignMemberTaskRequest {
   taskNote?: string;
 }
 
+export interface BulkAssignMembersTaskRequest {
+  members: AssignMemberTaskRequest[];
+}
+
+export interface ChangeMemberTaskStatusRequest {
+  status: MemberTaskStatus;
+}
+
 // Response DTOs
 export interface CampaignTaskResponse {
   campaignTaskId: string;
@@ -103,6 +111,34 @@ export interface GetCampaignTasksQuery {
   pageSize?: number;
   status?: CampaignTaskStatus;
   campaignTeamId?: string;
+}
+
+export interface GetMyMemberTasksQuery {
+  pageIndex?: number;
+  pageSize?: number;
+  status?: MemberTaskStatus;
+  campaignTeamId?: string;
+}
+
+export interface MyMemberTaskResponse {
+  memberTaskId: string;
+  campaignTaskId: string;
+  campaignId: string;
+  campaignTeamId: string;
+  campaignTeamName: string;
+  campaignTaskTitle: string;
+  campaignTaskDescription?: string;
+  startDate: string;
+  dueDate?: string;
+  campaignTaskStatus: CampaignTaskStatus;
+  priority: TaskPriority;
+  volunteerProfileId: string;
+  volunteerName: string;
+  subTaskTitle: string;
+  taskNote?: string;
+  assignedAt: string;
+  completedAt?: string;
+  status: MemberTaskStatus;
 }
 
 // Status label mapping

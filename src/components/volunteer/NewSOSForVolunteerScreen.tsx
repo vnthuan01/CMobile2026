@@ -2,7 +2,7 @@ import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Animated,
     ScrollView,
@@ -17,6 +17,8 @@ type EmergencyType = 'medical' | 'fire' | 'trapped';
 
 interface NewSOSForVolunteerScreenProps {
     onBack?: () => void;
+    defaultType?: string;
+    isEmergencyDefault?: boolean;
 }
 
 const EMERGENCY_TYPES: {
@@ -55,11 +57,21 @@ const EMERGENCY_TYPES: {
 
 export default function NewSOSForVolunteerScreen({
     onBack,
+    defaultType,
+    isEmergencyDefault,
 }: NewSOSForVolunteerScreenProps) {
     const { bottom } = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
-    const [selectedType, setSelectedType] = useState<EmergencyType | null>(null);
+    const [selectedType, setSelectedType] = useState<EmergencyType | null>((defaultType as EmergencyType) || 'medical');
     const [safeWord, setSafeWord] = useState('');
+
+    useEffect(() => {
+        if (defaultType === 'medical' || defaultType === 'fire' || defaultType === 'trapped') {
+            setSelectedType(defaultType);
+        } else if (isEmergencyDefault) {
+            setSelectedType('medical');
+        }
+    }, [defaultType, isEmergencyDefault]);
 
     // Pulse animation
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -134,7 +146,7 @@ export default function NewSOSForVolunteerScreen({
                         KHẨN CẤP
                     </Text>
                     <Text className="text-sm leading-relaxed text-center" style={{ color: colors.textSecondary }}>
-                        Giữ nút bên dưới trong 3 giây để phát tín hiệu cầu cứu GPS.
+                        {isEmergencyDefault ? 'SOS khẩn cấp đã được chọn mặc định cho bạn. Hãy kiểm tra nhanh loại sự cố rồi gửi tín hiệu cầu cứu GPS.' : 'Giữ nút bên dưới trong 3 giây để phát tín hiệu cầu cứu GPS.'}
                     </Text>
                 </View>
 

@@ -18,6 +18,7 @@ export interface TeamLeaderSummary extends TeamUserSummary {
 }
 
 export interface TeamMemberSummary extends TeamUserSummary {
+  volunteerProfileId?: string | null;
   role: 'Leader' | 'Member' | string;
   skills: TeamSkillResponse[];
   joinedAt: string;
@@ -31,6 +32,8 @@ export interface AssignedCampaignSummary {
   campaignType?: string | number | null;
   role?: string | number | null;
   status?: string | number | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 export interface TeamDetailResponse {

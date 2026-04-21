@@ -1,16 +1,22 @@
 import '@/global.css';
+import CustomDropdown from '@/src/components/CustomDropdown';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import StickyFooterButton from '@/src/components/common/StickyFooterButton';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
+import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
+import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useCampaignTaskDetail, useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { CampaignTaskStatus, MemberTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse, type MemberTaskResponse } from '@/src/types/leaderTask';
 import { showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueries } from '@tanstack/react-query';
+import { leaderTaskKeys } from '@/src/hooks/useLeaderTasks';
+import { leaderTaskService } from '@/src/services/leaderTaskService';
 
 interface ReportProgressTeamLeaderScreenProps {
   onBack?: () => void;
@@ -24,13 +30,27 @@ const initialsOf = (name?: string) =>
     .map((part) => part[0]?.toUpperCase() || '')
     .join('');
 
+const dinhDangNgay = (value?: string | null) => {
+  if (!value) return 'Chưa xác định';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('vi-VN');
+};
+
 export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgressTeamLeaderScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const [summaryNote, setSummaryNote] = useState('');
+  const [selectedCampaignId, setSelectedCampaignId] = useState('');
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
-  const { campaignId } = useActiveAssignedCampaign(team);
+  const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(team?.teamId, !!team?.teamId);
+  const { campaignId, activeCampaign, assignedCampaigns } = useActiveAssignedCampaign(
+    team,
+    selectedCampaignId || null,
+    fallbackAssignedCampaigns,
+  );
+  const { data: campaignDetail } = useCampaignDetail(campaignId || undefined, !!campaignId);
   const { data: campaignTeams = [] } = useCampaignTeams(campaignId);
   const myCampaignTeam = campaignTeams.find((item: CampaignTeamResponse) => item.teamId === team?.teamId) ?? campaignTeams[0];
   const { data: taskData, isLoading: isTasksLoading } = useCampaignTasks(campaignId, {
@@ -39,17 +59,73 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
     campaignTeamId: myCampaignTeam?.campaignTeamId,
   });
   const firstTaskId = taskData?.items?.[0]?.campaignTaskId ?? null;
-  const { data: firstTaskDetail, isLoading: isDetailLoading } = useCampaignTaskDetail(firstTaskId);
+  const { data: firstTaskDetail, isLoading: isFirstDetailLoading } = useCampaignTaskDetail(firstTaskId);
 
-  const reportItems = useMemo(() => firstTaskDetail?.memberTasks ?? [], [firstTaskDetail?.memberTasks]);
+  useEffect(() => {
+    if (!selectedCampaignId && assignedCampaigns.length > 0) {
+      setSelectedCampaignId(assignedCampaigns[0].campaignId);
+    }
+  }, [assignedCampaigns, selectedCampaignId]);
+
+  const taskDetailQueries = useQueries({
+    queries: (taskData?.items ?? []).map((task) => ({
+      queryKey: leaderTaskKeys.taskDetail(task.campaignTaskId),
+      queryFn: async () => {
+        const result = await leaderTaskService.getCampaignTaskDetail(task.campaignTaskId);
+        if (!result.success) throw new Error(result.message);
+        return result.data;
+      },
+      enabled: !!task.campaignTaskId,
+    })),
+  });
+
+  const isDetailLoading = taskDetailQueries.some((query) => query.isLoading) || isFirstDetailLoading;
+
+  const reportItems = useMemo(
+    () => taskDetailQueries.flatMap((query) => query.data?.memberTasks ?? []),
+    [taskDetailQueries],
+  );
+  const groupedReportItems = useMemo(() => {
+    const groups = new Map<string, { title: string; notes: string[]; members: MemberTaskResponse[]; completedCount: number; totalCount: number }>();
+
+    reportItems.forEach((item: MemberTaskResponse) => {
+      const key = item.subTaskTitle?.trim().toLowerCase() || item.memberTaskId;
+      const existing = groups.get(key);
+
+      if (existing) {
+        existing.members.push(item);
+        existing.totalCount += 1;
+        if (item.status === MemberTaskStatus.Completed) existing.completedCount += 1;
+        if (item.taskNote && !existing.notes.includes(item.taskNote)) existing.notes.push(item.taskNote);
+        return;
+      }
+
+      groups.set(key, {
+        title: item.subTaskTitle,
+        notes: item.taskNote ? [item.taskNote] : [],
+        members: [item],
+        completedCount: item.status === MemberTaskStatus.Completed ? 1 : 0,
+        totalCount: 1,
+      });
+    });
+
+    return Array.from(groups.values());
+  }, [reportItems]);
   const totalTasks = taskData?.items?.length ?? 0;
   const completedTasks = (taskData?.items ?? []).filter((task: CampaignTaskResponse) => task.status === CampaignTaskStatus.Completed).length;
   const totalSubtasks = reportItems.length;
   const completedSubtasks = reportItems.filter((item: MemberTaskResponse) => item.status === MemberTaskStatus.Completed).length;
+  const campaignOptions = useMemo(
+    () => assignedCampaigns.map((campaign) => ({ label: campaign.campaignName || campaign.campaignId, value: campaign.campaignId })),
+    [assignedCampaigns],
+  );
+  const campaignName = campaignDetail?.name || activeCampaign?.campaignName || myCampaignTeam?.campaignName || myCampaignTeam?.teamName || 'Chiến dịch hiện tại';
+  const campaignStartDate = campaignDetail?.startDate || activeCampaign?.startDate;
+  const campaignEndDate = campaignDetail?.endDate || activeCampaign?.endDate;
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <ScreenHeader title="Báo cáo Tổng hợp Nhóm" onBack={onBack} />
+      <ScreenHeader title="Báo cáo tổng hợp nhóm" onBack={onBack} />
 
       <ScrollView contentContainerStyle={{ paddingBottom: bottom + 120 }} className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-6 w-full p-4">
@@ -67,11 +143,14 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
                     {firstTaskDetail?.title || team?.name || 'Tổng hợp tiến độ'}
                   </Text>
                   <Text className="text-sm font-medium" style={{ color: '#e5e7eb' }}>
-                    {myCampaignTeam?.campaignName || myCampaignTeam?.teamName || 'Chiến dịch hiện tại'}
+                    {campaignName}
+                  </Text>
+                  <Text className="mt-1 text-xs" style={{ color: '#e5e7eb' }}>
+                    Thời gian chiến dịch: {dinhDangNgay(campaignStartDate)} - {dinhDangNgay(campaignEndDate)}
                   </Text>
                   <View className="mt-3">
                     <View className="flex-row justify-between mb-1">
-                      <Text className="text-xs text-white">Tiến độ task</Text>
+                      <Text className="text-xs text-white">Tiến độ nhiệm vụ</Text>
                       <Text className="text-xs text-white">{completedTasks}/{totalTasks}</Text>
                     </View>
                     <View className="h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }}>
@@ -83,8 +162,8 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
 
               <View className="flex-row gap-3">
                 {[
-                  { icon: 'briefcase', count: `${completedTasks}/${totalTasks}`, label: 'Task', color: colors.primary, bgColor: `${colors.primary}12` },
-                  { icon: 'people', count: `${completedSubtasks}/${totalSubtasks}`, label: 'Subtask', color: colors.secondary, bgColor: `${colors.secondary}12` },
+                  { icon: 'briefcase', count: `${completedTasks}/${totalTasks}`, label: 'Nhiệm vụ', color: colors.primary, bgColor: `${colors.primary}12` },
+                  { icon: 'people', count: `${completedSubtasks}/${totalSubtasks}`, label: 'Nhiệm vụ con', color: colors.secondary, bgColor: `${colors.secondary}12` },
                   { icon: 'document-text', count: `${reportItems.length}`, label: 'Báo cáo', color: colors.status.pending, bgColor: `${colors.status.pending}12` },
                 ].map((stat, i) => (
                   <View key={i} className="flex-1 rounded-lg border p-3 items-center justify-center gap-1 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
@@ -97,37 +176,75 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
                 ))}
               </View>
 
+              <View className="rounded-xl border p-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <Text className="text-sm" style={{ color: colors.textSecondary }}>Chiến dịch đang xem báo cáo</Text>
+                <View className="mt-2">
+                  <CustomDropdown
+                    items={campaignOptions}
+                    selectedValue={selectedCampaignId}
+                    onValueChange={setSelectedCampaignId}
+                    placeholder="Chọn chiến dịch"
+                    title="Chọn chiến dịch"
+                  />
+                </View>
+              </View>
+
               <View>
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-lg font-bold" style={{ color: colors.text }}>Báo cáo thành viên</Text>
                 </View>
 
                 <View className="gap-3">
-                  {reportItems.map((report: MemberTaskResponse) => (
-                    <View key={report.memberTaskId} className="rounded-lg border p-4 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-                      <View className="flex-row items-start gap-3">
-                        <View className="h-10 w-10 items-center justify-center rounded-full shrink-0" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}>
-                          <Text className="text-sm font-bold" style={{ color: colors.textSecondary }}>{initialsOf(report.volunteerName)}</Text>
-                        </View>
+                  {groupedReportItems.map((group, index) => (
+                    <View key={`${group.title}-${index}`} className="rounded-lg border p-4 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                      <View className="flex-row items-start justify-between gap-3">
                         <View className="flex-1">
-                          <View className="flex-row justify-between items-start">
-                            <View>
-                              <Text className="font-bold text-sm" style={{ color: colors.text }}>{report.volunteerName}</Text>
-                              <Text className="text-xs" style={{ color: colors.textSecondary }}>{report.completedAt || report.assignedAt || 'Chưa có thời gian'}</Text>
+                          <Text className="font-bold text-sm" style={{ color: colors.text }}>{group.title}</Text>
+                          <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                            {group.completedCount}/{group.totalCount} thành viên hoàn thành
+                          </Text>
+                        </View>
+                        <View className="rounded px-2 py-0.5" style={{ backgroundColor: group.completedCount === group.totalCount ? (isDark ? 'rgba(22,163,74,0.2)' : '#f0fdf4') : (isDark ? 'rgba(234,179,8,0.2)' : '#fefce8') }}>
+                          <Text className="text-[10px] font-bold" style={{ color: group.completedCount === group.totalCount ? colors.status.completed : colors.status.pending }}>
+                            {group.completedCount === group.totalCount ? 'Hoàn thành' : 'Đang xử lý'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {group.notes.length > 0 ? (
+                        <Text className="mt-2 text-sm leading-snug" style={{ color: colors.textSecondary }}>
+                          Ghi chú: {group.notes.join(' • ')}
+                        </Text>
+                      ) : null}
+
+                      <View className="mt-3 gap-2">
+                        {group.members.map((report) => (
+                          <View key={report.memberTaskId} className="flex-row items-start gap-3 rounded-lg p-3" style={{ backgroundColor: `${colors.primary}08` }}>
+                            <View className="h-10 w-10 items-center justify-center rounded-full shrink-0" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}>
+                              <Text className="text-sm font-bold" style={{ color: colors.textSecondary }}>{initialsOf(report.volunteerName)}</Text>
                             </View>
-                            <View className="rounded px-2 py-0.5" style={{ backgroundColor: report.status === MemberTaskStatus.Completed ? (isDark ? 'rgba(22,163,74,0.2)' : '#f0fdf4') : (isDark ? 'rgba(234,179,8,0.2)' : '#fefce8') }}>
-                              <Text className="text-[10px] font-bold" style={{ color: report.status === MemberTaskStatus.Completed ? colors.status.completed : colors.status.pending }}>
-                                {report.status === MemberTaskStatus.Completed ? 'Đã xong' : 'Đang xử lý'}
-                              </Text>
+                            <View className="flex-1">
+                              <View className="flex-row justify-between items-start gap-2">
+                                <View className="flex-1">
+                                  <Text className="font-bold text-sm" style={{ color: colors.text }}>{report.volunteerName}</Text>
+                                  <Text className="text-xs" style={{ color: colors.textSecondary }}>{report.completedAt || report.assignedAt || 'Chưa có thời gian'}</Text>
+                                </View>
+                                <View className="rounded px-2 py-0.5" style={{ backgroundColor: report.status === MemberTaskStatus.Completed ? (isDark ? 'rgba(22,163,74,0.2)' : '#f0fdf4') : (isDark ? 'rgba(234,179,8,0.2)' : '#fefce8') }}>
+                                  <Text className="text-[10px] font-bold" style={{ color: report.status === MemberTaskStatus.Completed ? colors.status.completed : colors.status.pending }}>
+                                    {report.status === MemberTaskStatus.Completed ? 'Đã xong' : 'Đang xử lý'}
+                                  </Text>
+                                </View>
+                              </View>
+                              {report.taskNote ? (
+                                <Text className="text-xs mt-1 leading-snug" style={{ color: colors.textSecondary }}>{report.taskNote}</Text>
+                              ) : null}
                             </View>
                           </View>
-                          <Text className="text-sm mt-2 leading-snug" style={{ color: colors.text }}>{report.subTaskTitle}</Text>
-                          <Text className="text-sm mt-1 leading-snug" style={{ color: colors.textSecondary }}>{report.taskNote || 'Chưa có ghi chú.'}</Text>
-                        </View>
+                        ))}
                       </View>
                     </View>
                   ))}
-                  {reportItems.length === 0 ? <Text style={{ color: colors.textSecondary }}>Chưa có báo cáo thành viên.</Text> : null}
+                  {groupedReportItems.length === 0 ? <Text style={{ color: colors.textSecondary }}>Chưa có báo cáo thành viên.</Text> : null}
                 </View>
               </View>
 

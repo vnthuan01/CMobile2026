@@ -3,6 +3,7 @@ import { extractApiErrorMessage } from '../utils/apiError';
 import type {
   AssignedCampaignSummary,
   TeamDetailResponse,
+  TeamMemberSummary,
   TeamMode,
   TeamTrackingHeartbeatRequest,
   TeamTrackingHeartbeatResponse,
@@ -72,6 +73,18 @@ const normalizeAssignedCampaigns = (team: any): AssignedCampaignSummary[] => {
       null,
     role: campaign?.role ?? campaign?.teamRole ?? campaign?.campaignTeam?.role ?? null,
     status: campaign?.status ?? null,
+    startDate:
+      campaign?.startDate ??
+      campaign?.campaign?.startDate ??
+      campaign?.campaignTeam?.startDate ??
+      campaign?.campaignTeam?.campaign?.startDate ??
+      null,
+    endDate:
+      campaign?.endDate ??
+      campaign?.campaign?.endDate ??
+      campaign?.campaignTeam?.endDate ??
+      campaign?.campaignTeam?.campaign?.endDate ??
+      null,
   }));
 
   return normalized
@@ -83,11 +96,77 @@ const normalizeAssignedCampaigns = (team: any): AssignedCampaignSummary[] => {
     }, []);
 };
 
+const normalizeTeamMembers = (team: any): TeamMemberSummary[] => {
+  const sources = Array.isArray(team?.members)
+    ? team.members
+    : Array.isArray(team?.teamMembers)
+      ? team.teamMembers
+      : Array.isArray(team?.users)
+        ? team.users
+        : [];
+
+  return sources
+    .map((member: any) => {
+      const rawUser = member?.user ?? member?.member ?? member?.profile ?? null;
+
+      const userId = String(
+        member?.userId ??
+          member?.id ??
+          member?.memberId ??
+          member?.accountId ??
+          rawUser?.userId ??
+          rawUser?.id ??
+          '',
+      );
+
+      const displayName =
+        member?.displayName ??
+        member?.fullName ??
+        member?.name ??
+        rawUser?.displayName ??
+        rawUser?.fullName ??
+        rawUser?.name ??
+        'Thành viên';
+
+      const volunteerProfileId =
+        member?.volunteerProfileId ??
+        member?.volunteerId ??
+        member?.profileId ??
+        member?.volunteerProfile?.volunteerProfileId ??
+        member?.volunteerProfile?.id ??
+        rawUser?.volunteerProfileId ??
+        rawUser?.volunteerProfile?.volunteerProfileId ??
+        rawUser?.volunteerProfile?.id ??
+        null;
+
+      return {
+        userId,
+        displayName,
+        email: member?.email ?? rawUser?.email ?? '',
+        volunteerProfileId: volunteerProfileId ? String(volunteerProfileId) : null,
+        role: member?.role ?? member?.teamRole ?? rawUser?.role ?? 'Member',
+        skills: Array.isArray(member?.skills)
+          ? member.skills
+          : Array.isArray(rawUser?.skills)
+            ? rawUser.skills
+            : [],
+        joinedAt:
+          member?.joinedAt ??
+          member?.createdAt ??
+          member?.joinedDate ??
+          rawUser?.joinedAt ??
+          new Date(0).toISOString(),
+      } satisfies TeamMemberSummary;
+    })
+    .filter((member) => member.userId || member.volunteerProfileId || member.displayName);
+};
+
 const normalizeTeam = (team: TeamDetailResponse | null): TeamDetailResponse | null => {
   if (!team) return null;
   const normalized = team as TeamDetailResponse & Record<string, any>;
   return {
     ...normalized,
+    members: normalizeTeamMembers(normalized),
     assignedCampaigns: normalizeAssignedCampaigns(normalized),
     teamMode: normalizeTeamMode(normalized),
   };

@@ -1,14 +1,17 @@
 import '@/global.css';
+import CustomDropdown from '@/src/components/CustomDropdown';
 import MemberCard, { type TeamMember } from '@/src/components/common/MemberCard';
 import StickyFooterButton from '@/src/components/common/StickyFooterButton';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
+import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
+import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { CampaignTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse } from '@/src/types/leaderTask';
 import type { TeamMemberSummary } from '@/src/types/team';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,6 +31,13 @@ const initialsOf = (name?: string) =>
     .map((part) => part[0]?.toUpperCase() || '')
     .join('');
 
+const dinhDangNgay = (value?: string | null) => {
+  if (!value) return 'Chưa xác định';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('vi-VN');
+};
+
 export default function DashboardTeamLeaderScreen({
   onAllocateTask,
   onViewMissionDetail,
@@ -35,11 +45,18 @@ export default function DashboardTeamLeaderScreen({
   const { top, bottom } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const [activeChip, setActiveChip] = useState(0);
+  const [selectedCampaignId, setSelectedCampaignId] = useState('');
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
 
   const team = myTeamData?.team;
   const teamMode = myTeamData?.teamMode ?? 'rescue';
-  const { campaignId } = useActiveAssignedCampaign(team);
+  const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(team?.teamId, !!team?.teamId);
+  const { campaignId, activeCampaign, assignedCampaigns } = useActiveAssignedCampaign(
+    team,
+    selectedCampaignId || null,
+    fallbackAssignedCampaigns,
+  );
+  const { data: campaignDetail } = useCampaignDetail(campaignId || undefined, !!campaignId);
   const { data: campaignTeams = [] } = useCampaignTeams(campaignId);
   const myCampaignTeam = campaignTeams.find((item: CampaignTeamResponse) => item.teamId === team?.teamId) ?? campaignTeams[0];
   const { data: taskData, isLoading: isTasksLoading } = useCampaignTasks(campaignId, {
@@ -47,6 +64,12 @@ export default function DashboardTeamLeaderScreen({
     pageSize: 50,
     campaignTeamId: myCampaignTeam?.campaignTeamId,
   });
+
+  useEffect(() => {
+    if (!selectedCampaignId && assignedCampaigns.length > 0) {
+      setSelectedCampaignId(assignedCampaigns[0].campaignId);
+    }
+  }, [assignedCampaigns, selectedCampaignId]);
 
   const members: TeamMember[] = useMemo(() => {
     const source = team?.members ?? [];
@@ -69,6 +92,13 @@ export default function DashboardTeamLeaderScreen({
   const inProgress = taskItems.filter((task: CampaignTaskResponse) => task.status === CampaignTaskStatus.InProgress).length;
   const progress = taskItems.length ? Math.round((completed / taskItems.length) * 100) : 0;
   const currentTask = taskItems[0];
+  const campaignOptions = useMemo(
+    () => assignedCampaigns.map((campaign) => ({ label: campaign.campaignName || campaign.campaignId, value: campaign.campaignId })),
+    [assignedCampaigns],
+  );
+  const campaignName = campaignDetail?.name || activeCampaign?.campaignName || myCampaignTeam?.campaignName || team?.name || 'Chưa có chiến dịch';
+  const campaignStartDate = campaignDetail?.startDate || activeCampaign?.startDate;
+  const campaignEndDate = campaignDetail?.endDate || activeCampaign?.endDate;
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -88,7 +118,7 @@ export default function DashboardTeamLeaderScreen({
           <View>
             <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>Nhóm trưởng</Text>
             <Text className="text-base font-bold leading-tight" style={{ color: colors.text }}>
-              {team?.leader?.displayName || team?.name || 'Chưa có team'}
+              {team?.leader?.displayName || team?.name || 'Chưa có đội'}
             </Text>
           </View>
         </View>
@@ -114,6 +144,23 @@ export default function DashboardTeamLeaderScreen({
         ) : (
           <>
             <View className="mb-6">
+              <View className="rounded-2xl border p-4 mb-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <Text className="text-sm" style={{ color: colors.textSecondary }}>Chiến dịch đang xem</Text>
+                <View className="mt-2">
+                  <CustomDropdown
+                    items={campaignOptions}
+                    selectedValue={selectedCampaignId}
+                    onValueChange={setSelectedCampaignId}
+                    placeholder="Chọn chiến dịch"
+                    title="Chọn chiến dịch"
+                  />
+                </View>
+                <Text className="mt-2 text-base font-bold" style={{ color: colors.text }}>{campaignName}</Text>
+                <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                  Từ {dinhDangNgay(campaignStartDate)} đến {dinhDangNgay(campaignEndDate)}
+                </Text>
+              </View>
+
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-lg font-bold" style={{ color: colors.text }}>Nhiệm vụ hiện tại</Text>
                 <TouchableOpacity onPress={onViewMissionDetail} className="flex-row items-center gap-1">
@@ -130,8 +177,20 @@ export default function DashboardTeamLeaderScreen({
                   {currentTask?.title || 'Chưa có nhiệm vụ nào'}
                 </Text>
                 <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-                  {currentTask?.description || 'Hãy tạo hoặc phân công task mới cho chiến dịch hiện tại.'}
+                  {currentTask?.description || 'Hãy tạo hoặc phân công công việc mới cho chiến dịch hiện tại.'}
                 </Text>
+
+                <View className="mt-3 rounded-xl border p-3" style={{ borderColor: colors.border, backgroundColor: `${colors.primary}08` }}>
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="time-outline" size={16} color={colors.primary} />
+                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                      Thời gian hoạt động chiến dịch
+                    </Text>
+                  </View>
+                  <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                    Từ {dinhDangNgay(campaignStartDate)} đến {dinhDangNgay(campaignEndDate)}
+                  </Text>
+                </View>
 
                 <View className="mb-4 mt-4">
                   <View className="flex-row justify-between mb-1">

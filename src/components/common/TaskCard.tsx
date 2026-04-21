@@ -13,6 +13,8 @@ export interface TaskItem {
     status: TaskStatus;
     assignee?: string;
     assigneeCount?: number;
+    isMainTask?: boolean;
+    showUnassignedState?: boolean;
 }
 
 interface TaskCardProps {
@@ -31,6 +33,8 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
     const { colors, isDark } = useTheme();
     const priority = PRIORITY_CONFIG[task.priority];
     const isDone = task.status === 'done';
+    const showUnassignedState = task.showUnassignedState ?? task.status === 'unassigned';
+    const borderAccent = task.isMainTask ? colors.secondary : isDone ? '#22c55e' : priority.color;
 
     return (
         <TouchableOpacity
@@ -39,9 +43,9 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
             className="overflow-hidden rounded-xl border shadow-sm"
             style={{
                 backgroundColor: colors.card,
-                borderColor: colors.border,
+                borderColor: task.isMainTask ? `${colors.secondary}55` : colors.border,
                 borderLeftWidth: 4,
-                borderLeftColor: isDone ? '#22c55e' : priority.color,
+                borderLeftColor: borderAccent,
                 opacity: isDone ? 0.6 : 1,
             }}
         >
@@ -89,7 +93,7 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
                     <View className="flex-row items-center justify-between">
                         {/* Assignee */}
                         <View className="flex-row items-center">
-                            {task.status === 'unassigned' ? (
+                            {showUnassignedState ? (
                                 <>
                                     <View
                                         className="h-7 w-7 items-center justify-center rounded-full border-2"
@@ -101,7 +105,7 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
                                         <Ionicons name="person-add" size={12} color={colors.icon} />
                                     </View>
                                     <Text className="ml-2 text-xs italic" style={{ color: colors.icon }}>
-                                        Chưa giao
+                                        Chưa phân công thành viên
                                     </Text>
                                 </>
                             ) : (

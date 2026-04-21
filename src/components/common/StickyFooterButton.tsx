@@ -8,6 +8,7 @@ interface StickyFooterButtonProps {
   onPress?: () => void;
   icon?: string;
   backgroundColor?: string;
+  disabled?: boolean;
 }
 
 export default function StickyFooterButton({
@@ -15,6 +16,7 @@ export default function StickyFooterButton({
   onPress,
   icon,
   backgroundColor,
+  disabled,
 }: StickyFooterButtonProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
@@ -32,8 +34,9 @@ export default function StickyFooterButton({
     >
       <TouchableOpacity
         onPress={onPress}
+        disabled={disabled}
         className="flex w-full flex-row items-center justify-center gap-2 rounded-xl px-4 py-3.5 shadow-lg"
-        style={{ backgroundColor: bgColor }}
+        style={{ backgroundColor: bgColor, opacity: disabled ? 0.6 : 1 }}
       >
         <Text className="text-base font-bold tracking-tight text-white">
           {title}
@@ -43,3 +46,4 @@ export default function StickyFooterButton({
     </View>
   );
 }
+
