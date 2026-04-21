@@ -58,6 +58,8 @@ export interface CampaignListItem {
   name: string;
   description?: string | null;
   type: number;
+  ForVolunteerRegistration?: boolean;
+  forVolunteerRegistration?: boolean;
   status: number;
   completionRule?: number;
   startDate: string;
@@ -162,6 +164,30 @@ export interface DonationPaymentReturnParams {
   orderCode?: number;
 }
 
+const isTruthyFlag = (value: unknown) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes';
+  }
+
+  return false;
+};
+
+const isVolunteerRegistrationCampaign = (campaign: CampaignListItem) => {
+  return (
+    isTruthyFlag((campaign as any).ForVolunteerRegistration) ||
+    isTruthyFlag((campaign as any).forVolunteerRegistration)
+  );
+};
+
 export async function getCampaignDonationSummary(campaignId: string) {
   const response = await api.get<PublicCampaignSummary>(
     `/campaigns/${campaignId}/summary`,
@@ -170,11 +196,39 @@ export async function getCampaignDonationSummary(campaignId: string) {
 }
 
 export async function getFundraisingCampaigns() {
-  return getCampaigns({
-    PageIndex: 1,
-    PageSize: 20,
-    Type: CampaignType.Fundraising,
-  });
+  const [fundraisingResponse, volunteerResponse] = await Promise.all([
+    getCampaigns({
+      PageIndex: 1,
+      PageSize: 50,
+      Type: CampaignType.Fundraising,
+      ForVolunteerRegistration: false,
+    }),
+    getCampaigns({
+      PageIndex: 1,
+      PageSize: 200,
+      ForVolunteerRegistration: true,
+    }),
+  ]);
+
+  const volunteerCampaignIds = new Set(
+    (volunteerResponse.items || [])
+      .map((campaign) => campaign.campaignId)
+      .filter(Boolean),
+  );
+
+  return {
+    ...fundraisingResponse,
+    items: (fundraisingResponse.items || []).filter((campaign) => {
+      const campaignType = Number(campaign.type);
+      const isVolunteerRegistration =
+        isVolunteerRegistrationCampaign(campaign) ||
+        volunteerCampaignIds.has(campaign.campaignId);
+
+      return (
+        campaignType === CampaignType.Fundraising && !isVolunteerRegistration
+      );
+    }),
+  };
 }
 
 export async function getCampaigns(params?: CampaignListParams) {
