@@ -32,7 +32,7 @@ export default function ScreenHeader({
 }: ScreenHeaderProps) {
   const { top } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const sideSlotWidth = 96;
+  const sideSlotWidth = 72;
 
   const bgColor = backgroundColor ?? colors.card;
   const txtColor = titleColor ?? colors.text;
@@ -61,7 +61,10 @@ export default function ScreenHeader({
       className={showBottomBorder ? 'border-b' : ''}
     >
       <View className="flex-row items-center">
-        <View style={{ width: sideSlotWidth, alignItems: 'flex-start' }}>
+        <View
+          style={{ width: sideSlotWidth, alignItems: 'flex-start' }}
+          className="shrink-0"
+        >
           {onBack ? (
             <TouchableOpacity
               onPress={onBack}
@@ -77,11 +80,12 @@ export default function ScreenHeader({
           ) : null}
         </View>
 
-        <View className="flex-1 items-center">
+        <View className="min-w-0 flex-1 items-center px-2">
           <Text
             style={{ color: txtColor, fontSize: 18 }}
             className="text-center font-bold leading-tight"
             numberOfLines={1}
+            ellipsizeMode="tail"
           >
             {title}
           </Text>
@@ -90,13 +94,17 @@ export default function ScreenHeader({
               style={{ color: colors.textSecondary, fontSize: 13 }}
               className="mt-0.5 text-center"
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {subtitle}
             </Text>
           ) : null}
         </View>
 
-        <View style={{ width: sideSlotWidth }} className="items-end">
+        <View
+          style={{ width: sideSlotWidth }}
+          className="shrink-0 items-end"
+        >
           {resolvedRightAction}
         </View>
       </View>

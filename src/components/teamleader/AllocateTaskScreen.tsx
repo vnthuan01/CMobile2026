@@ -1,5 +1,4 @@
 import '@/global.css';
-import CustomDropdown from '@/src/components/CustomDropdown';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import TaskCard, { type TaskItem } from '@/src/components/common/TaskCard';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -29,6 +28,7 @@ import type { TeamMemberSummary } from '@/src/types/team';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { Platform } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -158,12 +158,17 @@ const toTaskItem = (task: CampaignTaskResponse): TaskItem => ({
 export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const params = useLocalSearchParams<{ campaignId?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const detailSectionYRef = useRef(0);
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
   const teamMode = myTeamData?.teamMode ?? 'rescue';
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
+  const routeCampaignId =
+    typeof params.campaignId === 'string' ? params.campaignId : '';
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(
+    routeCampaignId,
+  );
   const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(team?.teamId, !!team?.teamId);
   const { activeCampaign, assignedCampaigns, campaignId } = useActiveAssignedCampaign(
     team,
@@ -222,20 +227,17 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
     () => memberOptions.filter((member: TeamMemberSummary) => !!member.volunteerProfileId),
     [memberOptions],
   );
-  const campaignOptions = useMemo(
-    () =>
-      assignedCampaigns.map((campaign: { campaignName?: string | null; campaignId: string }) => ({
-        label: campaign.campaignName || campaign.campaignId,
-        value: campaign.campaignId,
-      })),
-    [assignedCampaigns],
-  );
-
   useEffect(() => {
     if (!selectedCampaignId && assignedCampaigns.length > 0) {
       setSelectedCampaignId(assignedCampaigns[0].campaignId);
     }
   }, [assignedCampaigns, selectedCampaignId]);
+
+  useEffect(() => {
+    if (routeCampaignId && routeCampaignId !== selectedCampaignId) {
+      setSelectedCampaignId(routeCampaignId);
+    }
+  }, [routeCampaignId, selectedCampaignId]);
 
   useEffect(() => {
     if (!selectedMemberId && assignableMembers.length) {
@@ -437,16 +439,7 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
           <Text className="text-xl font-bold leading-tight" style={{ color: colors.text }}>Quản lý công việc</Text>
           <View className="rounded-xl border p-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
             <Text className="text-sm" style={{ color: colors.textSecondary }}>Chiến dịch đang thao tác</Text>
-            <View className="mt-2">
-              <CustomDropdown
-                items={campaignOptions}
-                selectedValue={selectedCampaignId}
-                onValueChange={setSelectedCampaignId}
-                placeholder="Chọn chiến dịch"
-                title="Chọn chiến dịch"
-              />
-            </View>
-            <Text className="mt-1 text-base font-bold" style={{ color: colors.text }}>
+            <Text className="mt-2 text-base font-bold" style={{ color: colors.text }}>
               {campaignName}
             </Text>
             <View className="mt-3 rounded-lg border p-3" style={{ borderColor: colors.border, backgroundColor: `${colors.primary}08` }}>

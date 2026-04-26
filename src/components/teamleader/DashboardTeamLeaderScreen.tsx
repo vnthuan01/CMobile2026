@@ -106,23 +106,28 @@ export default function DashboardTeamLeaderScreen({
         style={{ paddingTop: top, backgroundColor: colors.card, borderBottomColor: colors.border }}
         className="flex-row items-center justify-between border-b px-4 pb-2 shadow-sm"
       >
-        <View className="flex-row items-center gap-3">
+        <View className="min-w-0 flex-1 flex-row items-center gap-3 pr-3">
           <View
-            className="h-10 w-10 items-center justify-center rounded-full"
+            className="h-10 w-10 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderWidth: 2, borderColor: `${colors.primary}30` }}
           >
             <Text className="text-sm font-bold" style={{ color: colors.textSecondary }}>
               {initialsOf(team?.leader?.displayName || team?.name)}
             </Text>
           </View>
-          <View>
+          <View className="min-w-0 flex-1">
             <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>Nhóm trưởng</Text>
-            <Text className="text-base font-bold leading-tight" style={{ color: colors.text }}>
+            <Text
+              className="text-base font-bold leading-tight"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {team?.leader?.displayName || team?.name || 'Chưa có đội'}
             </Text>
           </View>
         </View>
-        <TouchableOpacity className="relative h-10 w-10 items-center justify-center rounded-full">
+        <TouchableOpacity className="relative h-10 w-10 shrink-0 items-center justify-center rounded-full">
           <Ionicons name="notifications-outline" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>

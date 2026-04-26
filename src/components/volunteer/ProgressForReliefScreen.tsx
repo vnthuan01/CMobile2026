@@ -116,6 +116,9 @@ export default function ProgressForReliefScreen({
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const params = useLocalSearchParams<{
+    campaignId?: string;
+    campaignTeamId?: string;
+    campaignTeamName?: string;
     campaignTaskId?: string;
     distributionPointId?: string;
     initialTab?: string;
@@ -129,19 +132,31 @@ export default function ProgressForReliefScreen({
     team?.teamId ?? '',
     !!team?.teamId,
   );
-  const { campaignId } = useActiveAssignedCampaign(
+  const { campaignId: activeCampaignId } = useActiveAssignedCampaign(
     team,
     null,
     fallbackAssignedCampaigns,
   );
+  const campaignId = params.campaignId || activeCampaignId;
 
   const { data: campaignTeams = [] } = useCampaignTeams(
     teamMode === 'relief' ? campaignId : null,
   );
+  const selectedCampaignTeamId =
+    typeof params.campaignTeamId === 'string'
+      ? params.campaignTeamId
+      : undefined;
   const myCampaignTeam =
+    (selectedCampaignTeamId
+      ? campaignTeams.find(
+          (item: CampaignTeamResponse) =>
+            item.campaignTeamId === selectedCampaignTeamId,
+        )
+      : undefined) ??
     campaignTeams.find(
       (item: CampaignTeamResponse) => item.teamId === team?.teamId,
-    ) ?? campaignTeams[0];
+    ) ??
+    campaignTeams[0];
 
   const { data: myMemberTaskData, isLoading: isMyMemberTasksLoading } =
     useMyMemberTasks(teamMode === 'relief' ? campaignId : null, {
@@ -161,13 +176,17 @@ export default function ProgressForReliefScreen({
     });
   }, [myMemberTaskData?.items]);
 
+  const [deliveryPageIndex, setDeliveryPageIndex] = useState(1);
+  const [deliveryPageSize, setDeliveryPageSize] = useState<50 | 100>(50);
+
   // Households for delivery
   const { data: checklistData, isLoading: isChecklistLoading } =
     useReliefChecklist(teamMode === 'relief' ? campaignId : null, {
       campaignTeamId: myCampaignTeam?.campaignTeamId,
       distributionPointId: params.distributionPointId,
       deliveryMode: 1,
-      pageSize: 50,
+      pageIndex: deliveryPageIndex || 1,
+      pageSize: deliveryPageSize || 50,
     });
 
   // State
@@ -186,6 +205,7 @@ export default function ProgressForReliefScreen({
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState<
     'all' | HouseholdFulfillmentStatus
   >('all');
+  const [jumpToPageInput, setJumpToPageInput] = useState('1');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [expandedDeliveryId, setExpandedDeliveryId] = useState<string | null>(
     null,
@@ -199,6 +219,57 @@ export default function ProgressForReliefScreen({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const allChecklistItems = checklistData?.items ?? [];
+  const checklistTotalCount = checklistData?.totalCount ?? 0;
+  const checklistCurrentPage = checklistData?.currentPage ?? deliveryPageIndex;
+  const checklistTotalPages = checklistData?.totalPages ?? 1;
+  const checklistPageSize = checklistData?.pageSize ?? deliveryPageSize;
+  const selectedDistributionPointId =
+    typeof params.distributionPointId === 'string'
+      ? params.distributionPointId
+      : undefined;
+  const checklistDebugReasons = useMemo(() => {
+    const reasons: string[] = [];
+    if (teamMode !== 'relief') {
+      reasons.push('Team hiện tại không ở chế độ relief.');
+    }
+    if (!campaignId) {
+      reasons.push('Không xác định được campaignId để fetch checklist.');
+    }
+    if (!selectedDistributionPointId) {
+      reasons.push('Không có distributionPointId được truyền vào màn hình.');
+    }
+    if (!myCampaignTeam?.campaignTeamId) {
+      reasons.push('Không xác định được campaignTeamId của team hiện tại.');
+    }
+    if (
+      !!selectedCampaignTeamId &&
+      !!myCampaignTeam?.campaignTeamId &&
+      selectedCampaignTeamId !== myCampaignTeam.campaignTeamId
+    ) {
+      reasons.push(
+        `campaignTeamId từ route (${selectedCampaignTeamId}) không khớp campaignTeamId resolve được (${myCampaignTeam.campaignTeamId}).`,
+      );
+    }
+    if (
+      checklistData &&
+      checklistTotalCount === 0 &&
+      selectedDistributionPointId &&
+      myCampaignTeam?.campaignTeamId
+    ) {
+      reasons.push(
+        'API checklist đã trả 0 item cho bộ lọc distributionPointId + campaignTeamId + deliveryMode=1 hiện tại.',
+      );
+    }
+    return reasons;
+  }, [
+    campaignId,
+    checklistData,
+    checklistTotalCount,
+    myCampaignTeam?.campaignTeamId,
+    selectedCampaignTeamId,
+    selectedDistributionPointId,
+    teamMode,
+  ]);
   const deliveryItems = useMemo(() => {
     const teamFiltered = allChecklistItems.filter(
       (item) => item.deliveryMode === 1,
@@ -249,6 +320,52 @@ export default function ProgressForReliefScreen({
     pendingFilteredDeliveryItems.every((item) =>
       selectedDeliveryIds.includes(item.householdDeliveryId),
     );
+
+  useEffect(() => {
+    setDeliveryPageIndex(1);
+  }, [params.distributionPointId, myCampaignTeam?.campaignTeamId]);
+
+  useEffect(() => {
+    setJumpToPageInput(String(checklistCurrentPage));
+  }, [checklistCurrentPage]);
+
+  useEffect(() => {
+    if (!__DEV__) return;
+    console.log('[ProgressForReliefScreen] checklist-debug', {
+      routeCampaignId: params.campaignId,
+      resolvedCampaignId: campaignId,
+      routeCampaignTeamId: selectedCampaignTeamId,
+      resolvedCampaignTeamId: myCampaignTeam?.campaignTeamId,
+      resolvedCampaignTeamName:
+        myCampaignTeam?.teamName || params.campaignTeamName,
+      distributionPointId: selectedDistributionPointId,
+      deliveryMode: 1,
+      pageIndex: deliveryPageIndex,
+      pageSize: deliveryPageSize,
+      apiTotalCount: checklistTotalCount,
+      apiCurrentPage: checklistCurrentPage,
+      apiTotalPages: checklistTotalPages,
+      itemCountOnPage: allChecklistItems.length,
+      visibleCountAfterClientFilter: filteredDeliveryItems.length,
+      reasons: checklistDebugReasons,
+    });
+  }, [
+    allChecklistItems.length,
+    campaignId,
+    checklistCurrentPage,
+    checklistDebugReasons,
+    checklistTotalCount,
+    checklistTotalPages,
+    deliveryPageIndex,
+    deliveryPageSize,
+    filteredDeliveryItems.length,
+    myCampaignTeam?.campaignTeamId,
+    myCampaignTeam?.teamName,
+    params.campaignId,
+    params.campaignTeamName,
+    selectedCampaignTeamId,
+    selectedDistributionPointId,
+  ]);
 
   const { data: taskDetail, isLoading: isDetailLoading } =
     useCampaignTaskDetail(selectedTaskId);
@@ -533,6 +650,20 @@ export default function ProgressForReliefScreen({
       }
       return Array.from(new Set([...prev, ...pendingIds]));
     });
+  };
+
+  const handleJumpToPage = () => {
+    const parsed = Number.parseInt(jumpToPageInput.trim(), 10);
+    if (Number.isNaN(parsed)) {
+      setJumpToPageInput(String(checklistCurrentPage));
+      return;
+    }
+    const safePage = Math.min(
+      Math.max(parsed, 1),
+      Math.max(checklistTotalPages, 1),
+    );
+    setDeliveryPageIndex(safePage);
+    setJumpToPageInput(String(safePage));
   };
 
   const handleCompleteBatch = async () => {
@@ -1254,6 +1385,20 @@ export default function ProgressForReliefScreen({
             <Text className="text-lg font-bold" style={{ color: colors.text }}>
               Danh sách hộ cần phát hàng
             </Text>
+            <View
+              className="rounded-xl border px-3 py-2"
+              style={{
+                borderColor: `${colors.secondary}40`,
+                backgroundColor: `${colors.secondary}10`,
+              }}
+            >
+              <Text
+                className="text-sm font-semibold"
+                style={{ color: colors.secondary }}
+              >
+                Đang lấy {checklistPageSize} hộ/trang
+              </Text>
+            </View>
             <Text className="text-sm" style={{ color: colors.textSecondary }}>
               Đánh dấu từng hộ sau khi phát hàng. Với nhiều hộ bạn có thể hoàn
               thành lần lượt.
@@ -1300,11 +1445,48 @@ export default function ProgressForReliefScreen({
               >
                 Team: {myCampaignTeam?.teamName || 'Chưa rõ'}
                 {`\n`}
+                Chiến dịch: {campaignId ? 'Đang hoạt động' : 'Chưa rõ'}
+                {`\n`}
+                Điểm phát:{' '}
+                {selectedDistributionPointId ? 'Đã chọn' : 'Chưa chọn'}
+                {`\n`}
                 Hình thức phát: {DeliveryModeLabels[1]}
                 {`\n`}
-                Tổng danh sách sau lọc: {filteredDeliveryItems.length}
+                Tổng hộ dân trả về: {checklistTotalCount}
+                {`\n`}
+                Đang xem trang: {checklistCurrentPage}/
+                {Math.max(checklistTotalPages, 1)} •{' '}
+                {filteredDeliveryItems.length} hộ trên màn hình này
               </Text>
             </View>
+
+            {checklistDebugReasons.length > 0 ? (
+              <View
+                className="rounded-xl border p-3"
+                style={{
+                  borderColor: `${colors.status.pending}55`,
+                  backgroundColor: `${colors.status.pending}10`,
+                }}
+              >
+                <Text
+                  className="text-sm font-semibold"
+                  style={{ color: colors.text }}
+                >
+                  Chẩn đoán vì sao không có hộ dân
+                </Text>
+                <View className="mt-2 gap-2">
+                  {checklistDebugReasons.map((reason, index) => (
+                    <Text
+                      key={`${index}-${reason}`}
+                      className="text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      • {reason}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            ) : null}
             {activeMemberTask && isDeliveryTask(activeMemberTask) ? (
               <View
                 className="rounded-xl border p-3"
@@ -1317,14 +1499,14 @@ export default function ProgressForReliefScreen({
                   className="text-sm font-semibold"
                   style={{ color: colors.text }}
                 >
-                  Flow hoàn thành subtask phát hàng
+                  Các bước hoàn thành nhiệm vụ phát hàng
                 </Text>
                 <Text
                   className="mt-1 text-xs"
                   style={{ color: colors.textSecondary }}
                 >
                   1) Giao hàng cho các hộ được gán{`\n`}2) Tải ảnh minh chứng
-                  {`\n`}3) Quay lại tab Nhiệm vụ con để bấm Hoàn thành
+                  {`\n`}3) Quay lại màn Nhiệm vụ con để bấm Hoàn thành
                 </Text>
               </View>
             ) : null}
@@ -1365,6 +1547,136 @@ export default function ProgressForReliefScreen({
 
                 {showAdvancedFilters ? (
                   <View className="mt-3 gap-3">
+                    <View className="flex-row flex-wrap gap-2">
+                      {[50, 100].map((size) => {
+                        const selected = deliveryPageSize === size;
+                        return (
+                          <TouchableOpacity
+                            key={`page-size-${size}`}
+                            onPress={() => {
+                              setDeliveryPageSize(size as 50 | 100);
+                              setDeliveryPageIndex(1);
+                            }}
+                            className="rounded-full border px-3 py-2"
+                            style={{
+                              borderColor: selected
+                                ? colors.primary
+                                : colors.border,
+                              backgroundColor: selected
+                                ? `${colors.primary}12`
+                                : colors.card,
+                            }}
+                          >
+                            <Text
+                              className="text-xs font-semibold"
+                              style={{
+                                color: selected
+                                  ? colors.primary
+                                  : colors.textSecondary,
+                              }}
+                            >
+                              Hiện {size} hộ
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    <View
+                      className="gap-3 rounded-lg border p-3"
+                      style={{
+                        borderColor: colors.border,
+                        backgroundColor: colors.background,
+                      }}
+                    >
+                      <View className="items-center">
+                        <Text
+                          className="text-sm font-semibold"
+                          style={{ color: colors.text }}
+                        >
+                          Trang {checklistCurrentPage}/{checklistTotalPages}
+                        </Text>
+                        <Text
+                          className="mt-1 text-xs"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Tổng {checklistTotalCount} hộ • tối đa{' '}
+                          {checklistPageSize} hộ/trang
+                        </Text>
+                      </View>
+
+                      <View className="flex-row items-center gap-2">
+                        <TouchableOpacity
+                          onPress={() =>
+                            setDeliveryPageIndex((prev) =>
+                              Math.max(prev - 1, 1),
+                            )
+                          }
+                          disabled={checklistCurrentPage <= 1}
+                          className="flex-1 rounded-lg border px-3 py-2"
+                          style={{
+                            borderColor: colors.border,
+                            opacity: checklistCurrentPage <= 1 ? 0.5 : 1,
+                          }}
+                        >
+                          <Text
+                            className="text-center"
+                            style={{ color: colors.text }}
+                          >
+                            Trang trước
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TextInput
+                          value={jumpToPageInput}
+                          onChangeText={setJumpToPageInput}
+                          keyboardType="number-pad"
+                          placeholder="Trang"
+                          placeholderTextColor={colors.textSecondary}
+                          className="min-w-[72px] rounded-lg border px-3 py-2 text-center"
+                          style={{
+                            borderColor: colors.border,
+                            color: colors.text,
+                            backgroundColor: colors.card,
+                          }}
+                        />
+
+                        <TouchableOpacity
+                          onPress={handleJumpToPage}
+                          className="rounded-lg px-3 py-2"
+                          style={{ backgroundColor: colors.primary }}
+                        >
+                          <Text className="font-semibold text-white">
+                            Đi tới
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() =>
+                            setDeliveryPageIndex((prev) =>
+                              Math.min(prev + 1, checklistTotalPages),
+                            )
+                          }
+                          disabled={checklistCurrentPage >= checklistTotalPages}
+                          className="flex-1 rounded-lg border px-3 py-2"
+                          style={{
+                            borderColor: colors.border,
+                            opacity:
+                              checklistCurrentPage >= checklistTotalPages
+                                ? 0.5
+                                : 1,
+                          }}
+                        >
+                          <Text
+                            className="text-center"
+                            style={{ color: colors.text }}
+                          >
+                            Trang sau
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
                     <TextInput
                       value={deliverySearch}
                       onChangeText={setDeliverySearch}
@@ -1511,7 +1823,9 @@ export default function ProgressForReliefScreen({
                 style={{ borderColor: colors.border }}
               >
                 <Text style={{ color: colors.textSecondary }}>
-                  Không có hộ dân nào phù hợp với bộ lọc hiện tại.
+                  {checklistTotalCount === 0
+                    ? 'API checklist đang trả về 0 hộ cho điểm phát / team / delivery mode hiện tại.'
+                    : 'Không có hộ dân nào phù hợp với bộ lọc hiện tại trên trang đang xem.'}
                 </Text>
               </View>
             ) : (
@@ -1635,7 +1949,7 @@ export default function ProgressForReliefScreen({
                             className="mt-1 text-xs"
                             style={{ color: colors.textSecondary }}
                           >
-                            Proof hiện có: {household.proofCount}
+                            Bằng chứng hiện có: {household.proofCount}
                           </Text>
                           <Text
                             className="mt-2 text-xs font-semibold"
@@ -1891,6 +2205,99 @@ export default function ProgressForReliefScreen({
                 },
               )
             )}
+
+            {checklistTotalPages > 1 ? (
+              <View
+                className="rounded-xl border p-3"
+                style={{
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                }}
+              >
+                <View className="gap-3">
+                  <View className="items-center">
+                    <Text
+                      className="text-sm font-semibold"
+                      style={{ color: colors.text }}
+                    >
+                      Trang {checklistCurrentPage}/{checklistTotalPages}
+                    </Text>
+                    <Text
+                      className="mt-1 text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Tổng {checklistTotalCount} hộ • tối đa {checklistPageSize}{' '}
+                      hộ/trang
+                    </Text>
+                  </View>
+
+                  <View className="flex-row items-center gap-2">
+                    <TouchableOpacity
+                      onPress={() =>
+                        setDeliveryPageIndex((prev) => Math.max(prev - 1, 1))
+                      }
+                      disabled={checklistCurrentPage <= 1}
+                      className="flex-1 rounded-lg border px-3 py-2"
+                      style={{
+                        borderColor: colors.border,
+                        opacity: checklistCurrentPage <= 1 ? 0.5 : 1,
+                      }}
+                    >
+                      <Text
+                        className="text-center"
+                        style={{ color: colors.text }}
+                      >
+                        Trang trước
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TextInput
+                      value={jumpToPageInput}
+                      onChangeText={setJumpToPageInput}
+                      keyboardType="number-pad"
+                      placeholder="Trang"
+                      placeholderTextColor={colors.textSecondary}
+                      className="min-w-[72px] rounded-lg border px-3 py-2 text-center"
+                      style={{
+                        borderColor: colors.border,
+                        color: colors.text,
+                        backgroundColor: colors.background,
+                      }}
+                    />
+
+                    <TouchableOpacity
+                      onPress={handleJumpToPage}
+                      className="rounded-lg px-3 py-2"
+                      style={{ backgroundColor: colors.primary }}
+                    >
+                      <Text className="font-semibold text-white">Đi tới</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() =>
+                        setDeliveryPageIndex((prev) =>
+                          Math.min(prev + 1, checklistTotalPages),
+                        )
+                      }
+                      disabled={checklistCurrentPage >= checklistTotalPages}
+                      className="flex-1 rounded-lg border px-3 py-2"
+                      style={{
+                        borderColor: colors.border,
+                        opacity:
+                          checklistCurrentPage >= checklistTotalPages ? 0.5 : 1,
+                      }}
+                    >
+                      <Text
+                        className="text-center"
+                        style={{ color: colors.text }}
+                      >
+                        Trang sau
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ) : null}
             <View className="h-16" />
           </View>
         )}
@@ -1926,7 +2333,7 @@ export default function ProgressForReliefScreen({
             style={{
               backgroundColor: colors.card,
               maxHeight: '80%',
-              height: 400,
+              height: 450,
             }}
             onPress={(event) => event.stopPropagation()}
           >

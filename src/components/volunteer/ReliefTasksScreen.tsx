@@ -325,6 +325,9 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
     router.push({
       pathname: '/profile/progress-for-relief' as any,
       params: {
+        campaignId: campaignId || undefined,
+        campaignTeamId: myCampaignTeam?.campaignTeamId,
+        campaignTeamName: myCampaignTeam?.teamName,
         distributionPointId,
         initialTab: 'delivery',
       },
@@ -444,7 +447,14 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
 
               {isLeader ? (
                 <TouchableOpacity
-                  onPress={() => router.push('/profile/allocate-task' as any)}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/profile/allocate-task' as any,
+                      params: {
+                        campaignId: campaignId || undefined,
+                      },
+                    })
+                  }
                   className="mt-4 flex-row items-center justify-center rounded-xl bg-white/20 py-3"
                 >
                   <Ionicons name="construct-outline" size={18} color="#fff" />

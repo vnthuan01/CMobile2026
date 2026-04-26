@@ -1,5 +1,6 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
 import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
@@ -9,6 +10,7 @@ import {
   type CampaignTeamResponse,
 } from '@/src/types/leaderTask';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 type Props = {
@@ -18,12 +20,19 @@ type Props = {
 export default function ReliefHomeContent({ team }: Props) {
   const router = useRouter();
   const { colors } = useTheme();
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
+    null,
+  );
   const { data: fallbackAssignedCampaigns, isLoading: isCampaignsLoading } =
     useAssignedCampaigns(team?.teamId ?? '', !!team?.teamId);
-  const { activeCampaign, campaignId } = useActiveAssignedCampaign(
+  const { activeCampaign, campaignId, assignedCampaigns } = useActiveAssignedCampaign(
     team,
-    null,
+    selectedCampaignId,
     fallbackAssignedCampaigns || [],
+  );
+  const { data: campaignDetail } = useCampaignDetail(
+    campaignId || undefined,
+    !!campaignId,
   );
   const { data: reliefCampaignTeams = [] } = useCampaignTeams(campaignId);
   const myReliefCampaignTeam =
@@ -45,7 +54,12 @@ export default function ReliefHomeContent({ team }: Props) {
       task.status === CampaignTaskStatus.InProgress,
   ).length;
   const reliefCurrentTask = reliefTasks[0] ?? null;
-
+  const campaignName =
+    campaignDetail?.name ||
+    activeCampaign?.campaignName ||
+    myReliefCampaignTeam?.campaignName ||
+    'Chiến dịch hiện tại';
+  const hasTasks = reliefTasks.length > 0;
   return (
     <>
       <View className="mt-6 px-4">
@@ -106,8 +120,55 @@ export default function ReliefHomeContent({ team }: Props) {
                 className="mt-1 text-sm"
                 style={{ color: colors.textSecondary }}
               >
-                {activeCampaign?.campaignName || 'Chiến dịch hiện tại'}
+                {campaignName}
               </Text>
+              {assignedCampaigns.length > 1 ? (
+                <View className="mt-3 gap-2">
+                  <Text
+                    className="text-xs font-semibold"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Chọn chiến dịch để xem có công việc hay không
+                  </Text>
+                  <View className="flex-row flex-wrap gap-2">
+                    {assignedCampaigns.map((campaign) => {
+                      const selected = campaign.campaignId === campaignId;
+                      const isCurrentCampaign = campaign.campaignId === campaignId;
+                      const campaignHasTasks = isCurrentCampaign ? hasTasks : null;
+
+                      return (
+                        <TouchableOpacity
+                          key={campaign.campaignId}
+                          onPress={() => setSelectedCampaignId(campaign.campaignId)}
+                          className="rounded-full border px-3 py-2"
+                          style={{
+                            borderColor: selected ? colors.primary : colors.border,
+                            backgroundColor: selected
+                              ? `${colors.primary}12`
+                              : colors.card,
+                          }}
+                        >
+                          <Text
+                            className="text-xs font-semibold"
+                            style={{
+                              color: selected
+                                ? colors.primary
+                                : colors.textSecondary,
+                            }}
+                          >
+                            {campaign.campaignName || 'Chiến dịch'}
+                            {isCurrentCampaign
+                              ? campaignHasTasks
+                                ? ' • Có việc'
+                                : ' • Chưa có việc'
+                              : ''}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
               <View className="mt-4 flex-row gap-3">
                 <MiniInfo
                   label="Tổng việc"
@@ -143,6 +204,14 @@ export default function ReliefHomeContent({ team }: Props) {
                   {reliefCurrentTask?.description ||
                     'Nhóm trưởng có thể tạo và phân công công việc cho từng thành viên tại bảng điều phối nhóm.'}
                 </Text>
+                {assignedCampaigns.length > 1 ? (
+                  <Text
+                    className="mt-3 text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Bạn đang có {assignedCampaigns.length} chiến dịch được gán. Hiện màn này đang hiển thị chi tiết của 1 chiến dịch để bạn biết chiến dịch nào có việc và chiến dịch nào chưa có việc.
+                  </Text>
+                ) : null}
                 <TouchableOpacity
                   onPress={() => router.push('/profile/tasks' as any)}
                   className="mt-4 rounded-xl px-4 py-3"
