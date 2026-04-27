@@ -1,3 +1,4 @@
+import { useMyTeam } from '@/src/hooks/useMyTeam';
 import CitizenProfile from '@/src/features/profile/screens/CitizenProfileScreen';
 import VolunteerProfile from '@/src/features/profile/screens/VolunteerProfileScreen';
 import type { AuthState } from '@/src/store/authStore';
@@ -26,10 +27,12 @@ export default function ProfileIndexScreen() {
   const router = useRouter();
   const user = useAuthStore((state: AuthState) => state.user);
   const logout = useAuthStore((state: AuthState) => state.logout);
+  const { data: myTeamData } = useMyTeam(Boolean(user));
 
   const role = (user?.role ?? '').toLowerCase();
   const isVolunteer = role === 'volunteer' || role === 'leader';
-  const isLeader = role === 'leader';
+  const team = myTeamData?.team;
+  const isLeader = !!user?.id && !!team?.leader?.userId && user.id === team.leader.userId;
 
   const handleLogout = async () => {
     await logout();

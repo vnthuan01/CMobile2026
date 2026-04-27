@@ -8,6 +8,7 @@ import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
 import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useCampaignTaskDetail, useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
+import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import { CampaignTaskStatus, MemberTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse, type MemberTaskResponse } from '@/src/types/leaderTask';
 import { showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,13 +42,16 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
   const { bottom } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const [summaryNote, setSummaryNote] = useState('');
-  const [selectedCampaignId, setSelectedCampaignId] = useState('');
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
   const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(team?.teamId, !!team?.teamId);
+  const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
+    team,
+    fallbackAssignedCampaigns,
+  );
   const { campaignId, activeCampaign, assignedCampaigns } = useActiveAssignedCampaign(
     team,
-    selectedCampaignId || null,
+    selectedCampaignId,
     fallbackAssignedCampaigns,
   );
   const { data: campaignDetail } = useCampaignDetail(campaignId || undefined, !!campaignId);
@@ -60,12 +64,6 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
   });
   const firstTaskId = taskData?.items?.[0]?.campaignTaskId ?? null;
   const { data: firstTaskDetail, isLoading: isFirstDetailLoading } = useCampaignTaskDetail(firstTaskId);
-
-  useEffect(() => {
-    if (!selectedCampaignId && assignedCampaigns.length > 0) {
-      setSelectedCampaignId(assignedCampaigns[0].campaignId);
-    }
-  }, [assignedCampaigns, selectedCampaignId]);
 
   const taskDetailQueries = useQueries({
     queries: (taskData?.items ?? []).map((task) => ({
@@ -130,7 +128,70 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
       <ScrollView contentContainerStyle={{ paddingBottom: bottom + 120 }} className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-6 w-full p-4">
           {isTeamLoading || isTasksLoading || isDetailLoading ? (
-            <View className="items-center py-12"><ActivityIndicator size="large" color={colors.primary} /></View>
+            <>
+              {/* Hero/stats skeleton */}
+              <View className="relative overflow-hidden rounded-xl shadow-sm h-48" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <View className="h-24 bg-gray-200 mx-4 mt-4 rounded" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="p-4">
+                  <View className="h-7 w-3/4 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  <View className="h-4 w-1/2 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  <View className="h-4 w-2/3 rounded bg-gray-200 mb-4" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  <View className="h-4 w-20 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                </View>
+              </View>
+
+              {/* Stats cards skeleton */}
+              <View className="flex-row gap-3">
+                {[...Array(3)].map((_, i) => (
+                  <View key={i} className="flex-1 rounded-lg border p-3 items-center justify-center gap-1 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                    <View className="h-8 w-8 rounded-full bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    <View className="h-7 w-10 rounded bg-gray-200 mb-1" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    <View className="h-3 w-16 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  </View>
+                ))}
+              </View>
+
+              {/* Campaign card skeleton */}
+              <View className="rounded-xl border p-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <View className="h-4 w-36 rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-5 w-48 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              </View>
+
+              {/* Report skeleton */}
+              <View>
+                <View className="h-8 w-44 rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="gap-3">
+                  {[...Array(2)].map((_, i) => (
+                    <View key={i} className="rounded-lg border p-4 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                      <View className="flex-row items-start justify-between gap-3">
+                        <View className="flex-1">
+                          <View className="h-5 w-32 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                          <View className="h-3 w-28 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                        </View>
+                        <View className="h-6 w-16 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                      </View>
+                      <View className="mt-3 gap-2">
+                        {[...Array(2)].map((_, j) => (
+                          <View key={j} className="flex-row items-start gap-3 rounded-lg p-3" style={{ backgroundColor: `${colors.primary}08` }}>
+                            <View className="h-10 w-10 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                            <View className="flex-1">
+                              <View className="h-4 w-24 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                              <View className="h-3 w-28 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Summary note skeleton */}
+              <View>
+                <View className="h-7 w-40 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-24 w-full rounded-lg border bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderColor: colors.border }} />
+              </View>
+            </>
           ) : (
             <>
               <View className="relative overflow-hidden rounded-xl shadow-sm h-48" style={{ backgroundColor: isDark ? '#1a2632' : colors.card }}>
@@ -178,15 +239,30 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
 
               <View className="rounded-xl border p-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
                 <Text className="text-sm" style={{ color: colors.textSecondary }}>Chiến dịch đang xem báo cáo</Text>
-                <View className="mt-2">
-                  <CustomDropdown
-                    items={campaignOptions}
-                    selectedValue={selectedCampaignId}
-                    onValueChange={setSelectedCampaignId}
-                    placeholder="Chọn chiến dịch"
-                    title="Chọn chiến dịch"
-                  />
-                </View>
+                {assignedCampaigns.length > 1 ? (
+                  <View className="mt-2">
+                    <CustomDropdown
+                      items={campaignOptions}
+                      selectedValue={selectedCampaignId}
+                      onValueChange={setSelectedCampaignId}
+                      placeholder="Chọn chiến dịch"
+                      title="Chọn chiến dịch"
+                    />
+                  </View>
+                ) : (
+                  <View className="mt-2 self-start rounded-full px-3 py-1.5" style={{ backgroundColor: `${colors.primary}10` }}>
+                    <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                      Chiến dịch hiện tại đã tự đồng bộ
+                    </Text>
+                  </View>
+                )}
+                {isTasksLoading ? (
+                  <View className="mt-3 rounded-xl px-3 py-3" style={{ backgroundColor: `${colors.primary}08` }}>
+                    <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                      Đang đồng bộ chiến dịch...
+                    </Text>
+                  </View>
+                ) : null}
               </View>
 
               <View>

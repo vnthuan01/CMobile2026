@@ -424,12 +424,16 @@ export default function MyCurrentTeamScreen({
                   <Text
                     className="mt-3 text-xl font-bold"
                     style={{ color: colors.text }}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
                   >
                     {team.leader.displayName}
                   </Text>
                   <Text
                     className="mt-1 text-sm"
                     style={{ color: colors.textSecondary }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                   >
                     {team.leader.email}
                   </Text>
@@ -499,6 +503,8 @@ export default function MyCurrentTeamScreen({
                   <Text
                     className="mt-3 text-base font-semibold"
                     style={{ color: colors.text }}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
                   >
                     {team.moderator.displayName}
                   </Text>
@@ -562,6 +568,8 @@ export default function MyCurrentTeamScreen({
                               <Text
                                 className="flex-1 text-base font-bold"
                                 style={{ color: colors.text }}
+                                numberOfLines={2}
+                                ellipsizeMode="tail"
                               >
                                 {member.displayName}
                               </Text>
@@ -580,6 +588,8 @@ export default function MyCurrentTeamScreen({
                             <Text
                               className="mt-1 text-sm"
                               style={{ color: colors.textSecondary }}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
                             >
                               {member.email}
                             </Text>

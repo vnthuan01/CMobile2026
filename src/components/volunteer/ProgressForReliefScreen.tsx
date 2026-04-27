@@ -13,6 +13,7 @@ import {
   useMyMemberTasks,
 } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
+import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import {
   useCompleteDelivery,
   useCompleteDeliveryBatch,
@@ -132,9 +133,14 @@ export default function ProgressForReliefScreen({
     team?.teamId ?? '',
     !!team?.teamId,
   );
+  const { selectedCampaignId } = useSelectedCampaign(
+    team,
+    fallbackAssignedCampaigns,
+    typeof params.campaignId === 'string' ? params.campaignId : null,
+  );
   const { campaignId: activeCampaignId } = useActiveAssignedCampaign(
     team,
-    null,
+    selectedCampaignId,
     fallbackAssignedCampaigns,
   );
   const campaignId = params.campaignId || activeCampaignId;

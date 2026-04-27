@@ -4,13 +4,13 @@ import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
 import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
+import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import {
   CampaignTaskStatus,
   type CampaignTaskResponse,
   type CampaignTeamResponse,
 } from '@/src/types/leaderTask';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 type Props = {
@@ -20,11 +20,12 @@ type Props = {
 export default function ReliefHomeContent({ team }: Props) {
   const router = useRouter();
   const { colors } = useTheme();
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
-    null,
-  );
   const { data: fallbackAssignedCampaigns, isLoading: isCampaignsLoading } =
     useAssignedCampaigns(team?.teamId ?? '', !!team?.teamId);
+  const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
+    team,
+    fallbackAssignedCampaigns || [],
+  );
   const { activeCampaign, campaignId, assignedCampaigns } = useActiveAssignedCampaign(
     team,
     selectedCampaignId,
@@ -105,8 +106,17 @@ export default function ReliefHomeContent({ team }: Props) {
       <View className="mt-6 px-4">
         <Card colors={colors.border} bg={colors.card}>
           {isCampaignsLoading || isLoading ? (
-            <View className="items-center py-8">
-              <ActivityIndicator size="large" color={colors.primary} />
+            <View className="py-2">
+              <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
+                <View className="h-4 w-32 rounded-full" style={{ backgroundColor: `${colors.primary}14` }} />
+                <View className="mt-3 h-3 w-48 rounded-full" style={{ backgroundColor: `${colors.primary}10` }} />
+                <View className="mt-4 flex-row gap-3">
+                  <View className="h-16 flex-1 rounded-2xl" style={{ backgroundColor: `${colors.primary}10` }} />
+                  <View className="h-16 flex-1 rounded-2xl" style={{ backgroundColor: `${colors.primary}10` }} />
+                  <View className="h-16 flex-1 rounded-2xl" style={{ backgroundColor: `${colors.primary}10` }} />
+                </View>
+                <View className="mt-4 h-28 rounded-2xl" style={{ backgroundColor: `${colors.primary}08` }} />
+              </View>
             </View>
           ) : (
             <>
@@ -122,6 +132,16 @@ export default function ReliefHomeContent({ team }: Props) {
               >
                 {campaignName}
               </Text>
+              {assignedCampaigns.length === 1 ? (
+                <View
+                  className="mt-3 self-start rounded-full px-3 py-1.5"
+                  style={{ backgroundColor: `${colors.primary}10` }}
+                >
+                  <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                    Chiến dịch hiện tại đã tự đồng bộ
+                  </Text>
+                </View>
+              ) : null}
               {assignedCampaigns.length > 1 ? (
                 <View className="mt-3 gap-2">
                   <Text
@@ -169,6 +189,13 @@ export default function ReliefHomeContent({ team }: Props) {
                   </View>
                 </View>
               ) : null}
+              {isLoading && campaignId ? (
+                <View className="mt-3 rounded-xl px-3 py-3" style={{ backgroundColor: `${colors.primary}08` }}>
+                  <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                    Đang đồng bộ chiến dịch...
+                  </Text>
+                </View>
+              ) : null}
               <View className="mt-4 flex-row gap-3">
                 <MiniInfo
                   label="Tổng việc"
@@ -213,7 +240,12 @@ export default function ReliefHomeContent({ team }: Props) {
                   </Text>
                 ) : null}
                 <TouchableOpacity
-                  onPress={() => router.push('/profile/tasks' as any)}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/profile/tasks' as any,
+                      params: { campaignId: campaignId || undefined },
+                    })
+                  }
                   className="mt-4 rounded-xl px-4 py-3"
                   style={{ backgroundColor: colors.primary }}
                 >

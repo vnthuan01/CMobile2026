@@ -8,6 +8,7 @@ import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
 import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
+import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import { CampaignTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse } from '@/src/types/leaderTask';
 import type { TeamMemberSummary } from '@/src/types/team';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,15 +46,18 @@ export default function DashboardTeamLeaderScreen({
   const { top, bottom } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const [activeChip, setActiveChip] = useState(0);
-  const [selectedCampaignId, setSelectedCampaignId] = useState('');
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
 
   const team = myTeamData?.team;
   const teamMode = myTeamData?.teamMode ?? 'rescue';
   const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(team?.teamId, !!team?.teamId);
+  const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
+    team,
+    fallbackAssignedCampaigns,
+  );
   const { campaignId, activeCampaign, assignedCampaigns } = useActiveAssignedCampaign(
     team,
-    selectedCampaignId || null,
+    selectedCampaignId,
     fallbackAssignedCampaigns,
   );
   const { data: campaignDetail } = useCampaignDetail(campaignId || undefined, !!campaignId);
@@ -64,12 +68,6 @@ export default function DashboardTeamLeaderScreen({
     pageSize: 50,
     campaignTeamId: myCampaignTeam?.campaignTeamId,
   });
-
-  useEffect(() => {
-    if (!selectedCampaignId && assignedCampaigns.length > 0) {
-      setSelectedCampaignId(assignedCampaigns[0].campaignId);
-    }
-  }, [assignedCampaigns, selectedCampaignId]);
 
   const members: TeamMember[] = useMemo(() => {
     const source = team?.members ?? [];
@@ -106,7 +104,7 @@ export default function DashboardTeamLeaderScreen({
         style={{ paddingTop: top, backgroundColor: colors.card, borderBottomColor: colors.border }}
         className="flex-row items-center justify-between border-b px-4 pb-2 shadow-sm"
       >
-        <View className="min-w-0 flex-1 flex-row items-center gap-3 pr-3">
+        <View className="min-w-0 flex-1 flex-row items-center pr-2">
           <View
             className="h-10 w-10 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderWidth: 2, borderColor: `${colors.primary}30` }}
@@ -115,7 +113,7 @@ export default function DashboardTeamLeaderScreen({
               {initialsOf(team?.leader?.displayName || team?.name)}
             </Text>
           </View>
-          <View className="min-w-0 flex-1">
+          <View className="ml-3 min-w-0 flex-1 pr-1">
             <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>Nhóm trưởng</Text>
             <Text
               className="text-base font-bold leading-tight"
@@ -134,9 +132,43 @@ export default function DashboardTeamLeaderScreen({
 
       <ScrollView contentContainerStyle={{ paddingBottom: bottom + 100 }} className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
         {isTeamLoading || isTasksLoading ? (
-          <View className="items-center justify-center py-20">
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
+          <>
+            <View className="mb-6">
+              <View className="rounded-2xl border p-4 mb-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <View className="h-4 w-24 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-6 w-48 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-4 w-64 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              </View>
+
+              <View className="h-8 w-40 rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              <View className="rounded-2xl border p-5" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <View className="h-4 w-32 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-6 w-3/4 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-12 rounded bg-gray-200 mb-4" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-10 w-full rounded-xl bg-gray-200 mb-4" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-4 w-24 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              </View>
+            </View>
+
+            <View>
+              <View className="h-8 w-56 rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 16 }}>
+                <View className="h-9 w-20 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-9 w-24 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              </ScrollView>
+              <View className="gap-3">
+                {[...Array(3)].map((_, i) => (
+                  <View key={i} className="flex-row items-center p-4 rounded-lg border" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                    <View className="h-12 w-12 rounded-full bg-gray-200 mr-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    <View className="flex-1">
+                      <View className="h-4 w-32 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                      <View className="h-3 w-24 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </>
         ) : teamMode !== 'relief' ? (
           <View className="rounded-2xl border border-dashed p-5" style={{ borderColor: colors.border }}>
             <Text className="text-lg font-bold" style={{ color: colors.text }}>
@@ -151,15 +183,30 @@ export default function DashboardTeamLeaderScreen({
             <View className="mb-6">
               <View className="rounded-2xl border p-4 mb-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
                 <Text className="text-sm" style={{ color: colors.textSecondary }}>Chiến dịch đang xem</Text>
-                <View className="mt-2">
-                  <CustomDropdown
-                    items={campaignOptions}
-                    selectedValue={selectedCampaignId}
-                    onValueChange={setSelectedCampaignId}
-                    placeholder="Chọn chiến dịch"
-                    title="Chọn chiến dịch"
-                  />
-                </View>
+                {assignedCampaigns.length > 1 ? (
+                  <View className="mt-2">
+                    <CustomDropdown
+                      items={campaignOptions}
+                      selectedValue={selectedCampaignId}
+                      onValueChange={setSelectedCampaignId}
+                      placeholder="Chọn chiến dịch"
+                      title="Chọn chiến dịch"
+                    />
+                  </View>
+                ) : (
+                  <View className="mt-2 self-start rounded-full px-3 py-1.5" style={{ backgroundColor: `${colors.primary}10` }}>
+                    <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                      Chiến dịch hiện tại đã tự đồng bộ
+                    </Text>
+                  </View>
+                )}
+                {isTasksLoading ? (
+                  <View className="mt-3 rounded-xl px-3 py-3" style={{ backgroundColor: `${colors.primary}08` }}>
+                    <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                      Đang đồng bộ chiến dịch...
+                    </Text>
+                  </View>
+                ) : null}
                 <Text className="mt-2 text-base font-bold" style={{ color: colors.text }}>{campaignName}</Text>
                 <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
                   Từ {dinhDangNgay(campaignStartDate)} đến {dinhDangNgay(campaignEndDate)}
@@ -168,7 +215,7 @@ export default function DashboardTeamLeaderScreen({
 
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-lg font-bold" style={{ color: colors.text }}>Nhiệm vụ hiện tại</Text>
-                <TouchableOpacity onPress={onViewMissionDetail} className="flex-row items-center gap-1">
+                <TouchableOpacity onPress={onViewMissionDetail} className="flex-row items-center gap-1" disabled={!taskItems.length} style={{ opacity: taskItems.length ? 1 : 0.45 }}>
                   <Text className="text-sm font-medium" style={{ color: colors.secondary }}>Chi tiết</Text>
                   <Ionicons name="arrow-forward" size={14} color={colors.secondary} />
                 </TouchableOpacity>
@@ -184,6 +231,24 @@ export default function DashboardTeamLeaderScreen({
                 <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
                   {currentTask?.description || 'Hãy tạo hoặc phân công công việc mới cho chiến dịch hiện tại.'}
                 </Text>
+
+                {taskItems.length > 0 ? (
+                  <TouchableOpacity
+                    onPress={onViewMissionDetail}
+                    className="mt-4 flex-row items-center justify-between rounded-xl px-4 py-3"
+                    style={{ backgroundColor: `${colors.secondary}12`, borderWidth: 1, borderColor: `${colors.secondary}25` }}
+                  >
+                    <View className="flex-1 pr-3">
+                      <Text className="text-sm font-bold" style={{ color: colors.secondary }}>
+                        Xem chi tiết nhiệm vụ của đội
+                      </Text>
+                      <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }} numberOfLines={2}>
+                        Mở trung tâm công việc để xem đầy đủ nhiệm vụ, phần việc và tiến độ thành viên.
+                      </Text>
+                    </View>
+                    <Ionicons name="arrow-forward-circle" size={22} color={colors.secondary} />
+                  </TouchableOpacity>
+                ) : null}
 
                 <View className="mt-3 rounded-xl border p-3" style={{ borderColor: colors.border, backgroundColor: `${colors.primary}08` }}>
                   <View className="flex-row items-center gap-2">

@@ -2,7 +2,9 @@ import api from './api';
 import { extractApiErrorMessage } from '../utils/apiError';
 
 import type {
+  CampaignInventoryBalanceResponse,
   CampaignHouseholdResponse,
+  CampaignPackageQueryRequest,
   DistributionPointResponse,
   HouseholdChecklistItemResponse,
   DistributionPointQueryRequest,
@@ -10,6 +12,7 @@ import type {
   HouseholdQueryRequest,
   UpdateCampaignHouseholdStatusRequest,
   CreateSupplyShortageRequestPayload,
+  ReliefPackageDefinitionResponse,
   SupplyShortageRequestResponse,
   SupplyShortageRequestQueryRequest,
   CompleteHouseholdDeliveryRequest,
@@ -18,6 +21,38 @@ import type {
   BatchCompleteHouseholdDeliveryResponse,
   PaginatedResponse,
 } from '../types/reliefDistribution';
+
+const toPascalCasePackageParams = (query?: CampaignPackageQueryRequest) => {
+  if (!query) return undefined;
+
+  return {
+    ...(query.isActive !== undefined ? { IsActive: query.isActive } : {}),
+    ...(query.isDefault !== undefined ? { IsDefault: query.isDefault } : {}),
+    ...(query.pageIndex !== undefined ? { PageIndex: query.pageIndex } : {}),
+    ...(query.pageSize !== undefined ? { PageSize: query.pageSize } : {}),
+    ...(query.search ? { Search: query.search } : {}),
+  };
+};
+
+const toPascalCaseShortageRequestParams = (
+  query?: SupplyShortageRequestQueryRequest,
+) => {
+  if (!query) return undefined;
+
+  return {
+    ...(query.status !== undefined ? { Status: query.status } : {}),
+    ...(query.distributionPointId
+      ? { DistributionPointId: query.distributionPointId }
+      : {}),
+    ...(query.campaignTeamId ? { CampaignTeamId: query.campaignTeamId } : {}),
+    ...(query.requestedByUserId
+      ? { RequestedByUserId: query.requestedByUserId }
+      : {}),
+    ...(query.pageIndex !== undefined ? { PageIndex: query.pageIndex } : {}),
+    ...(query.pageSize !== undefined ? { PageSize: query.pageSize } : {}),
+    ...(query.search ? { Search: query.search } : {}),
+  };
+};
 
 const toPascalCaseHouseholdParams = (query?: HouseholdQueryRequest) => {
   if (!query) return undefined;
@@ -48,6 +83,107 @@ const toPascalCaseDeliveryParams = (query?: DeliveryQueryRequest) => {
     ...(query.pageSize !== undefined ? { PageSize: query.pageSize } : {}),
     ...(query.search ? { Search: query.search } : {}),
   };
+};
+
+const pickFirstDefined = (obj: Record<string, any>, keys: string[]) => {
+  for (const key of keys) {
+    if (obj?.[key] !== undefined && obj?.[key] !== null) {
+      return obj[key];
+    }
+  }
+  return undefined;
+};
+
+const toNumberSafe = (value: unknown, fallback = 0) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const normalizeInventoryBalanceItem = (raw: any) => {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const supplyItemId = pickFirstDefined(raw, [
+    'supplyItemId',
+    'SupplyItemId',
+    'itemId',
+    'ItemId',
+    'id',
+    'Id',
+  ]);
+
+  if (!supplyItemId) return null;
+
+  return {
+    supplyItemId: String(supplyItemId),
+    supplyItemName:
+      pickFirstDefined(raw, [
+        'supplyItemName',
+        'SupplyItemName',
+        'itemName',
+        'ItemName',
+        'name',
+        'Name',
+      ]) || 'Chưa rõ vật tư',
+    unit: pickFirstDefined(raw, ['unit', 'Unit', 'uom', 'Uom']),
+    availableQuantity: toNumberSafe(
+      pickFirstDefined(raw, [
+        'availableQuantity',
+        'AvailableQuantity',
+        'available',
+        'Available',
+        'quantity',
+        'Quantity',
+        'onHand',
+        'OnHand',
+        'stockQuantity',
+        'StockQuantity',
+      ]),
+      0,
+    ),
+    reservedQuantity: toNumberSafe(
+      pickFirstDefined(raw, ['reservedQuantity', 'ReservedQuantity']),
+      0,
+    ),
+    incomingQuantity: toNumberSafe(
+      pickFirstDefined(raw, ['incomingQuantity', 'IncomingQuantity']),
+      0,
+    ),
+    totalQuantity: toNumberSafe(
+      pickFirstDefined(raw, ['totalQuantity', 'TotalQuantity']),
+      0,
+    ),
+    isLowStock: Boolean(
+      pickFirstDefined(raw, ['isLowStock', 'IsLowStock']) ?? false,
+    ),
+    shortageThreshold: toNumberSafe(
+      pickFirstDefined(raw, ['shortageThreshold', 'ShortageThreshold']),
+      0,
+    ),
+  };
+};
+
+const extractInventoryBalanceItems = (payload: any) => {
+  const candidates = [
+    payload,
+    payload?.items,
+    payload?.data,
+    payload?.data?.items,
+    payload?.result,
+    payload?.result?.items,
+    payload?.value,
+    payload?.value?.items,
+  ];
+
+  const matched = candidates.find((candidate) => Array.isArray(candidate));
+  if (!Array.isArray(matched)) return [];
+
+  return matched
+    .map(normalizeInventoryBalanceItem)
+    .filter(Boolean);
 };
 
 export interface ApiResponse<T> {
@@ -99,6 +235,52 @@ const tryRoutes = async <T>(
 
 export const reliefDistributionService = {
   // ─── Distribution Points ────────────────────────────────
+
+  getInventoryBalance: async (
+    campaignId: string,
+  ): Promise<ApiResponse<CampaignInventoryBalanceResponse>> => {
+    const routes = [
+      `/campaigns/${campaignId}/inventory-balance`,
+      `/api/campaigns/${campaignId}/inventory-balance`,
+    ];
+    return tryRoutes(
+      routes,
+      async (route) => {
+        debugLog('getInventoryBalance', { route, campaignId });
+        const resp = await api.get<CampaignInventoryBalanceResponse | any[]>(route);
+        const items = extractInventoryBalanceItems(resp.data);
+
+        return {
+          campaignId,
+          updatedAt: pickFirstDefined(resp.data ?? {}, ['updatedAt', 'UpdatedAt']),
+          items,
+        } as CampaignInventoryBalanceResponse;
+      },
+      'Không thể tải tồn kho chiến dịch.',
+    );
+  },
+
+  getCampaignPackages: async (
+    campaignId: string,
+    query?: CampaignPackageQueryRequest,
+  ): Promise<ApiResponse<PaginatedResponse<ReliefPackageDefinitionResponse>>> => {
+    const routes = [
+      `/relief/campaigns/${campaignId}/packages`,
+      `/api/relief/campaigns/${campaignId}/packages`,
+    ];
+    return tryRoutes(
+      routes,
+      async (route) => {
+        const params = toPascalCasePackageParams(query);
+        debugLog('getCampaignPackages', { route, campaignId, query, params });
+        const resp = await api.get<PaginatedResponse<ReliefPackageDefinitionResponse>>(route, {
+          params,
+        });
+        return resp.data;
+      },
+      'Không thể tải danh sách gói phát hàng của chiến dịch.',
+    );
+  },
 
   getDistributionPoints: async (
     campaignId: string,
@@ -212,8 +394,11 @@ export const reliefDistributionService = {
     return tryRoutes(
       routes,
       async (route) => {
-        debugLog('getShortageRequests', { route, campaignId, query });
-        const resp = await api.get<PaginatedResponse<SupplyShortageRequestResponse>>(route, { params: query });
+        const params = toPascalCaseShortageRequestParams(query);
+        debugLog('getShortageRequests', { route, campaignId, query, params });
+        const resp = await api.get<PaginatedResponse<SupplyShortageRequestResponse>>(route, {
+          params,
+        });
         return resp.data;
       },
       'Không thể tải danh sách yêu cầu bổ sung.',

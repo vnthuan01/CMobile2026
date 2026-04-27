@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { reliefDistributionService } from '../services/reliefDistributionService';
 import { leaderTaskKeys } from './useLeaderTasks';
 import type {
+  CampaignPackageQueryRequest,
   DistributionPointQueryRequest,
   DeliveryQueryRequest,
   HouseholdQueryRequest,
@@ -14,6 +15,10 @@ import type {
 
 export const reliefKeys = {
   all: ['relief'] as const,
+  inventoryBalance: (campaignId: string) =>
+    [...reliefKeys.all, 'inventoryBalance', campaignId] as const,
+  packages: (campaignId: string, query?: CampaignPackageQueryRequest) =>
+    [...reliefKeys.all, 'packages', campaignId, query ?? {}] as const,
   distributionPoints: (campaignId: string, query?: DistributionPointQueryRequest) =>
     [...reliefKeys.all, 'distributionPoints', campaignId, query ?? {}] as const,
   households: (campaignId: string, query?: HouseholdQueryRequest) =>
@@ -27,6 +32,33 @@ export const reliefKeys = {
 };
 
 // ─── Distribution Points (with lat/lng for map) ────────────
+
+export function useInventoryBalance(campaignId?: string | null) {
+  return useQuery({
+    queryKey: reliefKeys.inventoryBalance(campaignId || ''),
+    queryFn: async () => {
+      const result = await reliefDistributionService.getInventoryBalance(campaignId || '');
+      if (!result.success) throw new Error(result.message);
+      return result.data;
+    },
+    enabled: !!campaignId,
+  });
+}
+
+export function useCampaignPackages(
+  campaignId?: string | null,
+  query?: CampaignPackageQueryRequest,
+) {
+  return useQuery({
+    queryKey: reliefKeys.packages(campaignId || '', query),
+    queryFn: async () => {
+      const result = await reliefDistributionService.getCampaignPackages(campaignId || '', query);
+      if (!result.success) throw new Error(result.message);
+      return result.data;
+    },
+    enabled: !!campaignId,
+  });
+}
 
 export function useDistributionPoints(
   campaignId?: string | null,

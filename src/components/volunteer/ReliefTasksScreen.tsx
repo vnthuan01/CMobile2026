@@ -1,5 +1,7 @@
 import '@/global.css';
+import CustomDropdown from '@/src/components/CustomDropdown';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
+import InventorySection from './InventorySection';
 import TaskCard, { type TaskItem } from '@/src/components/common/TaskCard';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
@@ -15,7 +17,9 @@ import { useMyTeam } from '@/src/hooks/useMyTeam';
 import {
   useCampaignHouseholds,
   useDistributionPoints,
+  useShortageRequests,
 } from '@/src/hooks/useReliefDistribution';
+import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import { useAuthStore } from '@/src/store/authStore';
 import {
   CampaignTaskStatus,
@@ -26,7 +30,7 @@ import {
   type CampaignTeamResponse,
   type MemberTaskResponse,
 } from '@/src/types/leaderTask';
-import type { DistributionPointResponse } from '@/src/types/reliefDistribution';
+import { SupplyShortageRequestStatus } from '@/src/types/reliefDistribution';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -35,8 +39,6 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Modal,
-  Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -124,16 +126,18 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const [selectedCampaignId, setSelectedCampaignId] = useState('');
-  const [showCampaignModal, setShowCampaignModal] = useState(false);
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
   const { data: fallbackAssignedCampaigns, isLoading: isCampaignsLoading } =
     useAssignedCampaigns(team?.teamId ?? '', !!team?.teamId);
+  const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
+    team,
+    fallbackAssignedCampaigns || [],
+  );
   const { activeCampaign, campaignId, assignedCampaigns } =
     useActiveAssignedCampaign(
       team,
-      selectedCampaignId || null,
+      selectedCampaignId,
       fallbackAssignedCampaigns || [],
     );
   const { data: campaignDetail } = useCampaignDetail(
@@ -172,6 +176,17 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   );
   const distributionPoints = distributionPointsData?.items ?? [];
 
+  const { data: pendingShortageRequestsData } = useShortageRequests(
+    teamMode === 'relief' ? campaignId : null,
+    {
+      pageIndex: 1,
+      pageSize: 20,
+      campaignTeamId: myCampaignTeam?.campaignTeamId,
+      requestedByUserId: user?.id,
+      status: SupplyShortageRequestStatus.Pending,
+    },
+  );
+
   const { data: householdsData } = useCampaignHouseholds(
     teamMode === 'relief' ? campaignId : null,
     { campaignTeamId: myCampaignTeam?.campaignTeamId, deliveryMode: 1, pageSize: 50 },
@@ -187,7 +202,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { data: taskDetail, isLoading: isDetailLoading } =
     useCampaignTaskDetail(selectedTaskId);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'points'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'points' | 'inventory' | 'plan'>('tasks');
 
   // Identify current user's subtasks
   const myMemberTasks = useMemo(() => {
@@ -203,16 +218,14 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   const changeMemberStatusMutation = useChangeMemberTaskStatus();
 
   useEffect(() => {
-    if (!selectedCampaignId && assignedCampaigns.length > 0) {
-      setSelectedCampaignId(assignedCampaigns[0].campaignId);
-    }
-  }, [assignedCampaigns, selectedCampaignId]);
-
-  useEffect(() => {
     if (!selectedTaskId && tasks.length > 0) {
       setSelectedTaskId(tasks[0].campaignTaskId);
     }
   }, [selectedTaskId, tasks]);
+
+  useEffect(() => {
+    setSelectedTaskId(tasks[0]?.campaignTaskId ?? null);
+  }, [campaignId]);
 
   const completed = tasks.filter(
     (task: CampaignTaskResponse) =>
@@ -283,6 +296,9 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
     Dimensions.get('window').height * 0.5,
   );
 
+  const pendingShortageRequestsCount =
+    pendingShortageRequestsData?.items?.length ?? 0;
+
   const handleChangeMemberStatus = async (
     memberTaskId: string,
     newStatus: MemberTaskStatus,
@@ -315,6 +331,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
     router.push({
       pathname: '/profile/progress-for-relief' as any,
       params: {
+        campaignId: campaignId || undefined,
         campaignTaskId,
         initialTab: 'subtask',
       },
@@ -359,8 +376,28 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         {isTeamLoading || isCampaignsLoading || isTasksLoading ? (
-          <View className="items-center py-12">
-            <ActivityIndicator size="large" color={colors.primary} />
+          <View className="gap-4">
+            <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
+              <View className="h-3 w-28 rounded-full bg-white/25" />
+              <View className="mt-4 h-10 rounded-2xl bg-white/15" />
+              <View className="mt-4 h-7 w-3/4 rounded-full bg-white/20" />
+              <View className="mt-3 h-4 w-full rounded-full bg-white/15" />
+              <View className="mt-4 flex-row gap-3">
+                <View className="h-14 flex-1 rounded-2xl bg-white/12" />
+                <View className="h-14 flex-1 rounded-2xl bg-white/12" />
+                <View className="h-14 flex-1 rounded-2xl bg-white/12" />
+              </View>
+            </View>
+            <View className="flex-row gap-2">
+              <View className="h-12 flex-1 rounded-xl" style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }} />
+              <View className="h-12 flex-1 rounded-xl" style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }} />
+              <View className="h-12 flex-1 rounded-xl" style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }} />
+            </View>
+            <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+              <View className="h-5 w-40 rounded-full" style={{ backgroundColor: `${colors.primary}12` }} />
+              <View className="mt-3 h-24 rounded-2xl" style={{ backgroundColor: `${colors.primary}08` }} />
+              <View className="mt-3 h-24 rounded-2xl" style={{ backgroundColor: `${colors.primary}08` }} />
+            </View>
           </View>
         ) : teamMode !== 'relief' ? (
           <View
@@ -388,23 +425,30 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
               <Text className="text-xs font-semibold text-white/80">
                 Chiến dịch hiện tại
               </Text>
-              <TouchableOpacity
-                onPress={() => setShowCampaignModal(true)}
-                activeOpacity={0.85}
-                className="bg-white/14 mt-3 rounded-2xl px-4 py-3"
-              >
-                <View className="flex-row items-center justify-between gap-3">
-                  <View className="flex-1">
-                    <Text className="text-[11px] font-semibold text-white/70">
-                      Bấm để đổi chiến dịch
-                    </Text>
-                    <Text className="mt-1 text-sm font-bold text-white">
-                      {campaignName}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-down" size={18} color="#fff" />
+              {assignedCampaigns.length > 1 ? (
+                <View className="mt-3">
+                  <CustomDropdown
+                    items={campaignOptions}
+                    selectedValue={selectedCampaignId || ''}
+                    onValueChange={setSelectedCampaignId}
+                    placeholder="Chọn chiến dịch"
+                    title="Chọn chiến dịch"
+                  />
                 </View>
-              </TouchableOpacity>
+              ) : (
+                <View className="mt-3 self-start rounded-full bg-white/18 px-3 py-1.5">
+                  <Text className="text-xs font-semibold text-white">
+                    Chiến dịch hiện tại đã tự đồng bộ
+                  </Text>
+                </View>
+              )}
+              {isTasksLoading && campaignId ? (
+                <View className="mt-3 self-start rounded-full bg-white/16 px-3 py-1.5">
+                  <Text className="text-xs font-semibold text-white/90">
+                    Đang đồng bộ chiến dịch...
+                  </Text>
+                </View>
+              ) : null}
               <Text className="mt-2 text-2xl font-bold text-white">
                 {campaignName}
               </Text>
@@ -442,6 +486,10 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                 <SummaryChip
                   label="Hộ chờ phát"
                   value={String(pendingHouseholds.length)}
+                />
+                <SummaryChip
+                  label="Y/c bổ sung"
+                  value={String(pendingShortageRequestsCount)}
                 />
               </View>
 
@@ -507,6 +555,27 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   }}
                 >
                   Điểm phát ({distributionPoints.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setActiveTab('inventory')}
+                className="flex-1 items-center rounded-xl py-3"
+                style={{
+                  backgroundColor:
+                    activeTab === 'inventory' ? colors.primary : colors.card,
+                  borderWidth: 1,
+                  borderColor:
+                    activeTab === 'inventory' ? colors.primary : colors.border,
+                }}
+              >
+                <Text
+                  className="text-sm font-bold"
+                  style={{
+                    color:
+                      activeTab === 'inventory' ? '#fff' : colors.textSecondary,
+                  }}
+                >
+                  Kho & yêu cầu
                 </Text>
               </TouchableOpacity>
             </View>
@@ -808,7 +877,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   )}
                 </View>
               </>
-            ) : (
+            ) : activeTab === 'points' ? (
               /* Tab điểm phát */
               <View
                 className="rounded-2xl border p-4"
@@ -977,92 +1046,19 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   )}
                 </View>
               </View>
+            ) : (
+              <InventorySection
+                campaignId={teamMode === 'relief' ? campaignId || null : null}
+                campaignTeamId={myCampaignTeam?.campaignTeamId}
+                userId={user?.id}
+                distributionPoints={distributionPoints}
+                defaultDistributionPointId={distributionPoints[0]?.distributionPointId}
+              />
             )}
           </View>
         )}
       </ScrollView>
 
-      <Modal
-        visible={showCampaignModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowCampaignModal(false)}
-      >
-        <Pressable
-          className="flex-1 justify-end"
-          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-          onPress={() => setShowCampaignModal(false)}
-        >
-          <Pressable
-            className="rounded-t-3xl px-4 pb-8 pt-4"
-            style={{ backgroundColor: colors.card }}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View>
-              <Text
-                className="text-lg font-bold"
-                style={{ color: colors.text }}
-              >
-                Chọn chiến dịch
-              </Text>
-              <Text
-                className="mt-1 text-sm"
-                style={{ color: colors.textSecondary }}
-              >
-                Đổi chiến dịch để xem công việc và thống kê tương ứng.
-              </Text>
-            </View>
-
-            <ScrollView
-              className="mt-4"
-              showsVerticalScrollIndicator={false}
-              style={{ maxHeight: bottomSheetMaxHeight, height: 300 }}
-            >
-              <View className="gap-3">
-                {campaignOptions.map((campaign) => {
-                  const selected = campaign.value === selectedCampaignId;
-                  return (
-                    <TouchableOpacity
-                      key={campaign.value}
-                      onPress={() => {
-                        setSelectedCampaignId(campaign.value);
-                        setShowCampaignModal(false);
-                      }}
-                      className="rounded-2xl border p-4"
-                      style={{
-                        borderColor: selected ? colors.primary : colors.border,
-                        backgroundColor: selected
-                          ? `${colors.primary}10`
-                          : colors.card,
-                      }}
-                    >
-                      <View className="flex-row items-center justify-between gap-3">
-                        <View className="flex-1">
-                          <Text
-                            className="font-bold"
-                            style={{
-                              color: selected ? colors.primary : colors.text,
-                            }}
-                          >
-                            {campaign.label}
-                          </Text>
-                        </View>
-                        {selected ? (
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={20}
-                            color={colors.primary}
-                          />
-                        ) : null}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }

@@ -4,6 +4,7 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import { useMyTeam } from '@/src/hooks/useMyTeam';
 import {
   useAllSkills,
   useMyVolunteerProfile,
@@ -50,6 +51,12 @@ export default function MyVolunteerProfileScreen({
   const currentRole = (user?.role ?? '').toLowerCase();
   const isCurrentVolunteerRole =
     currentRole === 'volunteer' || currentRole === 'leader';
+  const { data: myTeamData } = useMyTeam(Boolean(user));
+  const team = myTeamData?.team;
+  const isLeader = useMemo(() => {
+    if (!user?.id || !team?.leader?.userId) return false;
+    return user.id === team.leader.userId;
+  }, [team?.leader?.userId, user?.id]);
   const hasShownRoleChangeDialogRef = useRef(false);
 
   const queryClient = useQueryClient();
@@ -294,6 +301,70 @@ export default function MyVolunteerProfileScreen({
                 <Text className="mt-2 text-sm leading-6 text-white">
                   {profile.reason}
                 </Text>
+              </View>
+            ) : null}
+
+            {isLeader ? (
+              <View className="mt-4 gap-3">
+                <TouchableOpacity
+                  onPress={() => router.push('/profile/dashboard-leader' as any)}
+                  className="flex-row items-center justify-between rounded-2xl bg-white/12 px-4 py-3"
+                >
+                  <View className="flex-1 pr-3">
+                    <Text className="text-sm font-bold text-white">
+                      Bảng điều phối nhóm trưởng
+                    </Text>
+                    <Text className="mt-1 text-xs text-white/75">
+                      Theo dõi nhiệm vụ và thành viên trong chiến dịch.
+                    </Text>
+                  </View>
+                  <Ionicons name="speedometer-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push('/profile/allocate-task' as any)}
+                  className="flex-row items-center justify-between rounded-2xl bg-white/12 px-4 py-3"
+                >
+                  <View className="flex-1 pr-3">
+                    <Text className="text-sm font-bold text-white">
+                      Phân công công việc
+                    </Text>
+                    <Text className="mt-1 text-xs text-white/75">
+                      Tạo và giao nhiệm vụ cho đội trong chiến dịch cứu trợ.
+                    </Text>
+                  </View>
+                  <Ionicons name="git-branch-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push('/profile/tasks' as any)}
+                  className="flex-row items-center justify-between rounded-2xl bg-white/12 px-4 py-3"
+                >
+                  <View className="flex-1 pr-3">
+                    <Text className="text-sm font-bold text-white">
+                      Công việc của đội
+                    </Text>
+                    <Text className="mt-1 text-xs text-white/75">
+                      Xem chi tiết nhiệm vụ, điểm phát và tiến độ thực hiện.
+                    </Text>
+                  </View>
+                  <Ionicons name="clipboard-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push('/profile/report-progress-team-leader' as any)}
+                  className="flex-row items-center justify-between rounded-2xl bg-white/12 px-4 py-3"
+                >
+                  <View className="flex-1 pr-3">
+                    <Text className="text-sm font-bold text-white">
+                      Báo cáo nhóm trưởng
+                    </Text>
+                    <Text className="mt-1 text-xs text-white/75">
+                      Mở nhanh màn hình tổng hợp tiến độ và báo cáo của đội.
+                    </Text>
+                  </View>
+                  <Ionicons name="bar-chart-outline" size={20} color="#fff" />
+                </TouchableOpacity>
               </View>
             ) : null}
           </View>

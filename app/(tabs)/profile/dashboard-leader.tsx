@@ -26,6 +26,7 @@ export default function ProfileDashboardLeaderRoute() {
     <DashboardTeamLeaderScreen
       onBack={() => router.replace('/profile')}
       onAllocateTask={() => router.push('/profile/allocate-task' as any)}
+      onViewMissionDetail={() => router.push('/profile/tasks' as any)}
     />
   );
 }

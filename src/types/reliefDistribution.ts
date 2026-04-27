@@ -169,6 +169,49 @@ export interface SupplyShortageRequestItemResponse {
   note?: string;
 }
 
+export interface ReliefPackageDefinitionResponse {
+  reliefPackageDefinitionId: string;
+  campaignId: string;
+  outputSupplyItemId?: string;
+  outputSupplyItemName?: string;
+  outputUnit?: string;
+  cashSupportAmount: number;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  items: ReliefPackageDefinitionItemResponse[];
+}
+
+export interface ReliefPackageDefinitionItemResponse {
+  reliefPackageDefinitionItemId: string;
+  supplyItemId: string;
+  supplyItemName: string;
+  quantity: number;
+  unit?: string;
+  estimatedStock?: number;
+  estimatedStockUnit?: string;
+}
+
+export interface CampaignInventoryBalanceResponse {
+  campaignId?: string;
+  updatedAt?: string;
+  items: CampaignInventoryBalanceItemResponse[];
+}
+
+export interface CampaignInventoryBalanceItemResponse {
+  supplyItemId: string;
+  supplyItemName: string;
+  unit?: string;
+  availableQuantity: number;
+  reservedQuantity?: number;
+  incomingQuantity?: number;
+  totalQuantity?: number;
+  isLowStock?: boolean;
+  shortageThreshold?: number;
+}
+
 export interface BatchCompleteHouseholdDeliveryItemResponse {
   householdDeliveryId: string;
   isSuccess: boolean;
@@ -254,6 +297,14 @@ export interface DistributionPointQueryRequest {
   campaignTeamId?: string;
   isActive?: boolean;
   deliveryMode?: DeliveryMode;
+}
+
+export interface CampaignPackageQueryRequest {
+  pageIndex?: number;
+  pageSize?: number;
+  search?: string;
+  isActive?: boolean;
+  isDefault?: boolean;
 }
 
 export interface DeliveryQueryRequest {

@@ -15,6 +15,7 @@ import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign
 import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
 import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
+import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import {
   CampaignTaskStatus,
   MemberTaskStatus,
@@ -166,13 +167,15 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
   const teamMode = myTeamData?.teamMode ?? 'rescue';
   const routeCampaignId =
     typeof params.campaignId === 'string' ? params.campaignId : '';
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(
-    routeCampaignId,
-  );
   const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(team?.teamId, !!team?.teamId);
+  const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
+    team,
+    fallbackAssignedCampaigns,
+    routeCampaignId || null,
+  );
   const { activeCampaign, assignedCampaigns, campaignId } = useActiveAssignedCampaign(
     team,
-    selectedCampaignId || null,
+    selectedCampaignId,
     fallbackAssignedCampaigns,
   );
   const { data: campaignDetail } = useCampaignDetail(campaignId || undefined, !!campaignId);
@@ -227,18 +230,6 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
     () => memberOptions.filter((member: TeamMemberSummary) => !!member.volunteerProfileId),
     [memberOptions],
   );
-  useEffect(() => {
-    if (!selectedCampaignId && assignedCampaigns.length > 0) {
-      setSelectedCampaignId(assignedCampaigns[0].campaignId);
-    }
-  }, [assignedCampaigns, selectedCampaignId]);
-
-  useEffect(() => {
-    if (routeCampaignId && routeCampaignId !== selectedCampaignId) {
-      setSelectedCampaignId(routeCampaignId);
-    }
-  }, [routeCampaignId, selectedCampaignId]);
-
   useEffect(() => {
     if (!selectedMemberId && assignableMembers.length) {
       setSelectedMemberId(assignableMembers[0].volunteerProfileId ?? null);
@@ -544,7 +535,21 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
         <View className="px-4 pb-4">
           <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>Danh sách nhiệm vụ chính ({tasks.length})</Text>
           {isTeamLoading || isTasksLoading ? (
-            <View className="items-center py-10"><ActivityIndicator size="large" color={colors.primary} /></View>
+            <View className="gap-3">
+              {[...Array(3)].map((_, i) => (
+                <View key={i} className="rounded-lg border p-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                  <View className="flex-row mb-2">
+                    <View className="h-6 w-40 rounded bg-gray-200 mr-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    <View className="h-6 w-16 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  </View>
+                  <View className="h-4 w-3/4 rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  <View className="flex-row items-center justify-between">
+                    <View className="h-4 w-24 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    <View className="h-9 w-20 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  </View>
+                </View>
+              ))}
+            </View>
           ) : tasks.length === 0 ? (
             <View className="rounded-xl border border-dashed p-4" style={{ borderColor: colors.border }}>
               <Text style={{ color: colors.textSecondary }}>Chưa có nhiệm vụ nào. Tạo ở Bước 1 trước.</Text>
@@ -584,7 +589,48 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
           </View>
 
           {isDetailLoading ? (
-            <ActivityIndicator color={colors.primary} />
+            <View className="gap-3">
+              <View className="rounded-lg p-3" style={{ backgroundColor: `${colors.secondary}08` }}>
+                <View className="h-6 w-3/4 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-4 w-full rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-5 w-32 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              </View>
+
+              <View className="rounded-xl border p-3" style={{ borderColor: colors.border }}>
+                <View className="h-4 w-40 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-3 w-5/6 rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="h-6 w-24 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                <View className="mt-3 self-start h-6 w-20 rounded-full border" style={{ borderColor: '#ef4444' }} />
+              </View>
+
+              <View className="h-4 w-56 rounded bg-gray-200 mt-1 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+
+              <View className="rounded-lg border p-3" style={{ borderColor: colors.border }}>
+                <View className="flex-row items-start justify-between gap-3">
+                  <View className="flex-1">
+                    <View className="h-5 w-40 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    <View className="h-3 w-32 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  </View>
+                  <View className="h-6 w-16 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                </View>
+                <View className="mt-3 gap-2">
+                  <View className="flex-row items-start gap-3 rounded-lg p-3" style={{ backgroundColor: `${colors.primary}08` }}>
+                    <View className="h-8 w-8 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    <View className="flex-1">
+                      <View className="h-4 w-32 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                      <View className="h-3 w-28 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    </View>
+                  </View>
+                  <View className="flex-row items-start gap-3 rounded-lg p-3" style={{ backgroundColor: `${colors.primary}08` }}>
+                    <View className="h-8 w-8 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    <View className="flex-1">
+                      <View className="h-4 w-40 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                      <View className="h-3 w-32 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
           ) : !taskDetail ? (
             <View className="rounded-xl border border-dashed p-4" style={{ borderColor: colors.border }}>
               <Ionicons name="arrow-up" size={20} color={colors.textSecondary} style={{ alignSelf: 'center', marginBottom: 8 }} />
