@@ -11,11 +11,13 @@ import {
   useCreateCampaignTask,
   useDeleteCampaignTask,
 } from '@/src/hooks/useLeaderTasks';
+import { useTeamWorklist } from '@/src/hooks/useReliefDistribution';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
 import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
+import { useAuthStore } from '@/src/store/authStore';
 import {
   CampaignTaskStatus,
   MemberTaskStatus,
@@ -26,11 +28,11 @@ import {
   type MemberTaskResponse,
 } from '@/src/types/leaderTask';
 import type { TeamMemberSummary } from '@/src/types/team';
+import { DeliveryMode } from '@/src/types/reliefDistribution';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { Platform } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -106,20 +108,6 @@ const dinhDangNgay = (value?: string | null) => {
   return date.toLocaleDateString('vi-VN', { timeZone: VIETNAM_TIMEZONE });
 };
 
-const dinhDangNgayGio = (value?: string | null) => {
-  if (!value) return 'Chưa xác định';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('vi-VN', {
-    timeZone: VIETNAM_TIMEZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-};
-
 const layNgayBatDau = (value?: string | null) => {
   const date = toGmt7Date(value);
   if (!date) return null;
@@ -159,21 +147,31 @@ const toTaskItem = (task: CampaignTaskResponse): TaskItem => ({
 export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const params = useLocalSearchParams<{ campaignId?: string }>();
+  const params = useLocalSearchParams<{
+    campaignId?: string;
+    areaName?: string;
+    distributionPointId?: string;
+    distributionPointName?: string;
+    source?: string;
+  }>();
   const scrollRef = useRef<ScrollView>(null);
   const detailSectionYRef = useRef(0);
+  const user = useAuthStore((s) => s.user);
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
   const teamMode = myTeamData?.teamMode ?? 'rescue';
   const routeCampaignId =
     typeof params.campaignId === 'string' ? params.campaignId : '';
+  const routeAreaName = typeof params.areaName === 'string' ? params.areaName : '';
+  const routeDistributionPointName = typeof params.distributionPointName === 'string' ? params.distributionPointName : '';
+  const routeSource = typeof params.source === 'string' ? params.source : '';
   const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(team?.teamId, !!team?.teamId);
-  const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
+  const { selectedCampaignId } = useSelectedCampaign(
     team,
     fallbackAssignedCampaigns,
     routeCampaignId || null,
   );
-  const { activeCampaign, assignedCampaigns, campaignId } = useActiveAssignedCampaign(
+  const { activeCampaign, campaignId } = useActiveAssignedCampaign(
     team,
     selectedCampaignId,
     fallbackAssignedCampaigns,
@@ -186,8 +184,30 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
     pageSize: 50,
     campaignTeamId: myCampaignTeam?.campaignTeamId,
   });
+  const { data: teamWorklistData } = useTeamWorklist(campaignId, {
+    pageIndex: 1,
+    pageSize: 100,
+    campaignTeamId: myCampaignTeam?.campaignTeamId,
+  });
 
-  const tasks = taskData?.items ?? [];
+  const tasks = useMemo(() => taskData?.items ?? [], [taskData?.items]);
+  const teamWorklistItems = useMemo(
+    () => teamWorklistData?.items ?? [],
+    [teamWorklistData?.items],
+  );
+  const pickupWorklist = useMemo(
+    () => teamWorklistItems.filter((item) => item.deliveryMode === DeliveryMode.PickupAtPoint),
+    [teamWorklistItems],
+  );
+  const mobileWorklist = useMemo(
+    () => teamWorklistItems.filter((item) => item.deliveryMode === DeliveryMode.DoorToDoor),
+    [teamWorklistItems],
+  );
+  const suggestedFlowLabel = routeDistributionPointName.trim()
+    ? 'Phân công theo điểm phát cho hộ không cô lập'
+    : routeAreaName.trim()
+      ? 'Phân công theo tuyến cơ động cho hộ cô lập'
+      : 'Phân công theo danh sách phát hàng';
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { data: taskDetail, isLoading: isDetailLoading } = useCampaignTaskDetail(selectedTaskId);
 
@@ -199,7 +219,7 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
 
   useEffect(() => {
     setSelectedTaskId(tasks[0]?.campaignTaskId ?? null);
-  }, [campaignId]);
+  }, [campaignId, tasks]);
 
   const createTaskMutation = useCreateCampaignTask();
   const deleteTaskMutation = useDeleteCampaignTask();
@@ -214,6 +234,32 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateObj, setDateObj] = useState(new Date());
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+
+  useEffect(() => {
+    if (routeSource !== 'relief-plan') return;
+
+    setTitle((prev) => {
+      if (prev.trim()) return prev;
+      if (routeDistributionPointName.trim()) {
+        return `Điều phối phát hàng - ${routeDistributionPointName.trim()}`;
+      }
+      if (routeAreaName.trim()) {
+        return `Hỗ trợ hộ cô lập - ${routeAreaName.trim()}`;
+      }
+      return 'Điều phối cứu trợ theo kế hoạch';
+    });
+
+    setDescription((prev) => {
+      if (prev.trim()) return prev;
+      const segments = [
+        'Nhiệm vụ được tạo từ kế hoạch cứu trợ.',
+        routeAreaName.trim() ? `Khu vực: ${routeAreaName.trim()}.` : '',
+        routeDistributionPointName.trim() ? `Điểm phát: ${routeDistributionPointName.trim()}.` : '',
+        'Ưu tiên điều phối nhân lực, vật lực và hỗ trợ các hộ cô lập hoặc hộ đang chờ phát tại khu vực liên quan.',
+      ].filter(Boolean);
+      return segments.join(' ');
+    });
+  }, [routeAreaName, routeDistributionPointName, routeSource]);
 
   // Biểu mẫu giao nhiệm vụ con
   const [assignMode, setAssignMode] = useState<'single' | 'bulk'>('single');
@@ -444,12 +490,37 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
                 Từ {dinhDangNgay(campaignStartDate)} đến {dinhDangNgay(campaignEndDate)}
               </Text>
               <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                GMT+7: {dinhDangNgayGio(campaignStartDate)} - {dinhDangNgayGio(campaignEndDate)}
-              </Text>
-              <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
                 Hãy tạo nhiệm vụ có thời gian phù hợp với khoảng thời gian hoạt động của chiến dịch.
               </Text>
             </View>
+            <View className="mt-3 rounded-lg border p-3" style={{ borderColor: colors.border, backgroundColor: `${colors.secondary}08` }}>
+              <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                Phân luồng theo thực địa
+              </Text>
+              <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                {suggestedFlowLabel}. Hộ không cô lập đi theo điểm phát; hộ cô lập đi theo tuyến cơ động, ưu tiên xuồng và người dẫn đường.
+              </Text>
+              <View className="mt-3 flex-row gap-2">
+                <View className="flex-1 rounded-xl px-3 py-2" style={{ backgroundColor: `${colors.primary}12` }}>
+                  <Text className="text-xs" style={{ color: colors.textSecondary }}>Nhận tại điểm phát</Text>
+                  <Text className="mt-1 text-base font-bold" style={{ color: colors.primary }}>{pickupWorklist.length}</Text>
+                </View>
+                <View className="flex-1 rounded-xl px-3 py-2" style={{ backgroundColor: `${colors.status.pending}12` }}>
+                  <Text className="text-xs" style={{ color: colors.textSecondary }}>Giao tận nơi</Text>
+                  <Text className="mt-1 text-base font-bold" style={{ color: colors.status.pending }}>{mobileWorklist.length}</Text>
+                </View>
+              </View>
+            </View>
+            {!!user?.role ? (
+              <View className="mt-3 rounded-lg border p-3" style={{ borderColor: `${colors.primary}35`, backgroundColor: `${colors.primary}08` }}>
+                <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                  Quyền hiện tại của bạn: {user.role}
+                </Text>
+                <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                  Hệ thống đã mở quyền cho tình nguyện viên là trưởng nhóm thao tác công việc. Nếu vẫn lỗi, hãy đăng xuất rồi đăng nhập lại để làm mới quyền truy cập.
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -462,8 +533,19 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
             <Text className="text-lg font-bold" style={{ color: colors.text }}>Tạo nhiệm vụ chính</Text>
           </View>
           <Text className="text-sm mb-3" style={{ color: colors.textSecondary }}>
-            Tạo 1 nhiệm vụ chung cho chiến dịch. Sau đó phân chia thành nhiều nhiệm vụ con cho thành viên.
+            Tạo một nhiệm vụ chung cho đợt triển khai, sau đó chia thành các phần việc cụ thể cho từng thành viên.
           </Text>
+          <View className="mb-3 rounded-lg border p-3" style={{ borderColor: colors.border, backgroundColor: `${colors.primary}06` }}>
+            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+              Gợi ý tạo công việc theo luồng mới
+            </Text>
+            <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+              - Nhận tại điểm phát: tạo task theo điểm phát, ca trực, số hộ chờ phát.
+            </Text>
+            <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+              - Giao tận nơi: tạo task theo khu vực, tuyến tiếp cận, mức ngập, nhu cầu xuồng hoặc dẫn đường.
+            </Text>
+          </View>
           <View className="mb-3 rounded-lg border p-3" style={{ borderColor: colors.primary, backgroundColor: `${colors.primary}08` }}>
             <View className="flex-row items-center gap-2">
               <Ionicons name="calendar-outline" size={16} color={colors.primary} />
@@ -475,9 +557,6 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
               Từ {dinhDangNgay(campaignStartDate)} đến {dinhDangNgay(campaignEndDate)}
             </Text>
             <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-              Theo giờ Việt Nam (GMT+7): {dinhDangNgayGio(campaignStartDate)} - {dinhDangNgayGio(campaignEndDate)}
-            </Text>
-            <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
               Hạn hoàn thành nhiệm vụ phải nằm trong khoảng thời gian này.
             </Text>
           </View>
@@ -486,7 +565,7 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
             <TextInput value={description} onChangeText={setDescription} placeholder="Mô tả chi tiết" placeholderTextColor={colors.textSecondary} className="rounded-lg border p-3" style={{ borderColor: colors.border, color: colors.text }} multiline />
             <TouchableOpacity onPress={() => setShowDatePicker(true)} className="flex-row items-center justify-between rounded-lg border p-3" style={{ borderColor: colors.border }}>
               <Text style={{ color: dueDate ? colors.text : colors.textSecondary }}>
-                {dueDate ? `Hạn: ${dinhDangNgay(dueDate)} (GMT+7)` : 'Hạn hoàn thành (tuỳ chọn)'}
+                {dueDate ? `Hạn: ${dinhDangNgay(dueDate)}` : 'Hạn hoàn thành (tùy chọn)'}
               </Text>
               <Ionicons name="calendar" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -740,10 +819,29 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
                   </Text>
                 </View>
 
+                <View className="rounded-lg border p-3" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
+                  <Text className="text-xs font-semibold" style={{ color: colors.text }}>
+                    Gợi ý giao việc cho thành viên
+                  </Text>
+                  <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                    {routeAreaName.trim()
+                      ? 'Với hộ cô lập, nên chia nhiệm vụ con theo tuyến tiếp cận, cụm hộ gần nhau, hoặc nhóm cần xuồng/người dẫn đường.'
+                      : routeDistributionPointName.trim()
+                        ? 'Với điểm phát, nên chia theo ca trực, quầy phát hoặc nhóm hộ đến nhận trong cùng khung giờ.'
+                        : 'Chia nhiệm vụ con theo từng cụm phát hàng thực địa để mỗi thành viên có phạm vi xử lý rõ ràng.'}
+                  </Text>
+                </View>
+
                 <TextInput
                   value={subTaskTitle}
                   onChangeText={setSubTaskTitle}
-                  placeholder="Tên nhiệm vụ con (VD: Phát hàng cho 10 hộ tổ 3)"
+                  placeholder={
+                    routeAreaName.trim()
+                      ? 'Tên phần việc (ví dụ: Tuyến xuồng 1 - 4 hộ cô lập cụm Bắc)'
+                      : routeDistributionPointName.trim()
+                        ? 'Tên phần việc (ví dụ: Quầy 2 - phát cho 20 hộ ca sáng)'
+                        : 'Tên phần việc (ví dụ: Phát hàng cho 10 hộ tổ 3)'
+                  }
                   placeholderTextColor={colors.textSecondary}
                   className="rounded-lg border p-3"
                   style={{ borderColor: colors.border, color: colors.text, backgroundColor: colors.card }}
@@ -792,7 +890,7 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
                           Chưa có thành viên khả dụng để giao việc
                         </Text>
                         <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                          API đội hiện chưa trả về volunteerProfileId hợp lệ cho thành viên nên chưa thể giao nhiệm vụ con.
+                          Danh sách thành viên hiện chưa sẵn sàng để giao việc. Vui lòng thử đồng bộ lại sau.
                         </Text>
                       </View>
                     ) : (
@@ -873,7 +971,7 @@ export default function AllocateTaskScreen({ onBack }: AllocateTaskScreenProps) 
               <View className="mt-1 flex-row items-start gap-2">
                 <Ionicons name="bulb-outline" size={16} color={colors.textSecondary} style={{ marginTop: 1 }} />
                 <Text className="flex-1 text-xs" style={{ color: colors.textSecondary }}>
-                  Khi tất cả nhiệm vụ con hoàn thành, nhiệm vụ chính sẽ tự động chuyển sang "Hoàn thành".
+                  Khi tất cả nhiệm vụ con hoàn thành, nhiệm vụ chính sẽ tự động chuyển sang trạng thái hoàn thành.
                 </Text>
               </View>
             </View>

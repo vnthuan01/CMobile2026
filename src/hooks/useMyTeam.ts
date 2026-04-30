@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { teamService } from '../services/teamService';
+import { mobileQueryOptions } from './queryOptions';
 
 export const teamKeys = {
   all: ['team'] as const,
@@ -36,5 +37,6 @@ export function useMyTeam(enabled = true) {
       };
     },
     enabled,
+    ...mobileQueryOptions('static'),
   });
 }

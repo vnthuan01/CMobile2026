@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   ScrollView,
@@ -552,7 +553,7 @@ export default function InventorySection({
                           </Text>
                           <Text className="text-sm font-bold" style={{ color: colors.primary }}>
                             Xin {item.quantityRequested}
-                            {item.quantityApproved !== undefined ? ` / duyệt ${item.quantityApproved}` : ''}
+                            {item.quantityApproved != null ? ` / duyệt ${item.quantityApproved}` : ''}
                           </Text>
                         </View>
                         {item.note ? (
@@ -592,30 +593,42 @@ export default function InventorySection({
         animationType="slide"
         onRequestClose={() => setShowShortageModal(false)}
       >
-        <Pressable
-          className="flex-1 justify-end"
-          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-          onPress={() => setShowShortageModal(false)}
-        >
-          <Pressable
-            className="rounded-t-3xl px-4 pb-8 pt-4"
-            style={{ backgroundColor: colors.card }}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text className="text-lg font-bold" style={{ color: colors.text }}>
-              Gửi yêu cầu nhập thêm hàng
-            </Text>
-            <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-              Chọn vật tư đang thiếu khi đi phát tại điểm phát hoặc hỗ trợ hộ dân bị cô lập.
-            </Text>
+        <KeyboardAvoidingView behavior="padding" className="flex-1">
+          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+            <View className="rounded-t-3xl px-4 pt-4" style={{ backgroundColor: colors.card, height: '94%' }}>
+              <View className="flex-row items-start justify-between gap-3">
+                <View className="flex-1">
+                  <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                    Gửi yêu cầu nhập thêm hàng
+                  </Text>
+                  <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                    Chọn vật tư đang thiếu khi đi phát tại điểm phát hoặc hỗ trợ hộ dân bị cô lập.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setShowShortageModal(false)}
+                  className="rounded-full p-2"
+                  style={{ backgroundColor: colors.background }}
+                >
+                  <Ionicons name="close" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-            <ScrollView className="mt-4" showsVerticalScrollIndicator={false}>
-              <View className="gap-4">
+              <View className="mt-4 flex-1">
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="always"
+                  contentContainerStyle={{ paddingBottom: 32 }}
+                >
+                  <View className="gap-4 pb-6">
                 <View>
                   <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
                     Điểm phát áp dụng
                   </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <Text className="mb-2 text-xs" style={{ color: colors.textSecondary }}>
+                    Kéo ngang để xem thêm điểm phát
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
                     <View className="flex-row gap-2">
                       {distributionPoints.map((point) => {
                         const selected = point.distributionPointId === selectedDistributionPointId;
@@ -752,6 +765,15 @@ export default function InventorySection({
                   </View>
                 </View>
 
+                    {hasOutOfStockItems ? (
+                      <Text className="text-center text-xs font-semibold" style={{ color: colors.status.error }}>
+                        Có vật tư đang hết hàng. Kiểm tra kỹ số lượng cần xin để ưu tiên bổ sung khẩn cấp.
+                      </Text>
+                    ) : null}
+                  </View>
+                </ScrollView>
+              </View>
+              <View className="gap-3 border-t pt-4 pb-6" style={{ borderColor: colors.border }}>
                 <TouchableOpacity
                   onPress={handleSubmitShortageRequest}
                   disabled={createShortageRequestMutation.isPending}
@@ -767,15 +789,19 @@ export default function InventorySection({
                     {createShortageRequestMutation.isPending ? 'Đang gửi...' : 'Gửi yêu cầu'}
                   </Text>
                 </TouchableOpacity>
-                {hasOutOfStockItems ? (
-                  <Text className="text-center text-xs font-semibold" style={{ color: colors.status.error }}>
-                    Có vật tư đang hết hàng. Kiểm tra kỹ số lượng cần xin để ưu tiên bổ sung khẩn cấp.
+                <TouchableOpacity
+                  onPress={() => setShowShortageModal(false)}
+                  className="items-center rounded-2xl border py-3"
+                  style={{ borderColor: colors.border }}
+                >
+                  <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                    Đóng
                   </Text>
-                ) : null}
+                </TouchableOpacity>
               </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

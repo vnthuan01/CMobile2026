@@ -120,8 +120,8 @@ export default function ViewTasksScreen({
                                     }}
                                 >
                                     <Text className="text-sm font-normal leading-relaxed" style={{ color: colors.text }}>
-                                        "Gia đình có người già và trẻ nhỏ, nước đang dâng cao khoảng
-                                        0.5m trước cửa nhà."
+                                        Gia đình có người già và trẻ nhỏ, nước đang dâng cao khoảng
+                                        0.5m trước cửa nhà.
                                     </Text>
                                 </View>
                             </View>

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { teamService } from '../services/teamService';
+import { mobileQueryOptions } from './queryOptions';
 
 export const assignedCampaignKeys = {
   all: ['assignedCampaigns'] as const,
@@ -15,8 +16,6 @@ export function useAssignedCampaigns(teamId?: string | null, enabled = true) {
       return result.data ?? [];
     },
     enabled: enabled && !!teamId,
-    staleTime: 1000 * 15,
-    refetchOnMount: true,
-    refetchOnReconnect: true,
+    ...mobileQueryOptions('normal', { staleTime: 1000 * 15 }),
   });
 }

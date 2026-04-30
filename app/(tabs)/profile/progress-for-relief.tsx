@@ -1,8 +1,8 @@
-import ProgressForReliefScreen from '@/src/features/volunteer/screens/ProgressForReliefScreen';
+import MyProgressForReliefScreen from '@/src/features/volunteer/screens/MyProgressForReliefScreen';
 import { useRouter } from 'expo-router';
 
 export default function ProgressForReliefRoute() {
   const router = useRouter();
 
-  return <ProgressForReliefScreen onBack={() => router.back()} />;
+  return <MyProgressForReliefScreen onBack={() => router.replace('/profile/tasks' as any)} />;
 }

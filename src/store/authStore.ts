@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
+import { queryClient } from '../lib/queryClient';
 import type { AuthTokens, StoredAuthTokens, User } from '../types/auth';
 
 export interface AuthState {
@@ -14,6 +15,7 @@ export interface AuthState {
   setLoading: (isLoading: boolean) => void;
   logout: () => Promise<void>;
   hydrateAuth: () => Promise<void>;
+  clearSession: () => void;
 }
 
 const STORAGE_KEY = 'auth_tokens';
@@ -117,6 +119,8 @@ export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>
         AsyncStorage.removeItem(USER_STORAGE_KEY),
       ]);
 
+      queryClient.clear();
+
       set({
         accessToken: null,
         refreshToken: null,
@@ -135,6 +139,17 @@ export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>
     }
   },
 
+  clearSession: () => {
+    queryClient.clear();
+    set({
+      accessToken: null,
+      refreshToken: null,
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  },
+
   hydrateAuth: async () => {
     try {
       const [{ accessToken, refreshToken }, userData] = await Promise.all([
@@ -145,7 +160,8 @@ export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>
       set({
         accessToken,
         refreshToken,
-        isAuthenticated: Boolean(accessToken),
+        user: null,
+        isAuthenticated: false,
       });
 
       if (userData) {

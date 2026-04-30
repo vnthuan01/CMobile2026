@@ -307,7 +307,7 @@ export default function MyVolunteerProfileScreen({
             {isLeader ? (
               <View className="mt-4 gap-3">
                 <TouchableOpacity
-                  onPress={() => router.push('/profile/dashboard-leader' as any)}
+                  onPress={() => router.replace('/profile/dashboard-leader' as any)}
                   className="flex-row items-center justify-between rounded-2xl bg-white/12 px-4 py-3"
                 >
                   <View className="flex-1 pr-3">
@@ -322,7 +322,7 @@ export default function MyVolunteerProfileScreen({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => router.push('/profile/allocate-task' as any)}
+                  onPress={() => router.replace('/profile/allocate-task' as any)}
                   className="flex-row items-center justify-between rounded-2xl bg-white/12 px-4 py-3"
                 >
                   <View className="flex-1 pr-3">
@@ -337,7 +337,7 @@ export default function MyVolunteerProfileScreen({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => router.push('/profile/tasks' as any)}
+                  onPress={() => router.replace('/profile/tasks' as any)}
                   className="flex-row items-center justify-between rounded-2xl bg-white/12 px-4 py-3"
                 >
                   <View className="flex-1 pr-3">
@@ -352,7 +352,7 @@ export default function MyVolunteerProfileScreen({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => router.push('/profile/report-progress-team-leader' as any)}
+                  onPress={() => router.replace('/profile/report-progress-team-leader' as any)}
                   className="flex-row items-center justify-between rounded-2xl bg-white/12 px-4 py-3"
                 >
                   <View className="flex-1 pr-3">

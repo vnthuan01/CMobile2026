@@ -6,7 +6,7 @@ export default function UserProfileViewRoute() {
 
   return (
     <UserProfileViewScreen
-      onBack={() => router.back()}
+      onBack={() => router.replace('/profile')}
       onEdit={() => router.replace('/profile/edit')}
     />
   );

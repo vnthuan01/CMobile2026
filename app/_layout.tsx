@@ -202,7 +202,7 @@ function RootLayoutContent() {
         style={{ flex: 1, backgroundColor: colors.background }}
         edges={['left', 'right']}
       >
-        {isStartupLoadingVisible ? (
+        {isStartupLoadingVisible || isLoading || !rootNavigationState?.key ? (
           <StartupLoadingScreen
             backgroundColor={colors.background}
             primaryColor={colors.primary}

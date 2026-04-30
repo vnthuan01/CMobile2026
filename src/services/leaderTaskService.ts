@@ -54,14 +54,16 @@ export interface PaginatedMyMemberTaskResponse {
   items: MyMemberTaskResponse[];
 }
 
+const ENABLE_DEBUG_LOGS = false;
+
 const debugLog = (label: string, payload?: unknown) => {
-  if (__DEV__) {
+  if (__DEV__ && ENABLE_DEBUG_LOGS) {
     console.log(`[LeaderTaskService] ${label}`, payload ?? '');
   }
 };
 
 const debugError = (label: string, error: any) => {
-  if (__DEV__) {
+  if (__DEV__ && ENABLE_DEBUG_LOGS) {
     console.error(`[LeaderTaskService] ${label}`, {
       status: error?.response?.status,
       data: error?.response?.data,
@@ -359,7 +361,7 @@ export const leaderTaskService = {
     campaignId: string,
     query?: GetMyMemberTasksQuery
   ): Promise<ApiResponse<PaginatedMyMemberTaskResponse>> => {
-    const routes = [`/campaigns/${campaignId}/my-member-tasks`, `/api/campaigns/${campaignId}/my-member-tasks`];
+    const routes = [`/api/campaigns/${campaignId}/member-tasks/me`, `/campaigns/${campaignId}/member-tasks/me`];
 
     for (const route of routes) {
       try {
@@ -436,8 +438,8 @@ export const leaderTaskService = {
     request: ChangeMemberTaskStatusRequest,
   ): Promise<ApiResponse<MemberTaskResponse>> => {
     const routes = [
-      `/campaigns/tasks/member-tasks/${memberTaskId}/status`,
-      `/api/campaigns/tasks/member-tasks/${memberTaskId}/status`,
+      `/api/campaigns/member-tasks/${memberTaskId}/status`,
+      `/campaigns/member-tasks/${memberTaskId}/status`,
     ];
 
     for (const route of routes) {
@@ -451,7 +453,7 @@ export const leaderTaskService = {
           message: 'Cập nhật trạng thái nhiệm vụ con thành công',
         };
       } catch (error: any) {
-        debugError('changeMemberTaskStatus failed', error);
+        debugError(`changeMemberTaskStatus failed:${route}`, error);
         if (error?.response?.status !== 404) {
           return {
             success: false,

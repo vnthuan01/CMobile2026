@@ -1,7 +1,6 @@
 import '@/global.css';
 import CustomDropdown from '@/src/components/CustomDropdown';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
-import InventorySection from './InventorySection';
 import TaskCard, { type TaskItem } from '@/src/components/common/TaskCard';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
@@ -12,12 +11,14 @@ import {
   useCampaignTasks,
   useCampaignTeams,
   useChangeMemberTaskStatus,
+  useMyMemberTasks,
 } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import {
   useCampaignHouseholds,
+  useCampaignPlanSummary,
   useDistributionPoints,
-  useShortageRequests,
+  useTeamWorklist,
 } from '@/src/hooks/useReliefDistribution';
 import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import { useAuthStore } from '@/src/store/authStore';
@@ -30,21 +31,26 @@ import {
   type CampaignTeamResponse,
   type MemberTaskResponse,
 } from '@/src/types/leaderTask';
-import { SupplyShortageRequestStatus } from '@/src/types/reliefDistribution';
+import {
+  DeliveryMode,
+  DistributionPointResponse,
+  type ReliefCampaignPlanSummary,
+} from '@/src/types/reliefDistribution';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import InventorySection from './InventorySection';
+import ReliefPlanSection from './ReliefPlanSection';
 
 interface ReliefTasksScreenProps {
   onBack?: () => void;
@@ -123,8 +129,9 @@ const getVolunteerDisplayName = (
 
 export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   const { bottom } = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
+  const summaryScrollRef = useRef<ScrollView | null>(null);
   const user = useAuthStore((s) => s.user);
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
   const team = myTeamData?.team;
@@ -146,9 +153,18 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   );
 
   const isLeader = useMemo(() => {
-    if (!user?.id || !team?.leader?.userId) return false;
-    return user.id === team.leader.userId;
-  }, [team?.leader?.userId, user?.id]);
+    if (!user?.id) return false;
+
+    if (team?.leader?.userId && user.id === team.leader.userId) {
+      return true;
+    }
+
+    const myMember = team?.members?.find((member) => member.userId === user.id);
+    const normalizedRole = String(
+      (myMember as any)?.role ?? (myMember as any)?.roleTeam ?? '',
+    ).toLowerCase();
+    return normalizedRole === 'leader';
+  }, [team?.leader?.userId, team?.members, user?.id]);
 
   const teamMode = myTeamData?.teamMode ?? 'rescue';
 
@@ -168,52 +184,139 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
       campaignTeamId: myCampaignTeam?.campaignTeamId,
     },
   );
+  const { data: myMemberTaskData } = useMyMemberTasks(
+    teamMode === 'relief' ? campaignId : null,
+    {
+      pageIndex: 1,
+      pageSize: 100,
+      campaignTeamId: myCampaignTeam?.campaignTeamId,
+    },
+  );
 
   // Relief distribution data
   const { data: distributionPointsData } = useDistributionPoints(
     teamMode === 'relief' ? campaignId : null,
     { campaignTeamId: myCampaignTeam?.campaignTeamId, pageSize: 50 },
   );
-  const distributionPoints = distributionPointsData?.items ?? [];
-
-  const { data: pendingShortageRequestsData } = useShortageRequests(
+  const distributionPoints = useMemo(
+    () => distributionPointsData?.items ?? [],
+    [distributionPointsData?.items],
+  );
+  const { data: teamWorklistData } = useTeamWorklist(
     teamMode === 'relief' ? campaignId : null,
     {
       pageIndex: 1,
-      pageSize: 20,
+      pageSize: 100,
       campaignTeamId: myCampaignTeam?.campaignTeamId,
-      requestedByUserId: user?.id,
-      status: SupplyShortageRequestStatus.Pending,
     },
   );
 
   const { data: householdsData } = useCampaignHouseholds(
     teamMode === 'relief' ? campaignId : null,
-    { campaignTeamId: myCampaignTeam?.campaignTeamId, deliveryMode: 1, pageSize: 50 },
+    {
+      campaignTeamId: myCampaignTeam?.campaignTeamId,
+      deliveryMode: 1,
+      pageSize: 50,
+    },
   );
+  const { data: apiPlanSummary, isLoading: isPlanSummaryLoading } =
+    useCampaignPlanSummary(teamMode === 'relief' ? campaignId : null);
   const households = (householdsData?.items ?? []).filter(
     (household) =>
-      (!myCampaignTeam?.campaignTeamId || household.campaignTeamId === myCampaignTeam.campaignTeamId) &&
+      (!myCampaignTeam?.campaignTeamId ||
+        household.campaignTeamId === myCampaignTeam.campaignTeamId) &&
       household.deliveryMode === 1,
   );
   const pendingHouseholds = households.filter((h) => h.fulfillmentStatus === 0);
+  const isolatedPendingHouseholds = pendingHouseholds.filter(
+    (household) => household.isIsolated,
+  );
+  const teamWorklist = useMemo(
+    () => teamWorklistData?.items ?? [],
+    [teamWorklistData?.items],
+  );
+  const pickupDeliveries = useMemo(
+    () =>
+      teamWorklist.filter(
+        (item) => item.deliveryMode === DeliveryMode.PickupAtPoint,
+      ),
+    [teamWorklist],
+  );
+  const isolatedDeliveries = useMemo(
+    () =>
+      teamWorklist.filter(
+        (item) =>
+          item.deliveryMode === DeliveryMode.DoorToDoor && item.isIsolated,
+      ),
+    [teamWorklist],
+  );
+  const mobileDeliveries = useMemo(
+    () =>
+      teamWorklist.filter(
+        (item) => item.deliveryMode === DeliveryMode.DoorToDoor,
+      ),
+    [teamWorklist],
+  );
 
-  const tasks = taskData?.items ?? [];
+  const tasks = useMemo(() => taskData?.items ?? [], [taskData?.items]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { data: taskDetail, isLoading: isDetailLoading } =
     useCampaignTaskDetail(selectedTaskId);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'points' | 'inventory' | 'plan'>('tasks');
+  const [activeTab, setActiveTab] = useState<
+    'tasks' | 'points' | 'inventory' | 'plan'
+  >('tasks');
 
-  // Identify current user's subtasks
-  const myMemberTasks = useMemo(() => {
-    if (!taskDetail || !user?.id) return [];
-    const detail = taskDetail as CampaignTaskDetailResponse;
-    return (detail.memberTasks || []).filter((mt: MemberTaskResponse) => {
-      // Match by volunteer name or profile id from team data
-      const myMember = team?.members?.find((m) => m.userId === user.id);
-      return myMember && mt.volunteerProfileId === myMember.volunteerProfileId;
+  const myVolunteerProfileId = useMemo(
+    () =>
+      team?.members?.find((member) => member.userId === user?.id)
+        ?.volunteerProfileId,
+    [team?.members, user?.id],
+  );
+
+  const myAssignedMemberTasks = useMemo(
+    () => myMemberTaskData?.items ?? [],
+    [myMemberTaskData?.items],
+  );
+
+  const myMemberTasksByCampaign = useMemo(
+    () => myAssignedMemberTasks,
+    [myAssignedMemberTasks],
+  );
+
+  const myTaskByCampaignTaskId = useMemo(() => {
+    const map = new Map<string, (typeof myAssignedMemberTasks)[number]>();
+    myAssignedMemberTasks.forEach((task) => {
+      if (!map.has(task.campaignTaskId)) {
+        map.set(task.campaignTaskId, task);
+      }
     });
-  }, [taskDetail, user?.id, team?.members]);
+    return map;
+  }, [myAssignedMemberTasks]);
+
+  const myTaskByDistributionPointId = useMemo(() => {
+    const map = new Map<string, (typeof myAssignedMemberTasks)[number]>();
+    myAssignedMemberTasks.forEach((task) => {
+      task.deliveries?.forEach((delivery) => {
+        const distributionPointId = (delivery as any).distributionPointId as
+          | string
+          | undefined;
+        if (distributionPointId && !map.has(distributionPointId)) {
+          map.set(distributionPointId, task);
+        }
+      });
+    });
+    return map;
+  }, [myAssignedMemberTasks]);
+
+  // Identify current user's subtasks inside selected task detail
+  const myMemberTasks = useMemo(() => {
+    if (!taskDetail || !myVolunteerProfileId) return [];
+    const detail = taskDetail as CampaignTaskDetailResponse;
+    return (detail.memberTasks || []).filter(
+      (memberTask: MemberTaskResponse) =>
+        memberTask.volunteerProfileId === myVolunteerProfileId,
+    );
+  }, [taskDetail, myVolunteerProfileId]);
 
   const changeMemberStatusMutation = useChangeMemberTaskStatus();
 
@@ -225,7 +328,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
 
   useEffect(() => {
     setSelectedTaskId(tasks[0]?.campaignTaskId ?? null);
-  }, [campaignId]);
+  }, [campaignId, tasks]);
 
   const completed = tasks.filter(
     (task: CampaignTaskResponse) =>
@@ -235,9 +338,33 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
     (task: CampaignTaskResponse) =>
       task.status === CampaignTaskStatus.InProgress,
   ).length;
-  const blocked = tasks.filter(
-    (task: CampaignTaskResponse) => task.status === CampaignTaskStatus.Blocked,
+  const completedSubtasks = myMemberTasksByCampaign.filter(
+    (task) => task.status === MemberTaskStatus.Completed,
   ).length;
+  const failedSubtasks = myMemberTasksByCampaign.filter(
+    (task) => task.status === MemberTaskStatus.Failed,
+  ).length;
+  const summaryItems = [
+    { label: 'Tổng việc', value: String(tasks.length) },
+    { label: 'Đang làm', value: String(inProgress) },
+    { label: 'Hoàn thành', value: String(completed) },
+    { label: 'Nhiệm vụ nhánh xong', value: String(completedSubtasks) },
+    { label: 'Nhiệm vụ nhánh lỗi', value: String(failedSubtasks) },
+    { label: 'Điểm phát của đội', value: String(distributionPoints.length) },
+    { label: 'Hộ chờ phát', value: String(pendingHouseholds.length) },
+    ...(isolatedPendingHouseholds.length > 0
+      ? [
+          {
+            label: 'Hộ cô lập chờ phát',
+            value: String(isolatedPendingHouseholds.length),
+          },
+        ]
+      : []),
+  ];
+  const marqueeSummaryItems = useMemo(
+    () => [...summaryItems, ...summaryItems],
+    [summaryItems],
+  );
   const campaignOptions = useMemo(
     () =>
       assignedCampaigns.map((campaign) => ({
@@ -292,12 +419,223 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
 
     return Array.from(groups.values());
   }, [taskDetail]);
-  const bottomSheetMaxHeight = Math.round(
-    Dimensions.get('window').height * 0.5,
-  );
 
-  const pendingShortageRequestsCount =
-    pendingShortageRequestsData?.items?.length ?? 0;
+  useEffect(() => {
+    if (summaryItems.length <= 1) return;
+
+    let offset = 0;
+    const itemWidth = 152;
+    const resetThreshold = summaryItems.length * itemWidth;
+
+    const timer = setInterval(() => {
+      offset += 1;
+      if (offset >= resetThreshold) {
+        offset = 0;
+      }
+
+      summaryScrollRef.current?.scrollTo({ x: offset, animated: false });
+    }, 18);
+
+    return () => clearInterval(timer);
+  }, [summaryItems.length]);
+
+  const canManageTasks = isLeader;
+  const shouldShowPersonalTaskPanels =
+    !canManageTasks && myMemberTasks.length > 0;
+
+  const fallbackPlanSummary = useMemo<ReliefCampaignPlanSummary>(() => {
+    const areaMap = new Map<
+      string,
+      {
+        areaName: string;
+        locationId?: string | null;
+        latitude?: number | null;
+        longitude?: number | null;
+        householdCount: number;
+        isolatedHouseholdCount: number;
+        population: number;
+        pendingHouseholds: number;
+      }
+    >();
+
+    households.forEach((household) => {
+      const areaName = household.address?.trim() || 'Chưa phân khu vực';
+      const key = `${household.locationId || 'na'}-${areaName}`;
+      const existing = areaMap.get(key) || {
+        areaName,
+        locationId: household.locationId || null,
+        latitude: household.latitude ?? null,
+        longitude: household.longitude ?? null,
+        householdCount: 0,
+        isolatedHouseholdCount: 0,
+        population: 0,
+        pendingHouseholds: 0,
+      };
+      if (typeof existing.latitude !== 'number' && typeof household.latitude === 'number') {
+        existing.latitude = household.latitude;
+      }
+      if (typeof existing.longitude !== 'number' && typeof household.longitude === 'number') {
+        existing.longitude = household.longitude;
+      }
+      existing.householdCount += 1;
+      existing.population += household.householdSize;
+      existing.pendingHouseholds += household.fulfillmentStatus === 0 ? 1 : 0;
+      if (household.isIsolated) existing.isolatedHouseholdCount += 1;
+      areaMap.set(key, existing);
+    });
+
+    const isolatedCount = households.filter((item) => item.isIsolated).length;
+    const totalPopulation = households.reduce(
+      (sum, item) => sum + item.householdSize,
+      0,
+    );
+    const suggestedTeamCount =
+      households.length > 0
+        ? Math.ceil(households.length / 50) + (isolatedCount > 6 ? 1 : 0)
+        : 0;
+    const estimatedReliefPersonnel = Math.max(
+      suggestedTeamCount * 4,
+      Math.ceil(totalPopulation / 25),
+    );
+    const estimatedLocalVolunteers =
+      isolatedCount > 0 ? Math.max(1, Math.ceil(isolatedCount / 10)) : 0;
+    const estimatedBoatCount =
+      isolatedCount > 0 ? Math.ceil(isolatedCount / 6) : 0;
+    const estimatedLifeJacketCount =
+      estimatedReliefPersonnel +
+      estimatedLocalVolunteers +
+      estimatedBoatCount * 2;
+
+    return {
+      campaignId: campaignId || '',
+      totalHouseholds: households.length,
+      isolatedHouseholds: isolatedCount,
+      totalPopulation,
+      averagePopulationDensity: 0,
+      highDensityAreaCount: 0,
+      mobileTeamPriorityAreaCount: 0,
+      pickupPriorityAreaCount: 0,
+      distributionPointCount: distributionPoints.length,
+      pendingHouseholds: pendingHouseholds.length,
+      suggestedTeamCount,
+      estimatedReliefPersonnel,
+      estimatedLocalVolunteers,
+      estimatedBoatCount,
+      estimatedLifeJacketCount,
+      areas: Array.from(areaMap.values()).map((item) => ({
+        areaName: item.areaName,
+        locationId: item.locationId,
+        latitude: item.latitude ?? null,
+        longitude: item.longitude ?? null,
+        populationDensity: 0,
+        householdCount: item.householdCount,
+        isolatedHouseholdCount: item.isolatedHouseholdCount,
+        population: item.population,
+        averageHouseholdSize:
+          item.householdCount > 0
+            ? Number((item.population / item.householdCount).toFixed(2))
+            : 0,
+        pendingHouseholds: item.pendingHouseholds,
+        estimatedCoverageRadiusKm: 0,
+        travelComplexityLabel:
+          item.isolatedHouseholdCount > 0 ? 'Phức tạp vừa' : 'Phức tạp thấp',
+        recommendedOperationalMode:
+          item.isolatedHouseholdCount > 0
+            ? 'Ưu tiên đội cơ động'
+            : 'Kết hợp điểm phát và đội cơ động',
+        recommendedDeliveryStrategy:
+          item.isolatedHouseholdCount > 0
+            ? 'Đội cơ động gõ từng cụm, giao tận nơi cho hộ cô lập'
+            : 'Kết hợp phát tại điểm và tiếp cận hộ xa',
+        suggestedDistributionPointCount: 0,
+        suggestedMobileTeamCount:
+          item.isolatedHouseholdCount > 0
+            ? Math.max(1, Math.ceil(item.isolatedHouseholdCount / 4))
+            : 0,
+        suggestedTeamCount:
+          item.householdCount > 0 ? Math.ceil(item.householdCount / 50) : 0,
+        estimatedPackages: item.pendingHouseholds,
+        estimatedBoatCount:
+          item.isolatedHouseholdCount > 0
+            ? Math.ceil(item.isolatedHouseholdCount / 6)
+            : 0,
+        estimatedLifeJacketCount:
+          Math.max(0, Math.ceil(item.population / 25)) +
+          (item.isolatedHouseholdCount > 0
+            ? Math.ceil(item.isolatedHouseholdCount / 6) * 2
+            : 0),
+      })),
+      isolatedHouseholdItems: households
+        .filter((item) => item.isIsolated)
+        .map((item) => ({
+          campaignHouseholdId: item.campaignHouseholdId,
+          householdCode: item.householdCode,
+          headOfHouseholdName: item.headOfHouseholdName,
+          address: item.address || null,
+          locationId: item.locationId || null,
+          householdSize: item.householdSize,
+          floodSeverityLevel: 0,
+          isolationSeverityLevel: 0,
+          requiresBoat: false,
+          requiresLocalGuide: false,
+          priorityLabel:
+            item.householdSize >= 5
+              ? 'Khẩn cấp'
+              : item.householdSize >= 3
+                ? 'Ưu tiên cao'
+                : 'Ưu tiên',
+          suggestedSupportMode:
+            item.deliveryMode === 0 ? 'Giao tận nơi' : 'Ưu tiên giao tận nơi',
+          estimatedReliefPersonnel: Math.max(
+            2,
+            Math.ceil(item.householdSize / 2),
+          ),
+          estimatedBoatCount: item.householdSize >= 4 ? 1 : 0,
+          estimatedLifeJacketCount: Math.max(2, item.householdSize),
+          campaignTeamName: item.campaignTeamName || null,
+        })),
+      distributionPoints: distributionPoints.map((item) => ({
+        distributionPointId: item.distributionPointId,
+        name: item.name,
+        address: item.address || null,
+        assignedHouseholdCount: item.assignedHouseholdCount,
+        pendingDeliveryCount: item.pendingDeliveryCount,
+        suggestedPersonnelCount: Math.max(
+          2,
+          Math.ceil(item.assignedHouseholdCount / 25),
+        ),
+        suggestedLocalVolunteerCount: 0,
+      })),
+      resourceRequirements: [
+        {
+          resourceType: 'Nhân lực',
+          resourceName: 'Đội cứu trợ',
+          estimatedQuantity: suggestedTeamCount,
+          notes: 'Tính nhanh theo số hộ cần hỗ trợ.',
+        },
+        {
+          resourceType: 'Nhân lực',
+          resourceName: 'Nhân sự cứu trợ',
+          estimatedQuantity: estimatedReliefPersonnel,
+          notes: 'Ước tính từ số dân và số đội.',
+        },
+        {
+          resourceType: 'Thiết bị',
+          resourceName: 'Xuồng / ghe tiếp cận',
+          estimatedQuantity: estimatedBoatCount,
+          notes: 'Ước tính từ số hộ cô lập.',
+        },
+        {
+          resourceType: 'Thiết bị',
+          resourceName: 'Áo phao',
+          estimatedQuantity: estimatedLifeJacketCount,
+          notes: 'Ước tính cho tổ tiếp cận và TNV địa phương.',
+        },
+      ],
+    };
+  }, [campaignId, distributionPoints, households, pendingHouseholds.length]);
+
+  const planSummary = apiPlanSummary ?? fallbackPlanSummary;
 
   const handleChangeMemberStatus = async (
     memberTaskId: string,
@@ -328,17 +666,61 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   };
 
   const openTaskProgress = (campaignTaskId: string) => {
+    const myTask = myTaskByCampaignTaskId.get(campaignTaskId);
+    const hasIsolatedDelivery = myTask?.deliveries?.some(
+      (delivery: any) => !delivery.distributionPointId,
+    );
+    const defaultDistributionPointId =
+      myTask?.deliveries?.find(
+        (delivery: any) => !!delivery.distributionPointId,
+      )?.distributionPointId ||
+      distributionPoints.find(
+        (point) => point.campaignTeamId === myCampaignTeam?.campaignTeamId,
+      )?.distributionPointId;
+
+    if (hasIsolatedDelivery) {
+      router.push({
+        pathname: '/profile/progress-for-relief' as any,
+        params: {
+          campaignId: campaignId || undefined,
+          campaignTeamId: myCampaignTeam?.campaignTeamId,
+          campaignTeamName: myCampaignTeam?.teamName,
+          campaignTaskId,
+          memberTaskId: myTask?.memberTaskId,
+          initialTab: myTask ? 'subtask' : 'delivery',
+          flowMode: 'isolated',
+        },
+      });
+      return;
+    }
+
+    if (!defaultDistributionPointId) {
+      setActiveTab('points');
+      setSelectedTaskId(campaignTaskId);
+      showSuccessToast(
+        'Chọn điểm phát để tiếp tục',
+        'Đây là các điểm phát mà đội bạn đang được phân công. Hãy chọn một điểm phát để tiếp tục cập nhật tiến độ phát hàng tại điểm.',
+      );
+      return;
+    }
+
     router.push({
       pathname: '/profile/progress-for-relief' as any,
       params: {
         campaignId: campaignId || undefined,
+        campaignTeamId: myCampaignTeam?.campaignTeamId,
+        campaignTeamName: myCampaignTeam?.teamName,
         campaignTaskId,
+        distributionPointId: defaultDistributionPointId,
+        memberTaskId: myTask?.memberTaskId,
         initialTab: 'subtask',
       },
     });
   };
 
   const openDistributionPointDeliveries = (distributionPointId: string) => {
+    const myTask = myTaskByDistributionPointId.get(distributionPointId);
+
     router.push({
       pathname: '/profile/progress-for-relief' as any,
       params: {
@@ -346,9 +728,52 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
         campaignTeamId: myCampaignTeam?.campaignTeamId,
         campaignTeamName: myCampaignTeam?.teamName,
         distributionPointId,
-        initialTab: 'delivery',
+        campaignTaskId: myTask?.campaignTaskId || selectedTaskId || undefined,
+        memberTaskId: myTask?.memberTaskId,
+        initialTab: 'subtask',
       },
     });
+  };
+
+  const openPlanAllocateTask = (
+    areaName?: string,
+    distributionPointId?: string,
+    distributionPointName?: string,
+  ) => {
+    router.push({
+      pathname: '/profile/allocate-task' as any,
+      params: {
+        campaignId: campaignId || undefined,
+        areaName: areaName || undefined,
+        distributionPointId: distributionPointId || undefined,
+        distributionPointName: distributionPointName || undefined,
+        source: 'relief-plan',
+      },
+    });
+  };
+
+  const openIsolatedProgress = () => {
+    const myTask =
+      myAssignedMemberTasks.find((task) =>
+        task.deliveries?.some((delivery: any) => !delivery.distributionPointId),
+      ) || myAssignedMemberTasks[0];
+
+    router.push({
+      pathname: '/profile/progress-for-relief' as any,
+      params: {
+        campaignId: campaignId || undefined,
+        campaignTeamId: myCampaignTeam?.campaignTeamId,
+        campaignTeamName: myCampaignTeam?.teamName,
+        campaignTaskId: myTask?.campaignTaskId,
+        memberTaskId: myTask?.memberTaskId,
+        initialTab: myTask ? 'subtask' : 'delivery',
+        flowMode: 'isolated',
+      },
+    });
+  };
+
+  const openAllIsolatedHouseholds = () => {
+    openIsolatedProgress();
   };
 
   const getNextStatusOptions = (
@@ -377,26 +802,65 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
       >
         {isTeamLoading || isCampaignsLoading || isTasksLoading ? (
           <View className="gap-4">
-            <View className="rounded-3xl p-5" style={{ backgroundColor: colors.secondary }}>
+            <View
+              className="rounded-3xl p-5"
+              style={{ backgroundColor: colors.secondary }}
+            >
               <View className="h-3 w-28 rounded-full bg-white/25" />
               <View className="mt-4 h-10 rounded-2xl bg-white/15" />
               <View className="mt-4 h-7 w-3/4 rounded-full bg-white/20" />
               <View className="mt-3 h-4 w-full rounded-full bg-white/15" />
               <View className="mt-4 flex-row gap-3">
-                <View className="h-14 flex-1 rounded-2xl bg-white/12" />
-                <View className="h-14 flex-1 rounded-2xl bg-white/12" />
-                <View className="h-14 flex-1 rounded-2xl bg-white/12" />
+                <View className="bg-white/12 h-14 flex-1 rounded-2xl" />
+                <View className="bg-white/12 h-14 flex-1 rounded-2xl" />
+                <View className="bg-white/12 h-14 flex-1 rounded-2xl" />
               </View>
             </View>
             <View className="flex-row gap-2">
-              <View className="h-12 flex-1 rounded-xl" style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }} />
-              <View className="h-12 flex-1 rounded-xl" style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }} />
-              <View className="h-12 flex-1 rounded-xl" style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }} />
+              <View
+                className="h-12 flex-1 rounded-xl"
+                style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              />
+              <View
+                className="h-12 flex-1 rounded-xl"
+                style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              />
+              <View
+                className="h-12 flex-1 rounded-xl"
+                style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              />
             </View>
-            <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.card }}>
-              <View className="h-5 w-40 rounded-full" style={{ backgroundColor: `${colors.primary}12` }} />
-              <View className="mt-3 h-24 rounded-2xl" style={{ backgroundColor: `${colors.primary}08` }} />
-              <View className="mt-3 h-24 rounded-2xl" style={{ backgroundColor: `${colors.primary}08` }} />
+            <View
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              }}
+            >
+              <View
+                className="h-5 w-40 rounded-full"
+                style={{ backgroundColor: `${colors.primary}12` }}
+              />
+              <View
+                className="mt-3 h-24 rounded-2xl"
+                style={{ backgroundColor: `${colors.primary}08` }}
+              />
+              <View
+                className="mt-3 h-24 rounded-2xl"
+                style={{ backgroundColor: `${colors.primary}08` }}
+              />
             </View>
           </View>
         ) : teamMode !== 'relief' ? (
@@ -436,14 +900,14 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   />
                 </View>
               ) : (
-                <View className="mt-3 self-start rounded-full bg-white/18 px-3 py-1.5">
+                <View className="bg-white/18 mt-3 self-start rounded-full px-3 py-1.5">
                   <Text className="text-xs font-semibold text-white">
                     Chiến dịch hiện tại đã tự đồng bộ
                   </Text>
                 </View>
               )}
               {isTasksLoading && campaignId ? (
-                <View className="mt-3 self-start rounded-full bg-white/16 px-3 py-1.5">
+                <View className="bg-white/16 mt-3 self-start rounded-full px-3 py-1.5">
                   <Text className="text-xs font-semibold text-white/90">
                     Đang đồng bộ chiến dịch...
                   </Text>
@@ -470,30 +934,34 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                 </Text>
               </View>
 
-              <View className="mt-4 flex-row gap-3">
-                <SummaryChip label="Tổng việc" value={String(tasks.length)} />
-                <SummaryChip label="Đang làm" value={String(inProgress)} />
-                <SummaryChip label="Bị chặn" value={String(blocked)} />
-                <SummaryChip label="Hoàn thành" value={String(completed)} />
-              </View>
+              <ScrollView
+                ref={summaryScrollRef}
+                horizontal
+                scrollEnabled={false}
+                showsHorizontalScrollIndicator={false}
+                className="mt-4 rounded-full border border-white"
+                style={{
+                  borderColor: 'rgba(255,255,255,0.25)',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                }}
+                contentContainerStyle={{ paddingRight: 12 }}
+              >
+                {marqueeSummaryItems.map((item, index) => (
+                  <View
+                    key={`${item.label}-${index}`}
+                    style={{
+                      width: 140,
+                      marginRight: 12,
+                      height: 48,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <SummaryChip label={item.label} value={item.value} />
+                  </View>
+                ))}
+              </ScrollView>
 
-              {/* Thống kê nhanh */}
-              <View className="mt-3 flex-row gap-3">
-                <SummaryChip
-                  label="Điểm phát"
-                  value={String(distributionPoints.length)}
-                />
-                <SummaryChip
-                  label="Hộ chờ phát"
-                  value={String(pendingHouseholds.length)}
-                />
-                <SummaryChip
-                  label="Y/c bổ sung"
-                  value={String(pendingShortageRequestsCount)}
-                />
-              </View>
-
-              {isLeader ? (
+              {canManageTasks ? (
                 <TouchableOpacity
                   onPress={() =>
                     router.push({
@@ -510,14 +978,35 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                     Quản lý & phân phối nhiệm vụ
                   </Text>
                 </TouchableOpacity>
-              ) : null}
+              ) : (
+                <View
+                  className="mt-4 rounded-xl border px-4 py-3"
+                  style={{ borderColor: 'rgba(255,255,255,0.25)' }}
+                >
+                  <Text className="text-sm font-semibold text-white">
+                    Theo dõi phần việc và cập nhật tiến độ ngay từ tab Công
+                    việc.
+                  </Text>
+                  <Text className="mt-1 text-xs text-white/75">
+                    Khi cần phân công thêm, trưởng nhóm sẽ mở tính năng quản lý
+                    nhiệm vụ từ cùng chiến dịch này.
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Tab selector */}
-            <View className="flex-row gap-2">
+            <Text className="text-xs" style={{ color: colors.textSecondary }}>
+              Kéo ngang để xem thêm mục
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+            >
               <TouchableOpacity
                 onPress={() => setActiveTab('tasks')}
-                className="flex-1 items-center rounded-xl py-3"
+                className="items-center rounded-xl px-4 py-3"
                 style={{
                   backgroundColor:
                     activeTab === 'tasks' ? colors.primary : colors.card,
@@ -536,9 +1025,32 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   Công việc ({tasks.length})
                 </Text>
               </TouchableOpacity>
+              {canManageTasks ? (
+                <TouchableOpacity
+                  onPress={() => setActiveTab('plan')}
+                  className="items-center rounded-xl px-4 py-3"
+                  style={{
+                    backgroundColor:
+                      activeTab === 'plan' ? colors.primary : colors.card,
+                    borderWidth: 1,
+                    borderColor:
+                      activeTab === 'plan' ? colors.primary : colors.border,
+                  }}
+                >
+                  <Text
+                    className="text-sm font-bold"
+                    style={{
+                      color:
+                        activeTab === 'plan' ? '#fff' : colors.textSecondary,
+                    }}
+                  >
+                    Kế hoạch
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity
                 onPress={() => setActiveTab('points')}
-                className="flex-1 items-center rounded-xl py-3"
+                className="items-center rounded-xl px-4 py-3"
                 style={{
                   backgroundColor:
                     activeTab === 'points' ? colors.primary : colors.card,
@@ -559,7 +1071,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setActiveTab('inventory')}
-                className="flex-1 items-center rounded-xl py-3"
+                className="items-center rounded-xl px-4 py-3"
                 style={{
                   backgroundColor:
                     activeTab === 'inventory' ? colors.primary : colors.card,
@@ -578,7 +1090,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   Kho & yêu cầu
                 </Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
 
             {activeTab === 'tasks' ? (
               <>
@@ -604,16 +1116,30 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                     đội.
                   </Text>
 
+                  {myMemberTasksByCampaign.length > 0 ? (
+                    <Text
+                      className="mt-2 text-xs font-semibold"
+                      style={{ color: colors.secondary }}
+                    >
+                      Bạn đang có {myMemberTasksByCampaign.length} công việc
+                      được giao trong chiến dịch này.
+                    </Text>
+                  ) : null}
+
                   <View className="mt-4 gap-3">
                     {tasks.length > 0 ? (
                       tasks.map((task: CampaignTaskResponse) => (
                         <View key={task.campaignTaskId} className="gap-2">
                           <TaskCard
                             task={toTaskItem(task)}
-                            onPress={() => setSelectedTaskId(task.campaignTaskId)}
+                            onPress={() =>
+                              setSelectedTaskId(task.campaignTaskId)
+                            }
                           />
                           <TouchableOpacity
-                            onPress={() => openTaskProgress(task.campaignTaskId)}
+                            onPress={() =>
+                              openTaskProgress(task.campaignTaskId)
+                            }
                             className="flex-row items-center justify-center rounded-xl py-3"
                             style={{
                               backgroundColor: `${colors.primary}12`,
@@ -621,11 +1147,62 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                               borderColor: `${colors.primary}33`,
                             }}
                           >
-                            <Ionicons name="create-outline" size={16} color={colors.primary} />
-                            <Text className="ml-2 text-sm font-bold" style={{ color: colors.primary }}>
+                            <Ionicons
+                              name="create-outline"
+                              size={16}
+                              color={colors.primary}
+                            />
+                            <Text
+                              className="ml-2 text-sm font-bold"
+                              style={{ color: colors.primary }}
+                            >
                               Cập nhật tiến độ nhiệm vụ này
                             </Text>
                           </TouchableOpacity>
+                          {selectedTaskId === task.campaignTaskId &&
+                          myMemberTasks.length > 0 ? (
+                            <View
+                              className="rounded-xl border p-3"
+                              style={{
+                                borderColor: `${colors.secondary}30`,
+                                backgroundColor: `${colors.secondary}08`,
+                              }}
+                            >
+                              <Text
+                                className="text-sm font-semibold"
+                                style={{ color: colors.secondary }}
+                              >
+                                Phần việc của tôi trong công việc này
+                              </Text>
+                              <View className="mt-2 gap-2">
+                                {myMemberTasks.map((memberTask) => (
+                                  <View
+                                    key={memberTask.memberTaskId}
+                                    className="rounded-lg px-3 py-2"
+                                    style={{
+                                      backgroundColor: colors.card,
+                                      borderWidth: 1,
+                                      borderColor: colors.border,
+                                    }}
+                                  >
+                                    <Text
+                                      className="text-sm font-semibold"
+                                      style={{ color: colors.text }}
+                                    >
+                                      {memberTask.subTaskTitle}
+                                    </Text>
+                                    <Text
+                                      className="mt-1 text-xs"
+                                      style={{ color: colors.textSecondary }}
+                                    >
+                                      {MEMBER_STATUS_MAP[memberTask.status]
+                                        ?.label || 'Đã giao'}
+                                    </Text>
+                                  </View>
+                                ))}
+                              </View>
+                            </View>
+                          ) : null}
                         </View>
                       ))
                     ) : (
@@ -642,241 +1219,308 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                 </View>
 
                 {/* Chi tiết công việc và cập nhật trạng thái phần việc */}
-                <View
-                  className="rounded-2xl border p-4"
-                  style={{
-                    borderColor: colors.border,
-                    backgroundColor: colors.card,
-                  }}
-                >
-                  <Text
-                    className="text-lg font-bold"
-                    style={{ color: colors.text }}
+                {shouldShowPersonalTaskPanels ? (
+                  <View
+                    className="rounded-2xl border p-4"
+                    style={{
+                      borderColor: `${colors.secondary}30`,
+                      backgroundColor: `${colors.secondary}08`,
+                    }}
                   >
-                    Chi tiết công việc
-                  </Text>
-                  {isDetailLoading ? (
-                    <View className="items-center py-6">
-                      <ActivityIndicator color={colors.primary} />
-                    </View>
-                  ) : !taskDetail ? (
                     <Text
-                      className="mt-3"
+                      className="text-lg font-bold"
+                      style={{ color: colors.secondary }}
+                    >
+                      Phần việc được giao cho tôi
+                    </Text>
+                    <Text
+                      className="mt-1 text-sm"
                       style={{ color: colors.textSecondary }}
                     >
-                      Chọn một công việc để xem danh sách phần việc của thành
-                      viên.
+                      Chọn một công việc ở trên để xem phần việc của bạn và mở
+                      màn cập nhật tiến độ.
                     </Text>
-                  ) : (
-                    <View className="mt-3 gap-3">
-                      <Text
-                        className="text-base font-bold"
-                        style={{ color: colors.text }}
-                      >
-                        {taskDetail.title}
-                      </Text>
-                      <Text style={{ color: colors.textSecondary }}>
-                        {taskDetail.description || 'Không có mô tả'}
-                      </Text>
-
-                      <View className="flex-row flex-wrap gap-2">
-                        <StatusPill
-                          label={`Bắt đầu: ${formatDate(taskDetail.startDate)}`}
-                          color={colors.primary}
-                        />
-                        <StatusPill
-                          label={`Hạn: ${formatDate(taskDetail.dueDate)}`}
-                          color={colors.textSecondary}
-                        />
-                        <StatusPill
-                          label={`${taskDetail.completedMemberTaskCount}/${taskDetail.memberTaskCount} hoàn thành`}
-                          color={colors.status.completed}
-                        />
-                      </View>
-
-                      <Text
-                        className="mt-2 text-sm font-semibold"
-                        style={{ color: colors.text }}
-                      >
-                        Phần việc thành viên
-                      </Text>
-                      {(
-                        (taskDetail as CampaignTaskDetailResponse)
-                          .memberTasks || []
-                      ).length > 0 ? (
-                        groupedMemberTasks.map((group, index) => (
-                          <View
-                            key={`${group.title}-${index}`}
-                            className="rounded-xl border p-3"
-                            style={{ borderColor: colors.border }}
+                    <View className="mt-3 gap-2">
+                      {myMemberTasks.map((memberTask) => (
+                        <View
+                          key={memberTask.memberTaskId}
+                          className="rounded-xl border p-3"
+                          style={{
+                            borderColor: colors.border,
+                            backgroundColor: colors.card,
+                          }}
+                        >
+                          <Text
+                            className="text-sm font-semibold"
+                            style={{ color: colors.text }}
                           >
-                            <View className="flex-row items-start justify-between gap-3">
-                              <View className="flex-1">
-                                <Text
-                                  className="font-semibold"
-                                  style={{ color: colors.text }}
-                                >
-                                  {group.title}
-                                </Text>
-                                <Text
-                                  className="mt-1 text-xs"
-                                  style={{ color: colors.textSecondary }}
-                                >
-                                  {group.completedCount}/{group.totalCount}{' '}
-                                  thành viên hoàn thành
-                                </Text>
-                              </View>
-                              <View
-                                className="rounded-full px-3 py-1"
-                                style={{
-                                  backgroundColor: `${colors.primary}18`,
-                                }}
-                              >
-                                <Text
-                                  className="text-xs font-bold"
-                                  style={{ color: colors.primary }}
-                                >
-                                  {group.totalCount} người
-                                </Text>
-                              </View>
-                            </View>
+                            {memberTask.subTaskTitle}
+                          </Text>
+                          <Text
+                            className="mt-1 text-xs"
+                            style={{ color: colors.textSecondary }}
+                          >
+                            {MEMBER_STATUS_MAP[memberTask.status]?.label ||
+                              'Đã giao'}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : (
+                  <View
+                    className="rounded-2xl border p-4"
+                    style={{
+                      borderColor: colors.border,
+                      backgroundColor: colors.card,
+                    }}
+                  >
+                    <Text
+                      className="text-lg font-bold"
+                      style={{ color: colors.text }}
+                    >
+                      Chi tiết công việc
+                    </Text>
+                    {isDetailLoading ? (
+                      <View className="items-center py-6">
+                        <ActivityIndicator color={colors.primary} />
+                      </View>
+                    ) : !taskDetail ? (
+                      <Text
+                        className="mt-3"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Chọn một công việc để xem danh sách phần việc của thành
+                        viên.
+                      </Text>
+                    ) : (
+                      <View className="mt-3 gap-3">
+                        <Text
+                          className="text-base font-bold"
+                          style={{ color: colors.text }}
+                        >
+                          {taskDetail.title}
+                        </Text>
+                        <Text style={{ color: colors.textSecondary }}>
+                          {taskDetail.description || 'Không có mô tả'}
+                        </Text>
 
-                            <View className="mt-3 gap-2">
-                              {group.members.map((memberTask) => {
-                                const statusInfo =
-                                  MEMBER_STATUS_MAP[memberTask.status] ||
-                                  MEMBER_STATUS_MAP[MemberTaskStatus.Assigned];
-                                const nextStatuses = getNextStatusOptions(
-                                  memberTask.status,
-                                );
-                                const isMyTask = myMemberTasks.some(
-                                  (mt) =>
-                                    mt.memberTaskId === memberTask.memberTaskId,
-                                );
-                                return (
-                                  <View
-                                    key={memberTask.memberTaskId}
-                                    className="rounded-xl border p-3"
-                                    style={{
-                                      borderColor: isMyTask
-                                        ? colors.secondary
-                                        : colors.border,
-                                      borderWidth: isMyTask ? 1.5 : 1,
-                                      backgroundColor: `${colors.primary}06`,
-                                    }}
+                        <View className="flex-row flex-wrap gap-2">
+                          <StatusPill
+                            label={`Bắt đầu: ${formatDate(taskDetail.startDate)}`}
+                            color={colors.primary}
+                          />
+                          <StatusPill
+                            label={`Hạn: ${formatDate(taskDetail.dueDate)}`}
+                            color={colors.textSecondary}
+                          />
+                          <StatusPill
+                            label={`${taskDetail.completedMemberTaskCount}/${taskDetail.memberTaskCount} hoàn thành`}
+                            color={colors.status.completed}
+                          />
+                        </View>
+
+                        <Text
+                          className="mt-2 text-sm font-semibold"
+                          style={{ color: colors.text }}
+                        >
+                          Phần việc thành viên
+                        </Text>
+                        {(
+                          (taskDetail as CampaignTaskDetailResponse)
+                            .memberTasks || []
+                        ).length > 0 ? (
+                          groupedMemberTasks.map((group, index) => (
+                            <View
+                              key={`${group.title}-${index}`}
+                              className="rounded-xl border p-3"
+                              style={{ borderColor: colors.border }}
+                            >
+                              <View className="flex-row items-start justify-between gap-3">
+                                <View className="flex-1">
+                                  <Text
+                                    className="font-semibold"
+                                    style={{ color: colors.text }}
                                   >
-                                    <View className="flex-row items-start justify-between gap-3">
-                                      <View className="flex-1">
-                                        <View className="flex-row items-center gap-2">
-                                          <Text
-                                            className="font-semibold"
-                                            style={{ color: colors.text }}
-                                          >
-                                            {getVolunteerDisplayName(
-                                              memberTask,
-                                              team?.members,
-                                            )}
-                                          </Text>
-                                          {isMyTask && (
-                                            <View
-                                              className="rounded-full px-2 py-0.5"
-                                              style={{
-                                                backgroundColor: `${colors.secondary}20`,
-                                              }}
+                                    {group.title}
+                                  </Text>
+                                  <Text
+                                    className="mt-1 text-xs"
+                                    style={{ color: colors.textSecondary }}
+                                  >
+                                    {group.completedCount}/{group.totalCount}{' '}
+                                    thành viên hoàn thành
+                                  </Text>
+                                </View>
+                                <View
+                                  className="rounded-full px-3 py-1"
+                                  style={{
+                                    backgroundColor: `${colors.primary}18`,
+                                  }}
+                                >
+                                  <Text
+                                    className="text-xs font-bold"
+                                    style={{ color: colors.primary }}
+                                  >
+                                    {group.totalCount} người
+                                  </Text>
+                                </View>
+                              </View>
+
+                              <View className="mt-3 gap-2">
+                                {group.members.map((memberTask) => {
+                                  const statusInfo =
+                                    MEMBER_STATUS_MAP[memberTask.status] ||
+                                    MEMBER_STATUS_MAP[
+                                      MemberTaskStatus.Assigned
+                                    ];
+                                  const nextStatuses = getNextStatusOptions(
+                                    memberTask.status,
+                                  );
+                                  const isMyTask =
+                                    memberTask.volunteerProfileId ===
+                                    myVolunteerProfileId;
+                                  return (
+                                    <View
+                                      key={memberTask.memberTaskId}
+                                      className="rounded-xl border p-3"
+                                      style={{
+                                        borderColor: isMyTask
+                                          ? colors.secondary
+                                          : colors.border,
+                                        borderWidth: isMyTask ? 1.5 : 1,
+                                        backgroundColor: `${colors.primary}06`,
+                                      }}
+                                    >
+                                      <View className="flex-row items-start justify-between gap-3">
+                                        <View className="flex-1">
+                                          <View className="flex-row items-center gap-2">
+                                            <Text
+                                              className="font-semibold"
+                                              style={{ color: colors.text }}
                                             >
-                                              <Text
-                                                className="text-xs font-bold"
+                                              {getVolunteerDisplayName(
+                                                memberTask,
+                                                team?.members,
+                                              )}
+                                            </Text>
+                                            {isMyTask && (
+                                              <View
+                                                className="rounded-full px-2 py-0.5"
                                                 style={{
-                                                  color: colors.secondary,
+                                                  backgroundColor: `${colors.secondary}20`,
                                                 }}
                                               >
-                                                Của tôi
-                                              </Text>
-                                            </View>
-                                          )}
+                                                <Text
+                                                  className="text-xs font-bold"
+                                                  style={{
+                                                    color: colors.secondary,
+                                                  }}
+                                                >
+                                                  Của tôi
+                                                </Text>
+                                              </View>
+                                            )}
+                                          </View>
+                                          <Text
+                                            className="mt-1 text-sm"
+                                            style={{
+                                              color: colors.textSecondary,
+                                            }}
+                                          >
+                                            {memberTask.taskNote ||
+                                              'Chưa có ghi chú'}
+                                          </Text>
                                         </View>
-                                        <Text
-                                          className="mt-1 text-sm"
+                                        <View
+                                          className="rounded-full px-3 py-1"
                                           style={{
-                                            color: colors.textSecondary,
+                                            backgroundColor: `${statusInfo.color}18`,
                                           }}
                                         >
-                                          {memberTask.taskNote ||
-                                            'Chưa có ghi chú'}
-                                        </Text>
+                                          <Text
+                                            className="text-xs font-bold"
+                                            style={{ color: statusInfo.color }}
+                                          >
+                                            {statusInfo.label}
+                                          </Text>
+                                        </View>
                                       </View>
-                                      <View
-                                        className="rounded-full px-3 py-1"
-                                        style={{
-                                          backgroundColor: `${statusInfo.color}18`,
-                                        }}
-                                      >
-                                        <Text
-                                          className="text-xs font-bold"
-                                          style={{ color: statusInfo.color }}
-                                        >
-                                          {statusInfo.label}
-                                        </Text>
-                                      </View>
-                                    </View>
 
-                                    {isMyTask && nextStatuses.length > 0 && (
-                                      <View className="mt-3 flex-row gap-2">
-                                        {nextStatuses.map((ns) => {
-                                          const nsInfo = MEMBER_STATUS_MAP[ns];
-                                          return (
-                                            <TouchableOpacity
-                                              key={ns}
-                                              onPress={() =>
-                                                handleChangeMemberStatus(
-                                                  memberTask.memberTaskId,
-                                                  ns,
-                                                )
-                                              }
-                                              disabled={
-                                                changeMemberStatusMutation.isPending
-                                              }
-                                              className="flex-1 flex-row items-center justify-center gap-1 rounded-lg border py-2"
-                                              style={{
-                                                borderColor: nsInfo.color,
-                                                backgroundColor: `${nsInfo.color}12`,
-                                                opacity:
+                                      {isMyTask && nextStatuses.length > 0 && (
+                                        <View className="mt-3 flex-row gap-2">
+                                          {nextStatuses.map((ns) => {
+                                            const nsInfo =
+                                              MEMBER_STATUS_MAP[ns];
+                                            return (
+                                              <TouchableOpacity
+                                                key={ns}
+                                                onPress={() =>
+                                                  handleChangeMemberStatus(
+                                                    memberTask.memberTaskId,
+                                                    ns,
+                                                  )
+                                                }
+                                                disabled={
                                                   changeMemberStatusMutation.isPending
-                                                    ? 0.6
-                                                    : 1,
-                                              }}
-                                            >
-                                              <Ionicons
-                                                name={nsInfo.icon as any}
-                                                size={14}
-                                                color={nsInfo.color}
-                                              />
-                                              <Text
-                                                className="text-xs font-bold"
-                                                style={{ color: nsInfo.color }}
+                                                }
+                                                className="flex-1 flex-row items-center justify-center gap-1 rounded-lg border py-2"
+                                                style={{
+                                                  borderColor: nsInfo.color,
+                                                  backgroundColor: `${nsInfo.color}12`,
+                                                  opacity:
+                                                    changeMemberStatusMutation.isPending
+                                                      ? 0.6
+                                                      : 1,
+                                                }}
                                               >
-                                                {nsInfo.label}
-                                              </Text>
-                                            </TouchableOpacity>
-                                          );
-                                        })}
-                                      </View>
-                                    )}
-                                  </View>
-                                );
-                              })}
+                                                <Ionicons
+                                                  name={nsInfo.icon as any}
+                                                  size={14}
+                                                  color={nsInfo.color}
+                                                />
+                                                <Text
+                                                  className="text-xs font-bold"
+                                                  style={{
+                                                    color: nsInfo.color,
+                                                  }}
+                                                >
+                                                  {nsInfo.label}
+                                                </Text>
+                                              </TouchableOpacity>
+                                            );
+                                          })}
+                                        </View>
+                                      )}
+                                    </View>
+                                  );
+                                })}
+                              </View>
                             </View>
-                          </View>
-                        ))
-                      ) : (
-                        <Text style={{ color: colors.textSecondary }}>
-                          Chưa có phần việc nào được giao cho thành viên.
-                        </Text>
-                      )}
-                    </View>
-                  )}
-                </View>
+                          ))
+                        ) : (
+                          <Text style={{ color: colors.textSecondary }}>
+                            Chưa có phần việc nào được giao cho thành viên.
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
               </>
+            ) : activeTab === 'plan' ? (
+              <ReliefPlanSection
+                summary={planSummary}
+                isLoading={isPlanSummaryLoading}
+                onOpenAllocateTask={
+                  canManageTasks
+                    ? () => openPlanAllocateTask(planSummary.areas[0]?.areaName)
+                    : undefined
+                }
+                onOpenProgress={openDistributionPointDeliveries}
+                onOpenIsolatedFlow={openIsolatedProgress}
+                onOpenAllIsolatedHouseholds={openAllIsolatedHouseholds}
+              />
             ) : activeTab === 'points' ? (
               /* Tab điểm phát */
               <View
@@ -896,14 +1540,40 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   className="mt-1 text-sm"
                   style={{ color: colors.textSecondary }}
                 >
-                  Các điểm phân phối hàng cứu trợ trong chiến dịch.
+                  Các điểm phân phối hàng cứu trợ cho nhóm hộ không cô lập, nhận
+                  hàng tại điểm phát.
                 </Text>
+                <View
+                  className="mt-3 rounded-xl border p-3"
+                  style={{
+                    borderColor: `${colors.primary}24`,
+                    backgroundColor: `${colors.primary}08`,
+                  }}
+                >
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.primary }}
+                  >
+                    Cách tổ chức 1: Điểm phát cho hộ không cô lập
+                  </Text>
+                  <Text
+                    className="mt-1 text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Dùng tính năng này khi đội phụ trách các lượt phát tại điểm:
+                    trực điểm phát, kiểm soát hàng chờ phát và xử lý theo ca.
+                  </Text>
+                </View>
                 <View className="mt-4 gap-3">
                   {distributionPoints.length > 0 ? (
                     distributionPoints.map((dp: DistributionPointResponse) => (
                       <TouchableOpacity
                         key={dp.distributionPointId}
-                        onPress={() => openDistributionPointDeliveries(dp.distributionPointId)}
+                        onPress={() =>
+                          openDistributionPointDeliveries(
+                            dp.distributionPointId,
+                          )
+                        }
                         activeOpacity={0.85}
                         className="rounded-xl border p-4"
                         style={{ borderColor: colors.border }}
@@ -944,62 +1614,52 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                           </View>
                         </View>
 
-                        <View className="mt-3 flex-row gap-2">
-                          <View
-                            className="flex-1 items-center rounded-lg p-2"
-                            style={{ backgroundColor: `${colors.primary}12` }}
-                          >
-                            <Text
-                              className="text-lg font-bold"
-                              style={{ color: colors.primary }}
+                        <View className="mt-3 flex-row flex-wrap gap-2">
+                          {myTaskByDistributionPointId.has(
+                            dp.distributionPointId,
+                          ) ? (
+                            <View
+                              className="rounded-full px-3 py-1"
+                              style={{
+                                backgroundColor: `${colors.secondary}18`,
+                              }}
                             >
-                              {dp.assignedHouseholdCount}
-                            </Text>
-                            <Text
-                              className="text-xs"
-                              style={{ color: colors.textSecondary }}
+                              <Text
+                                className="text-xs font-bold"
+                                style={{ color: colors.secondary }}
+                              >
+                                Phần việc của tôi
+                              </Text>
+                            </View>
+                          ) : null}
+                          {pickupDeliveries.length > 0 ? (
+                            <View
+                              className="rounded-full px-3 py-1"
+                              style={{ backgroundColor: `${colors.primary}12` }}
                             >
-                              Hộ giao
-                            </Text>
-                          </View>
-                          <View
-                            className="flex-1 items-center rounded-lg p-2"
-                            style={{
-                              backgroundColor: `${colors.status.pending}12`,
-                            }}
-                          >
-                            <Text
-                              className="text-lg font-bold"
-                              style={{ color: colors.status.pending }}
+                              <Text
+                                className="text-xs font-bold"
+                                style={{ color: colors.primary }}
+                              >
+                                Có hộ chờ phát tại điểm
+                              </Text>
+                            </View>
+                          ) : null}
+                          {isolatedDeliveries.length > 0 ? (
+                            <View
+                              className="rounded-full px-3 py-1"
+                              style={{
+                                backgroundColor: `${colors.status.pending}12`,
+                              }}
                             >
-                              {dp.pendingDeliveryCount}
-                            </Text>
-                            <Text
-                              className="text-xs"
-                              style={{ color: colors.textSecondary }}
-                            >
-                              Chờ phát
-                            </Text>
-                          </View>
-                          <View
-                            className="flex-1 items-center rounded-lg p-2"
-                            style={{
-                              backgroundColor: `${colors.status.completed}12`,
-                            }}
-                          >
-                            <Text
-                              className="text-lg font-bold"
-                              style={{ color: colors.status.completed }}
-                            >
-                              {dp.totalDeliveryCount}
-                            </Text>
-                            <Text
-                              className="text-xs"
-                              style={{ color: colors.textSecondary }}
-                            >
-                              Tổng
-                            </Text>
-                          </View>
+                              <Text
+                                className="text-xs font-bold"
+                                style={{ color: colors.status.pending }}
+                              >
+                                Có hộ cô lập
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
 
                         <View className="mt-2 flex-row items-center gap-1">
@@ -1026,11 +1686,21 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                             ? 'Giao tận nhà'
                             : 'Nhận tại điểm'}
                         </Text>
-                        <View className="mt-3 flex-row items-center justify-between rounded-lg px-3 py-2" style={{ backgroundColor: `${colors.primary}10` }}>
-                          <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
+                        <View
+                          className="mt-3 flex-row items-center justify-between rounded-lg px-3 py-2"
+                          style={{ backgroundColor: `${colors.primary}10` }}
+                        >
+                          <Text
+                            className="text-sm font-semibold"
+                            style={{ color: colors.primary }}
+                          >
                             Xem hộ dân đang chờ phát
                           </Text>
-                          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                          <Ionicons
+                            name="arrow-forward"
+                            size={16}
+                            color={colors.primary}
+                          />
                         </View>
                       </TouchableOpacity>
                     ))
@@ -1045,6 +1715,36 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                     </View>
                   )}
                 </View>
+                <TouchableOpacity
+                  onPress={openIsolatedProgress}
+                  className="mt-4 rounded-xl border p-4"
+                  style={{
+                    borderColor: `${colors.status.pending}24`,
+                    backgroundColor: `${colors.status.pending}08`,
+                  }}
+                >
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.status.pending }}
+                  >
+                    Cách tổ chức 2: Cơ động cho hộ cô lập
+                  </Text>
+                  <Text
+                    className="mt-1 text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    {isolatedDeliveries.length > 0
+                      ? `Đội hiện có ${isolatedDeliveries.length} lượt phát cho hộ cô lập cần xử lý theo tuyến tận nơi, không gắn với điểm phát.`
+                      : 'Hiện chưa có lượt phát nào cho hộ cô lập trong danh sách của đội.'}
+                  </Text>
+
+                  <Text
+                    className="mt-2 text-xs font-bold"
+                    style={{ color: colors.status.pending }}
+                  >
+                    Mở tiến độ hộ cô lập
+                  </Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <InventorySection
@@ -1052,21 +1752,27 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                 campaignTeamId={myCampaignTeam?.campaignTeamId}
                 userId={user?.id}
                 distributionPoints={distributionPoints}
-                defaultDistributionPointId={distributionPoints[0]?.distributionPointId}
+                defaultDistributionPointId={
+                  distributionPoints[0]?.distributionPointId
+                }
               />
             )}
           </View>
         )}
       </ScrollView>
-
     </View>
   );
 }
 
 function SummaryChip({ label, value }: { label: string; value: string }) {
   return (
-    <View className="bg-white/12 flex-1 rounded-2xl px-3 py-2">
-      <Text className="text-xs text-white/70">{label}</Text>
+    <View
+      className="bg-white/12 rounded-2xl px-3 py-3"
+      style={{ minHeight: 72 }}
+    >
+      <Text className="text-xs text-white/70" numberOfLines={2}>
+        {label}
+      </Text>
       <Text className="mt-1 text-base font-bold text-white">{value}</Text>
     </View>
   );

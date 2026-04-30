@@ -12,8 +12,8 @@ import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import { CampaignTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse } from '@/src/types/leaderTask';
 import type { TeamMemberSummary } from '@/src/types/team';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface DashboardTeamLeaderScreenProps {
@@ -85,7 +85,7 @@ export default function DashboardTeamLeaderScreen({
     ? members.filter((member) => member.status === 'ready')
     : members;
 
-  const taskItems = taskData?.items ?? [];
+  const taskItems = useMemo(() => taskData?.items ?? [], [taskData?.items]);
   const completed = taskItems.filter((task: CampaignTaskResponse) => task.status === CampaignTaskStatus.Completed).length;
   const inProgress = taskItems.filter((task: CampaignTaskResponse) => task.status === CampaignTaskStatus.InProgress).length;
   const progress = taskItems.length ? Math.round((completed / taskItems.length) * 100) : 0;

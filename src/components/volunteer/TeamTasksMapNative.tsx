@@ -29,36 +29,17 @@ export default function TeamTasksMapNative({
 
   const Mapbox = useMemo(() => {
     try {
-      // Avoid crashing in Expo Go / web where native code isn't available.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const module = require('@rnmapbox/maps')
-      module.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '')
-      return module
+      const module = eval('require')( '@rnmapbox/maps');
+      module.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '');
+      return module;
     } catch {
-      return null
+      return null;
     }
-  }, [])
-
-  if (!Mapbox?.MapView) {
-    return (
-      <View
-        className="flex-1 items-center justify-center px-4"
-        style={{ backgroundColor: colors.background }}
-      >
-        <Text className="text-center text-base" style={{ color: colors.text }}>
-          Bản đồ chưa khả dụng trong môi trường hiện tại.
-        </Text>
-        <Text
-          className="mt-2 text-center text-sm"
-          style={{ color: colors.textSecondary }}
-        >
-          Hãy chạy bằng Dev Build / build native để dùng Mapbox.
-        </Text>
-      </View>
-    )
-  }
+  }, []);
 
   useEffect(() => {
+    if (!Mapbox?.MapView) return;
+
     const timer = setTimeout(() => {
       if (routeCoordinates.length >= 2 && cameraRef.current?.fitBounds) {
         const lngs = routeCoordinates.map((coord) => coord[0]);
@@ -85,7 +66,26 @@ export default function TeamTasksMapNative({
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [routeCoordinates, selectedMission]);
+  }, [Mapbox, routeCoordinates, selectedMission]);
+
+  if (!Mapbox?.MapView) {
+    return (
+      <View
+        className="flex-1 items-center justify-center px-4"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Text className="text-center text-base" style={{ color: colors.text }}>
+          Bản đồ chưa khả dụng trong môi trường hiện tại.
+        </Text>
+        <Text
+          className="mt-2 text-center text-sm"
+          style={{ color: colors.textSecondary }}
+        >
+          Hãy chạy bằng Dev Build / build native để dùng Mapbox.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <Mapbox.MapView

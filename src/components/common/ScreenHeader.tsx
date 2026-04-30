@@ -32,7 +32,7 @@ export default function ScreenHeader({
 }: ScreenHeaderProps) {
   const { top } = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const sideSlotWidth = 72;
+  const sideSlotWidth = 56;
 
   const bgColor = backgroundColor ?? colors.card;
   const txtColor = titleColor ?? colors.text;
@@ -80,7 +80,7 @@ export default function ScreenHeader({
           ) : null}
         </View>
 
-        <View className="min-w-0 flex-1 items-center px-2">
+        <View className="min-w-0 flex-1 items-center px-1">
           <Text
             style={{ color: txtColor, fontSize: 18 }}
             className="text-center font-bold leading-tight"
@@ -103,7 +103,7 @@ export default function ScreenHeader({
 
         <View
           style={{ width: sideSlotWidth }}
-          className="shrink-0 items-end"
+          className="shrink-0 items-end justify-center"
         >
           {resolvedRightAction}
         </View>

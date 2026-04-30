@@ -13,16 +13,6 @@ type CitizenProfileRoute =
   | '/profile/requests'
   | '/profile/help';
 
-type VolunteerProfileRoute =
-  | '/tasks'
-  | '/profile/my-team'
-  | '/profile/tasks'
-  | '/profile/dashboard-leader'
-  | '/profile/requests'
-  | '/profile/change-password'
-  | '/profile/settings'
-  | '/profile/help';
-
 export default function ProfileIndexScreen() {
   const router = useRouter();
   const user = useAuthStore((state: AuthState) => state.user);
@@ -42,14 +32,14 @@ export default function ProfileIndexScreen() {
   return isVolunteer ? (
     <VolunteerProfile
       onLogout={handleLogout}
-      onNavigate={(route: string) => router.push(route as any)}
-      onEdit={() => router.push('/profile/edit' as any)}
+      onNavigate={(route: string) => router.replace(route as any)}
+      onEdit={() => router.replace('/profile/edit' as any)}
       isLeader={isLeader}
     />
   ) : (
     <CitizenProfile
       onLogout={handleLogout}
-      onNavigate={(route: CitizenProfileRoute) => router.push(route as any)}
+      onNavigate={(route: CitizenProfileRoute) => router.replace(route as any)}
     />
   );
 }

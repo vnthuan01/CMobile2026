@@ -47,6 +47,7 @@ export const SupplyShortageRequestStatusLabels: Record<SupplyShortageRequestStat
 export interface CampaignHouseholdResponse {
   campaignHouseholdId: string;
   campaignId: string;
+  locationId?: string;
   distributionPointId?: string;
   distributionPointName?: string;
   campaignTeamId?: string;
@@ -59,6 +60,10 @@ export interface CampaignHouseholdResponse {
   longitude: number;
   householdSize: number;
   isIsolated: boolean;
+  floodSeverityLevel?: number;
+  isolationSeverityLevel?: number;
+  requiresBoat?: boolean;
+  requiresLocalGuide?: boolean;
   deliveryMode: DeliveryMode;
   fulfillmentStatus: HouseholdFulfillmentStatus;
   notes?: string;
@@ -130,6 +135,64 @@ export interface HouseholdChecklistItemResponse {
   deliveredAt?: string;
   notes?: string;
   proofCount: number;
+}
+
+export interface TeamWorklistItemResponse {
+  householdDeliveryId: string;
+  campaignId: string;
+  campaignHouseholdId: string;
+  householdCode: string;
+  headOfHouseholdName: string;
+  contactPhone?: string;
+  address?: string;
+  campaignTeamId?: string;
+  campaignTeamName?: string;
+  distributionPointId?: string;
+  distributionPointName?: string;
+  reliefPackageDefinitionId: string;
+  reliefPackageDefinitionName: string;
+  deliveryMode: DeliveryMode;
+  status: HouseholdFulfillmentStatus;
+  scheduledAt: string;
+  deliveredAt?: string;
+  notes?: string;
+  proofCount: number;
+  householdSize?: number;
+  isIsolated?: boolean;
+  floodSeverityLevel?: number;
+  isolationSeverityLevel?: number;
+  requiresBoat?: boolean;
+  requiresLocalGuide?: boolean;
+}
+
+export interface MemberTaskDeliveryResponse {
+  memberTaskDeliveryId: string;
+  memberTaskId: string;
+  campaignTaskId?: string;
+  campaignId: string;
+  householdDeliveryId: string;
+  campaignHouseholdId?: string;
+  householdCode?: string;
+  headOfHouseholdName?: string;
+  address?: string;
+  contactPhone?: string;
+  campaignTeamId?: string;
+  campaignTeamName?: string;
+  distributionPointId?: string;
+  distributionPointName?: string;
+  reliefPackageDefinitionId?: string;
+  reliefPackageDefinitionName?: string;
+  deliveryMode: DeliveryMode;
+  status: HouseholdFulfillmentStatus;
+  scheduledAt?: string;
+  deliveredAt?: string;
+  notes?: string;
+  proofCount?: number;
+  isIsolated?: boolean;
+  requiresBoat?: boolean;
+  requiresLocalGuide?: boolean;
+  floodSeverityLevel?: number;
+  isolationSeverityLevel?: number;
 }
 
 export interface HouseholdDeliveryProofResponse {
@@ -226,10 +289,110 @@ export interface BatchCompleteHouseholdDeliveryResponse {
   items: BatchCompleteHouseholdDeliveryItemResponse[];
 }
 
+export interface ReliefPlanAreaSummary {
+  areaName: string;
+  locationId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  populationDensity: number;
+  householdCount: number;
+  isolatedHouseholdCount: number;
+  population: number;
+  averageHouseholdSize: number;
+  pendingHouseholds: number;
+  estimatedCoverageRadiusKm: number;
+  travelComplexityLabel: string;
+  recommendedOperationalMode: string;
+  recommendedDeliveryStrategy: string;
+  suggestedDistributionPointCount: number;
+  suggestedMobileTeamCount: number;
+  suggestedTeamCount: number;
+  estimatedPackages: number;
+  estimatedBoatCount: number;
+  estimatedLifeJacketCount: number;
+}
+
+export interface IsolatedHouseholdPlanItem {
+  campaignHouseholdId: string;
+  householdCode: string;
+  headOfHouseholdName: string;
+  address?: string | null;
+  locationId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  householdSize: number;
+  floodSeverityLevel?: number | null;
+  isolationSeverityLevel?: number | null;
+  requiresBoat?: boolean;
+  requiresLocalGuide?: boolean;
+  priorityLabel: string;
+  suggestedSupportMode: string;
+  estimatedReliefPersonnel: number;
+  estimatedBoatCount: number;
+  estimatedLifeJacketCount: number;
+  campaignTeamName?: string | null;
+}
+
+export interface DistributionPointPlanSummary {
+  distributionPointId: string;
+  name: string;
+  address?: string | null;
+  assignedHouseholdCount: number;
+  pendingDeliveryCount: number;
+  suggestedPersonnelCount: number;
+  suggestedLocalVolunteerCount: number;
+}
+
+export interface ReliefResourceRequirement {
+  resourceType: string;
+  resourceName: string;
+  estimatedQuantity: number;
+  notes?: string | null;
+}
+
+export interface ReliefCampaignPlanSummary {
+  campaignId: string;
+  totalHouseholds: number;
+  isolatedHouseholds: number;
+  totalPopulation: number;
+  averagePopulationDensity: number;
+  highDensityAreaCount: number;
+  mobileTeamPriorityAreaCount: number;
+  pickupPriorityAreaCount: number;
+  distributionPointCount: number;
+  pendingHouseholds: number;
+  suggestedTeamCount: number;
+  estimatedReliefPersonnel: number;
+  estimatedLocalVolunteers: number;
+  estimatedBoatCount: number;
+  estimatedLifeJacketCount: number;
+  areas: ReliefPlanAreaSummary[];
+  isolatedHouseholdItems: IsolatedHouseholdPlanItem[];
+  distributionPoints: DistributionPointPlanSummary[];
+  resourceRequirements: ReliefResourceRequirement[];
+}
+
 // ─── Request Types ───────────────────────────────────────
 
 export interface UpdateCampaignHouseholdStatusRequest {
   status: HouseholdFulfillmentStatus;
+  notes?: string;
+}
+
+export interface ReportNewReliefHouseholdRequest {
+  householdCode: string;
+  headOfHouseholdName: string;
+  contactPhone?: string;
+  address?: string;
+  latitude: number;
+  longitude: number;
+  locationId?: string;
+  householdSize: number;
+  isIsolated: boolean;
+  floodSeverityLevel?: number;
+  isolationSeverityLevel?: number;
+  requiresBoat: boolean;
+  requiresLocalGuide: boolean;
   notes?: string;
 }
 
@@ -260,6 +423,15 @@ export interface CompleteHouseholdDeliveryBatchItemRequest {
 
 export interface CompleteHouseholdDeliveryBatchRequest {
   items: CompleteHouseholdDeliveryBatchItemRequest[];
+}
+
+export interface CompleteMemberTaskDeliveryWithDeliveryRequest {
+  campaignId?: string;
+  notes?: string;
+  proofNote?: string;
+  proofFileUrl?: string;
+  proofContentType?: string;
+  cashSupportAmount?: number;
 }
 
 export interface CreateSupplyShortageRequestPayload {
@@ -317,6 +489,30 @@ export interface DeliveryQueryRequest {
   deliveryMode?: DeliveryMode;
   scheduledFrom?: string;
   scheduledTo?: string;
+}
+
+export interface TeamWorklistQueryRequest {
+  pageIndex?: number;
+  pageSize?: number;
+  search?: string;
+  status?: HouseholdFulfillmentStatus;
+  campaignTeamId?: string;
+  distributionPointId?: string;
+  deliveryMode?: DeliveryMode;
+  scheduledFrom?: string;
+  scheduledTo?: string;
+}
+
+export interface MemberTaskDeliveryQueryRequest {
+  pageIndex?: number;
+  pageSize?: number;
+  search?: string;
+  status?: HouseholdFulfillmentStatus;
+  campaignTeamId?: string;
+  memberTaskId?: string;
+  campaignTaskId?: string;
+  distributionPointId?: string;
+  deliveryMode?: DeliveryMode;
 }
 
 export interface SupplyShortageRequestQueryRequest {

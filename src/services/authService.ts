@@ -59,21 +59,6 @@ interface ChangePasswordRequest {
   newPassword: string;
 }
 
-const getNoResponseErrorMessage = (error: any) => {
-  const code = error?.code;
-  const message = String(error?.message || '').toLowerCase();
-
-  if (code === 'ECONNABORTED') {
-    return 'Yêu cầu đến máy chủ bị quá thời gian. Vui lòng thử lại.';
-  }
-
-  if (code === 'ERR_NETWORK' || message.includes('network error')) {
-    return 'Không thể kết nối máy chủ. Vui lòng kiểm tra Internet hoặc địa chỉ API.';
-  }
-
-  return 'Không thể kết nối đến máy chủ (lỗi mạng/bảo mật). Vui lòng thử lại sau.';
-};
-
 const localizeAuthMessage = (message?: string | null, fallback?: string) => {
   const raw = String(message ?? '').trim();
   const normalized = raw.toLowerCase();
@@ -284,8 +269,6 @@ export const authService = {
         newPassword: data.newPassword,
       });
 
-      console.log('[Auth/change-password] status:', response.status);
-
       return {
         success: response.status >= 200 && response.status < 300,
         status: response.status,
@@ -296,10 +279,6 @@ export const authService = {
       };
     } catch (error: any) {
       const status = error?.response?.status ?? null;
-      console.log('[Auth/change-password] status:', status, {
-        data: error?.response?.data,
-        message: error?.message,
-      });
 
       return {
         success: false,
@@ -344,8 +323,7 @@ export const authService = {
     return {
       success: false,
       data: null,
-      message:
-        'Không tìm thấy endpoint profile. Kiểm tra lại route backend (ví dụ: /Auth/profile hoặc /User/profile).',
+      message: 'Hiện chưa tải được thông tin hồ sơ. Vui lòng thử lại sau.',
     };
   },
 
@@ -364,7 +342,7 @@ export const authService = {
       if (!accessToken) {
         return {
           success: false,
-          message: 'Không nhận được accessToken',
+          message: 'Không thể khởi tạo phiên đăng nhập. Vui lòng thử lại.',
         };
       }
 
@@ -373,7 +351,7 @@ export const authService = {
       if (!user) {
         return {
           success: false,
-          message: 'Token không hợp lệ',
+          message: 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
         };
       }
 
@@ -424,23 +402,24 @@ export const authService = {
       const { accessToken, refreshToken } = useAuthStore.getState();
 
       if (!accessToken) {
-        await authStore.logout();
+        authStore.clearSession();
         return;
       }
 
       if (!isTokenExpired(accessToken)) {
+        useAuthStore.setState({ isAuthenticated: true });
         authStore.setLoading(false);
         return;
       }
 
       if (!refreshToken) {
-        await authStore.logout();
+        authStore.clearSession();
         return;
       }
 
       await authService.refreshSession(refreshToken);
     } catch {
-      await authStore.logout();
+      authStore.clearSession();
     } finally {
       useAuthStore.getState().setLoading(false);
     }

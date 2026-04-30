@@ -139,6 +139,22 @@ export interface MyMemberTaskResponse {
   assignedAt: string;
   completedAt?: string;
   status: MemberTaskStatus;
+  deliveries?: {
+    memberTaskDeliveryId: string;
+    memberTaskId: string;
+    householdDeliveryId: string;
+    campaignHouseholdId: string;
+    householdCode: string;
+    headOfHouseholdName: string;
+    address?: string;
+    assignedVolunteerProfileId?: string;
+    assignedVolunteerName?: string;
+    status: MemberTaskStatus;
+    deliveryStatus: number;
+    scheduledAt: string;
+    completedAt?: string;
+    note?: string;
+  }[];
 }
 
 // Status label mapping

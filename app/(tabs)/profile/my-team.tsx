@@ -7,7 +7,7 @@ export default function ProfileMyTeamRoute() {
   return (
     <MyCurrentTeamScreen
       onBack={() => router.replace('/profile')}
-      onOpenTasks={() => router.push('/profile/tasks' as any)}
+      onOpenTasks={() => router.replace('/profile/tasks' as any)}
     />
   );
 }

@@ -1,375 +1,438 @@
 import '@/global.css';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
+import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
+import { useMyTeam } from '@/src/hooks/useMyTeam';
 import {
-    Animated,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  useCampaignHouseholds,
+  useReportNewReliefHousehold,
+} from '@/src/hooks/useReliefDistribution';
+import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
+import { getCurrentLocation } from '@/src/utils/location';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type EmergencyType = 'medical' | 'fire' | 'trapped';
+type EmergencyType = 'medical' | 'supply' | 'isolated';
 
 interface NewSOSForVolunteerScreenProps {
-    onBack?: () => void;
-    defaultType?: string;
-    isEmergencyDefault?: boolean;
+  onBack?: () => void;
+  defaultType?: string;
+  isEmergencyDefault?: boolean;
 }
 
-const EMERGENCY_TYPES: {
-    id: EmergencyType;
-    icon: string;
-    label: string;
-    iconColor: string;
-    bgColor: string;
-    darkBgColor: string;
+type LocationCandidate = {
+  locationId?: string | null;
+  address?: string;
+};
+
+const ISSUE_OPTIONS: {
+  id: EmergencyType;
+  icon: string;
+  label: string;
+  hint: string;
+  tint: string;
+  bg: string;
 }[] = [
-        {
-            id: 'medical',
-            icon: 'medkit',
-            label: 'Y tế',
-            iconColor: '#dc2626',
-            bgColor: '#fee2e2',
-            darkBgColor: 'rgba(220,38,38,0.2)',
-        },
-        {
-            id: 'fire',
-            icon: 'flame',
-            label: 'Hỏa hoạn',
-            iconColor: '#ea580c',
-            bgColor: '#ffedd5',
-            darkBgColor: 'rgba(234,88,12,0.2)',
-        },
-        {
-            id: 'trapped',
-            icon: 'person',
-            label: 'Mắc kẹt',
-            iconColor: '#6b7280',
-            bgColor: '#f3f4f6',
-            darkBgColor: 'rgba(107,114,128,0.2)',
-        },
-    ];
+  {
+    id: 'medical',
+    icon: 'medical',
+    label: 'Y tế khẩn cấp',
+    hint: 'Cần thuốc men hoặc chăm sóc sức khỏe.',
+    tint: '#dc2626',
+    bg: '#fee2e2',
+  },
+  {
+    id: 'supply',
+    icon: 'cube',
+    label: 'Thiếu nhu yếu phẩm',
+    hint: 'Cần nước uống, lương thực hoặc gói hỗ trợ.',
+    tint: '#0f766e',
+    bg: '#ccfbf1',
+  },
+  {
+    id: 'isolated',
+    icon: 'boat',
+    label: 'Bị cô lập',
+    hint: 'Khó tiếp cận, có thể cần xuồng hoặc người dẫn đường.',
+    tint: '#334155',
+    bg: '#e2e8f0',
+  },
+];
+
+const makeHouseholdCode = () => `SOS-${Date.now().toString().slice(-8)}`;
+
+const normalize = (value?: string | null) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+function resolveLocationIdFromAddress(
+  address: string,
+  candidates: LocationCandidate[],
+): string | undefined {
+  const normalizedAddress = normalize(address);
+  if (!normalizedAddress) return undefined;
+
+  const matched = candidates.find((candidate) => {
+    const candidateAddress = normalize(candidate.address);
+    return (
+      candidateAddress.length > 0 &&
+      (normalizedAddress.includes(candidateAddress) ||
+        candidateAddress.includes(normalizedAddress))
+    );
+  });
+
+  return matched?.locationId || undefined;
+}
 
 export default function NewSOSForVolunteerScreen({
-    onBack,
-    defaultType,
-    isEmergencyDefault,
+  onBack,
+  defaultType,
+  isEmergencyDefault,
 }: NewSOSForVolunteerScreenProps) {
-    const { bottom } = useSafeAreaInsets();
-    const { colors, isDark } = useTheme();
-    const [selectedType, setSelectedType] = useState<EmergencyType | null>((defaultType as EmergencyType) || 'medical');
-    const [safeWord, setSafeWord] = useState('');
+  const { bottom } = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const router = useRouter();
+  const { data: myTeamData } = useMyTeam();
+  const team = myTeamData?.team;
+  const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(
+    team?.teamId ?? '',
+    !!team?.teamId,
+  );
+  const { selectedCampaignId } = useSelectedCampaign(
+    team,
+    fallbackAssignedCampaigns,
+  );
+  const { campaignId } = useActiveAssignedCampaign(
+    team,
+    selectedCampaignId,
+    fallbackAssignedCampaigns,
+  );
+  const reportNewHouseholdMutation = useReportNewReliefHousehold();
+  const { data: nearbyHouseholdsData } = useCampaignHouseholds(
+    campaignId || null,
+    {
+      pageIndex: 1,
+      pageSize: 200,
+    },
+  );
 
-    useEffect(() => {
-        if (defaultType === 'medical' || defaultType === 'fire' || defaultType === 'trapped') {
-            setSelectedType(defaultType);
-        } else if (isEmergencyDefault) {
-            setSelectedType('medical');
-        }
-    }, [defaultType, isEmergencyDefault]);
+  const [selectedType, setSelectedType] = useState<EmergencyType>(
+    (defaultType as EmergencyType) || 'medical',
+  );
+  const [headOfHouseholdName, setHeadOfHouseholdName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [householdSize, setHouseholdSize] = useState('1');
+  const [gpsAddress, setGpsAddress] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [locationId, setLocationId] = useState<string | undefined>();
+  const [isResolvingLocation, setIsResolvingLocation] = useState(true);
 
-    // Pulse animation
-    const pulseAnim = useRef(new Animated.Value(1)).current;
-    const opacityAnim = useRef(new Animated.Value(0.7)).current;
+  useEffect(() => {
+    if (
+      defaultType === 'medical' ||
+      defaultType === 'supply' ||
+      defaultType === 'isolated'
+    ) {
+      setSelectedType(defaultType);
+      return;
+    }
 
-    useState(() => {
-        Animated.loop(
-            Animated.parallel([
-                Animated.sequence([
-                    Animated.timing(pulseAnim, {
-                        toValue: 1.3,
-                        duration: 1200,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseAnim, {
-                        toValue: 1,
-                        duration: 1200,
-                        useNativeDriver: true,
-                    }),
-                ]),
-                Animated.sequence([
-                    Animated.timing(opacityAnim, {
-                        toValue: 0,
-                        duration: 1200,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(opacityAnim, {
-                        toValue: 0.7,
-                        duration: 1200,
-                        useNativeDriver: true,
-                    }),
-                ]),
-            ]),
-        ).start();
-    });
+    if (isEmergencyDefault) {
+      setSelectedType('medical');
+    }
+  }, [defaultType, isEmergencyDefault]);
 
-    return (
-        <View className="flex-1" style={{ backgroundColor: colors.background }}>
-            {/* Header */}
-            <ScreenHeader
-                title="Tạo SOS mới"
-                onBack={onBack}
-                rightAction={
-                    <TouchableOpacity className="relative p-2">
-                        <Ionicons name="settings-outline" size={24} color={colors.text} />
-                        <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-                    </TouchableOpacity>
-                }
-            />
+  const locationCandidates = useMemo<LocationCandidate[]>(
+    () =>
+      (nearbyHouseholdsData?.items ?? []).map((item) => ({
+        locationId: item.locationId,
+        address: item.address,
+      })),
+    [nearbyHouseholdsData?.items],
+  );
 
-            <ScrollView
-                contentContainerStyle={{ paddingBottom: bottom + 40, alignItems: 'center' }}
-                className="flex-1"
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Status Header */}
-                <View className="items-center pt-2">
-                    <View className="flex-row items-center gap-2 mb-1">
-                        <View className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                        <Text className="text-sm font-bold uppercase tracking-wider" style={{ color: colors.text }}>
-                            Đang hoạt động
-                        </Text>
-                    </View>
-                    <Text className="text-xs font-mono mt-1" style={{ color: colors.textSecondary }}>
-                        GPS: 10.7626° N, 106.6601° E
-                    </Text>
-                </View>
+  useEffect(() => {
+    let mounted = true;
 
-                {/* Title */}
-                <View className="items-center mt-6 mb-4 px-6">
-                    <Text className="text-3xl font-extrabold tracking-tight mb-2" style={{ color: colors.text }}>
-                        KHẨN CẤP
-                    </Text>
-                    <Text className="text-sm leading-relaxed text-center" style={{ color: colors.textSecondary }}>
-                        {isEmergencyDefault ? 'SOS khẩn cấp đã được chọn mặc định cho bạn. Hãy kiểm tra nhanh loại sự cố rồi gửi tín hiệu cầu cứu GPS.' : 'Giữ nút bên dưới trong 3 giây để phát tín hiệu cầu cứu GPS.'}
-                    </Text>
-                </View>
+    const resolveGps = async () => {
+      try {
+        setIsResolvingLocation(true);
+        const current = await getCurrentLocation();
+        if (!mounted) return;
 
-                {/* Map Preview */}
-                <View className="w-full px-6 mb-6">
-                    <View
-                        className="w-full h-32 rounded-xl overflow-hidden border items-center justify-center"
-                        style={{
-                        backgroundColor: colors.surface,
-                            borderColor: colors.border,
-                        }}
-                    >
-                        <View className="flex-row items-center gap-1 px-3 py-1.5 rounded-full shadow-lg mb-2" style={{ backgroundColor: colors.card }}>
-                            <Ionicons name="navigate" size={14} color={colors.primary} />
-                            <Text className="text-xs font-bold" style={{ color: colors.text }}>
-                                Vị trí hiện tại
-                            </Text>
-                        </View>
-                        <TouchableOpacity
-                            className="flex-row items-center gap-1 px-3 py-1.5 rounded-lg shadow-md"
-                            style={{ backgroundColor: colors.primary }}
-                        >
-                            <Ionicons name="create-outline" size={14} color={colors.white} />
-                            <Text className="text-[10px] font-semibold uppercase tracking-wide text-white">
-                                Chọn vị trí khác
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                    <View className="flex-row items-center justify-between mt-2 px-1">
-                        <Text className="text-[10px]" style={{ color: colors.textSecondary }}>
-                            Độ chính xác:{' '}
-                            <Text style={{ color: colors.status.completed }} className="font-medium">
-                                Cao (~5m)
-                            </Text>
-                        </Text>
-                        <TouchableOpacity>
-                            <Text className="text-[10px]" style={{ color: colors.primary }}>
-                                Làm mới GPS
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+        setLatitude(current.latitude);
+        setLongitude(current.longitude);
+        const detectedAddress =
+          current.address || current.displayLabel || 'Chưa xác định được vị trí';
+        setGpsAddress(detectedAddress);
+        setLocationId(resolveLocationIdFromAddress(detectedAddress, locationCandidates));
+      } catch (error: any) {
+        if (!mounted) return;
+        setGpsAddress('Không xác định được vị trí hiện tại');
+        showErrorToast('Không lấy được vị trí', error?.message);
+      } finally {
+        if (mounted) setIsResolvingLocation(false);
+      }
+    };
 
-                {/* SOS Button */}
-                <View className="items-center mb-8">
-                    <View className="relative">
-                        {/* Pulse ring */}
-                        <Animated.View
-                            style={{
-                                position: 'absolute',
-                                width: 160,
-                                height: 160,
-                                borderRadius: 80,
-                                borderWidth: 2,
-                                borderColor: colors.primary,
-                                transform: [{ scale: pulseAnim }],
-                                opacity: opacityAnim,
-                            }}
-                        />
-                        <TouchableOpacity
-                            className="w-40 h-40 rounded-full items-center justify-center"
-                            style={{
-                                backgroundColor: isDark ? '#1a1a2e' : '#1e1e2e',
-                                borderWidth: 4,
-                                borderColor: colors.primary,
-                                shadowColor: colors.primary,
-                                shadowOffset: { width: 0, height: 0 },
-                                shadowOpacity: 0.3,
-                                shadowRadius: 15,
-                                elevation: 10,
-                            }}
-                            activeOpacity={0.8}
-                        >
-                            <Ionicons name="warning" size={48} color={colors.primary} />
-                            <Text className="text-white font-bold text-base uppercase tracking-wide mt-1">
-                                Gửi Tín Hiệu
-                            </Text>
-                            <Text className="text-[10px] font-medium mt-0.5 uppercase tracking-widest" style={{ color: `${colors.primary}cc` }}>
-                                Nguy Hiểm
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+    void resolveGps();
 
-                {/* Emergency Type Grid */}
-                <View className="w-full px-6 mb-6">
-                    <View className="flex-row gap-3">
-                        {EMERGENCY_TYPES.map((type) => (
-                            <TouchableOpacity
-                                key={type.id}
-                                onPress={() => setSelectedType(type.id)}
-                                className="flex-1 flex-col items-center justify-center gap-2 rounded-xl border p-2.5"
-                                style={{
-                                    backgroundColor: selectedType === type.id
-                                        ? `${type.iconColor}15`
-                                        : colors.card,
-                                    borderColor: selectedType === type.id
-                                        ? `${type.iconColor}50`
-                                        : colors.border,
-                                }}
-                            >
-                                <View
-                                    className="h-9 w-9 items-center justify-center rounded-full"
-                                    style={{ backgroundColor: isDark ? type.darkBgColor : type.bgColor }}
-                                >
-                                    <Ionicons name={type.icon as any} size={20} color={type.iconColor} />
-                                </View>
-                                <Text
-                                    className="text-[11px] font-semibold"
-                                    style={{ color: colors.text }}
-                                >
-                                    {type.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
+    return () => {
+      mounted = false;
+    };
+  }, [locationCandidates]);
 
-                {/* Evidence Section */}
-                <View className="w-full px-6 mb-6">
-                    <View className="flex-row items-center justify-between mb-2 px-1">
-                        <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
-                            Cung cấp bằng chứng
-                        </Text>
-                        <View
-                            className="px-2 py-0.5 rounded-full"
-                            style={{                                 backgroundColor: colors.surface, }}
-                        >
-                            <Text className="text-[10px]" style={{ color: colors.textSecondary }}>
-                                Minh bạch
-                            </Text>
-                        </View>
-                    </View>
-                    <View className="flex-row gap-3">
-                        <TouchableOpacity
-                            className="flex-1 flex-row items-center gap-3 rounded-lg border p-3"
-                            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                        >
-                            <View
-                                className="h-10 w-10 items-center justify-center rounded-full"
-                                style={{ backgroundColor: `${colors.secondary}18` }}
-                            >
-                                <Ionicons name="camera" size={22} color={colors.secondary} />
-                            </View>
-                            <View>
-                                <Text className="text-xs font-bold" style={{ color: colors.text }}>Chụp ảnh</Text>
-                                <Text className="text-[10px]" style={{ color: colors.textSecondary }}>Gửi hiện trường</Text>
-                            </View>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            className="flex-1 flex-row items-center gap-3 rounded-lg border p-3"
-                            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                        >
-                            <View
-                                className="h-10 w-10 items-center justify-center rounded-full"
-                                style={{ backgroundColor: `${colors.accent}18` }}
-                            >
-                                <Ionicons name="videocam" size={22} color={colors.accent} />
-                            </View>
-                            <View>
-                                <Text className="text-xs font-bold" style={{ color: colors.text }}>Quay video</Text>
-                                <Text className="text-[10px]" style={{ color: colors.textSecondary }}>Ghi lại sự cố</Text>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+  const selectedIssue = ISSUE_OPTIONS.find((item) => item.id === selectedType);
 
-                {/* Safe Word Input */}
-                <View className="w-full px-6 mb-4">
-                    <Text className="text-sm font-medium mb-2 px-1" style={{ color: colors.textSecondary }}>
-                        Mật mã an toàn (Safe-word)
-                    </Text>
-                    <View className="relative">
-                        <View className="absolute left-4 top-1/2 z-10" style={{ transform: [{ translateY: -10 }] }}>
-                            <Ionicons name="lock-closed" size={20} color={colors.textSecondary} />
-                        </View>
-                        <TextInput
-                            value={safeWord}
-                            onChangeText={setSafeWord}
-                            placeholder="Nhập mật mã để xác nhận an toàn..."
-                            placeholderTextColor={colors.textSecondary}
-                            secureTextEntry
-                            className="w-full rounded-lg border py-3.5 pl-11 pr-4 text-sm"
-                            style={{
-                                backgroundColor: colors.card,
-                                borderColor: colors.border,
-                                color: colors.text,
-                            }}
-                        />
-                    </View>
-                    <Text
-                        className="text-[10px] mt-2 text-center italic"
-                        style={{ color: colors.textSecondary, opacity: 0.8 }}
-                    >
-                        Nhập sai mật mã 3 lần sẽ tự động kích hoạt chế độ im lặng.
-                    </Text>
-                </View>
-            </ScrollView>
+  const handleSubmit = async () => {
+    if (!campaignId) {
+      showErrorToast(
+        'Thiếu chiến dịch',
+        'Không xác định được chiến dịch cứu trợ hiện tại.',
+      );
+      return;
+    }
 
-            {/* Slide to Safety Bar */}
-            <View className="px-6 pb-8">
-                <View
-                    className="relative h-14 rounded-full overflow-hidden flex-row items-center p-1 border"
+    if (!headOfHouseholdName.trim()) {
+      showErrorToast(
+        'Thiếu tên chủ hộ',
+        'Vui lòng nhập tên chủ hộ hoặc người cần hỗ trợ.',
+      );
+      return;
+    }
+
+    if (!householdSize.trim()) {
+      showErrorToast(
+        'Thiếu số người trong hộ',
+        'Vui lòng nhập số người trong hộ.',
+      );
+      return;
+    }
+
+    if (latitude == null || longitude == null) {
+      showErrorToast(
+        'Thiếu vị trí',
+        'Không lấy được vị trí hiện tại. Vui lòng thử lại khi GPS ổn định.',
+      );
+      return;
+    }
+
+    try {
+      await reportNewHouseholdMutation.mutateAsync({
+        campaignId,
+        request: {
+          householdCode: makeHouseholdCode(),
+          headOfHouseholdName: headOfHouseholdName.trim(),
+          contactPhone: contactPhone.trim() || undefined,
+          address: gpsAddress || undefined,
+          latitude,
+          longitude,
+          locationId,
+          householdSize: Math.max(
+            1,
+            Number.parseInt(householdSize || '1', 10) || 1,
+          ),
+          isIsolated: selectedType === 'isolated',
+          requiresBoat: selectedType === 'isolated',
+          requiresLocalGuide: selectedType === 'isolated',
+          floodSeverityLevel: selectedType === 'isolated' ? 7 : undefined,
+          isolationSeverityLevel: selectedType === 'isolated' ? 7 : undefined,
+          notes: [
+            'Nguồn báo: Tình nguyện viên',
+            `Loại phát sinh: ${selectedIssue?.label || 'Cần cứu trợ mới'}`,
+          ].join(' | '),
+        },
+      });
+
+      showSuccessToast('Đã ghi nhận hộ dân mới cần cứu trợ');
+      router.back();
+    } catch (error: any) {
+      showErrorToast('Gửi thông tin thất bại', error?.message);
+    }
+  };
+
+  return (
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <ScreenHeader title="Báo hộ dân cần cứu trợ mới" onBack={onBack} />
+
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: bottom + 28 }}
+      >
+        <View className="gap-5 px-5 pt-4">
+          <View
+            className="rounded-[28px] border p-5"
+            style={{ borderColor: colors.border, backgroundColor: colors.card }}
+          >
+            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              Ghi nhận hộ dân mới cần cứu trợ
+            </Text>
+            <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
+              Chỉ cần nhập tên chủ hộ và số người trong hộ. Hệ thống sẽ tự lấy vị trí hiện tại cho bạn.
+            </Text>
+          </View>
+
+          <View
+            className="rounded-[28px] border p-4"
+            style={{ borderColor: colors.border, backgroundColor: colors.card }}
+          >
+            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+              Loại hỗ trợ cần ưu tiên
+            </Text>
+            <View className="mt-3 flex-row gap-3">
+              {ISSUE_OPTIONS.map((item) => {
+                const active = selectedType === item.id;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => setSelectedType(item.id)}
+                    className="flex-1 rounded-2xl border p-3"
                     style={{
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
+                      borderColor: active ? item.tint : colors.border,
+                      backgroundColor: active ? `${item.tint}14` : colors.card,
                     }}
-                >
-                    <View className="absolute inset-0 items-center justify-center">
-                        <Text
-                            className="text-sm font-semibold tracking-widest uppercase"
-                            style={{ color: colors.textSecondary, opacity: 0.5 }}
-                        >
-                            Trượt để báo an toàn
-                        </Text>
-                    </View>
+                  >
                     <View
-                        className="h-12 w-14 items-center justify-center rounded-full bg-green-500 shadow-lg z-10"
+                      className="h-10 w-10 items-center justify-center rounded-full"
+                      style={{ backgroundColor: item.bg }}
                     >
-                        <Ionicons name="chevron-forward" size={24} color={colors.white} />
+                      <Ionicons name={item.icon as any} size={18} color={item.tint} />
                     </View>
-                </View>
+                    <Text className="mt-3 text-sm font-bold" style={{ color: colors.text }}>
+                      {item.label}
+                    </Text>
+                    <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                      {item.hint}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+          </View>
+
+          <View
+            className="rounded-[28px] border p-4"
+            style={{ borderColor: colors.border, backgroundColor: colors.card }}
+          >
+            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+              Thông tin cơ bản
+            </Text>
+            <View className="mt-3 gap-3">
+              <View>
+                <Text className="mb-2 text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                  Tên chủ hộ
+                </Text>
+                <TextInput
+                  value={headOfHouseholdName}
+                  onChangeText={setHeadOfHouseholdName}
+                  placeholder="Nhập tên chủ hộ hoặc người cần hỗ trợ"
+                  placeholderTextColor={colors.textSecondary}
+                  className="rounded-xl border px-4 py-3"
+                  style={{ borderColor: colors.border, color: colors.text, backgroundColor: colors.background }}
+                />
+              </View>
+
+              <View>
+                <Text className="mb-2 text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                  Số người trong hộ
+                </Text>
+                <TextInput
+                  value={householdSize}
+                  onChangeText={setHouseholdSize}
+                  placeholder="Ví dụ: 4"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                  className="rounded-xl border px-4 py-3"
+                  style={{ borderColor: colors.border, color: colors.text, backgroundColor: colors.background }}
+                />
+              </View>
+
+              <View>
+                <Text className="mb-2 text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                  Số điện thoại (không bắt buộc)
+                </Text>
+                <TextInput
+                  value={contactPhone}
+                  onChangeText={setContactPhone}
+                  placeholder="Nhập số điện thoại nếu có"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="phone-pad"
+                  className="rounded-xl border px-4 py-3"
+                  style={{ borderColor: colors.border, color: colors.text, backgroundColor: colors.background }}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View
+            className="rounded-[28px] border p-4"
+            style={{ borderColor: colors.border, backgroundColor: colors.card }}
+          >
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="location-outline" size={16} color={colors.primary} />
+              <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                Vị trí hiện tại
+              </Text>
+            </View>
+
+            {isResolvingLocation ? (
+              <View className="mt-3 flex-row items-center gap-2">
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                  Đang lấy GPS và địa chỉ gần đúng...
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text className="mt-3 text-sm" style={{ color: colors.text }}>
+                  {gpsAddress || 'Không xác định được vị trí hiện tại'}
+                </Text>
+                <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                  {latitude != null && longitude != null
+                    ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+                    : 'Tọa độ chưa sẵn sàng'}
+                </Text>
+              </>
+            )}
+          </View>
+
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={reportNewHouseholdMutation.isPending || isResolvingLocation}
+            className="items-center rounded-2xl py-3"
+            style={{
+              backgroundColor: colors.primary,
+              opacity:
+                reportNewHouseholdMutation.isPending || isResolvingLocation
+                  ? 0.7
+                  : 1,
+            }}
+          >
+            {reportNewHouseholdMutation.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-base font-bold text-white">
+                Gửi hộ dân cần cứu trợ mới
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
-    );
+      </ScrollView>
+    </View>
+  );
 }

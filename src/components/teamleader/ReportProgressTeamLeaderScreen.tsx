@@ -6,17 +6,16 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
 import { useCampaignDetail } from '@/src/hooks/useDonation';
-import { useCampaignTaskDetail, useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
+import { useCampaignTaskDetail, useCampaignTasks, useCampaignTeams, leaderTaskKeys } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import { CampaignTaskStatus, MemberTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse, type MemberTaskResponse } from '@/src/types/leaderTask';
 import { showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueries } from '@tanstack/react-query';
-import { leaderTaskKeys } from '@/src/hooks/useLeaderTasks';
 import { leaderTaskService } from '@/src/services/leaderTaskService';
 
 interface ReportProgressTeamLeaderScreenProps {
@@ -343,7 +342,7 @@ export default function ReportProgressTeamLeaderScreen({ onBack }: ReportProgres
         </View>
       </ScrollView>
 
-      <StickyFooterButton title="Gửi báo cáo tổng hợp" icon="send" backgroundColor={colors.secondary} onPress={() => showInfoToast('MVP', 'Chức năng gửi báo cáo tổng hợp sẽ nối API sau.')} />
+      <StickyFooterButton title="Gửi báo cáo tổng hợp" icon="send" backgroundColor={colors.secondary} onPress={() => showInfoToast('Đang hoàn thiện', 'Chức năng gửi báo cáo tổng hợp sẽ được cập nhật trong bản tiếp theo.')} />
     </View>
   );
 }

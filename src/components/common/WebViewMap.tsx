@@ -161,6 +161,20 @@ function buildMapHtml(
             .addTo(map);
         });
 
+        if (MARKERS.length > 1) {
+          var bounds = new maplibregl.LngLatBounds();
+          MARKERS.forEach(function (m) {
+            bounds.extend(m.coordinate);
+          });
+          map.fitBounds(bounds, {
+            padding: 40,
+            maxZoom: 14,
+            duration: 0,
+          });
+        } else if (MARKERS.length === 1) {
+          map.flyTo({ center: MARKERS[0].coordinate, zoom: Math.max(ZOOM, 13), duration: 0 });
+        }
+
         // Signal ready
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(
@@ -255,7 +269,18 @@ export default function WebViewMap({
         style,
       ]}
     >
-      {!hasError && (
+      {!GOONG_KEY ? (
+        <View style={[styles.overlay, { backgroundColor: colors.surface }]}>
+          <Ionicons name="map-outline" size={36} color={colors.textSecondary} />
+          <Text style={[styles.errorTitle, { color: colors.text }]}>
+            Thiếu khóa bản đồ
+          </Text>
+          <Text style={[styles.errorSub, { color: colors.textSecondary }]}>
+            Cần cấu hình `EXPO_PUBLIC_GOONG_MAP_KEY` để hiển thị bản đồ.
+          </Text>
+        </View>
+      ) : null}
+      {!hasError && !!GOONG_KEY ? (
         <WebView
           key={retryKey}
           ref={webViewRef}
@@ -276,7 +301,7 @@ export default function WebViewMap({
           // Prevent default WebView context menus
           allowsInlineMediaPlayback
         />
-      )}
+      ) : null}
 
       {/* Loading overlay */}
       {loading && !hasError && (
@@ -286,10 +311,29 @@ export default function WebViewMap({
             { backgroundColor: colors.surface, pointerEvents: 'none' },
           ]}
         >
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Đang tải bản đồ…
-          </Text>
+          <View style={styles.skeletonFrame}>
+            <View
+              style={[
+                styles.skeletonBlock,
+                styles.skeletonMap,
+                { backgroundColor: `${colors.primary}12` },
+              ]}
+            />
+            <View
+              style={[
+                styles.skeletonBlock,
+                styles.skeletonLineShort,
+                { backgroundColor: `${colors.primary}16` },
+              ]}
+            />
+            <View
+              style={[
+                styles.skeletonBlock,
+                styles.skeletonLineLong,
+                { backgroundColor: `${colors.primary}10` },
+              ]}
+            />
+          </View>
         </View>
       )}
 
@@ -339,6 +383,27 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 13,
+  },
+  skeletonFrame: {
+    width: '82%',
+    alignItems: 'center',
+  },
+  skeletonBlock: {
+    borderRadius: 14,
+  },
+  skeletonMap: {
+    width: '100%',
+    height: 120,
+  },
+  skeletonLineShort: {
+    width: '46%',
+    height: 14,
+    marginTop: 16,
+  },
+  skeletonLineLong: {
+    width: '72%',
+    height: 12,
+    marginTop: 10,
   },
   errorIcon: {
     fontSize: 36,

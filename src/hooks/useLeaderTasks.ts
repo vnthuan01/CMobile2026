@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { leaderTaskService } from '../services/leaderTaskService';
 import { teamKeys } from './useMyTeam';
+import { mobileQueryOptions } from './queryOptions';
 import type {
   AssignMemberTaskRequest,
   ChangeCampaignTaskStatusRequest,
@@ -23,6 +24,47 @@ export const leaderTaskKeys = {
     [...leaderTaskKeys.all, 'taskDetail', campaignTaskId] as const,
 };
 
+async function invalidateLeaderTaskQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  options?: {
+    campaignId?: string | null;
+    campaignTaskId?: string | null;
+    refreshTeam?: boolean;
+  },
+) {
+  const jobs: Promise<unknown>[] = [];
+
+  if (options?.campaignId) {
+    jobs.push(
+      queryClient.invalidateQueries({
+        queryKey: leaderTaskKeys.campaignTeams(options.campaignId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: leaderTaskKeys.tasks(options.campaignId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: leaderTaskKeys.myMemberTasks(options.campaignId),
+      }),
+    );
+  } else {
+    jobs.push(queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }));
+  }
+
+  if (options?.campaignTaskId) {
+    jobs.push(
+      queryClient.invalidateQueries({
+        queryKey: leaderTaskKeys.taskDetail(options.campaignTaskId),
+      }),
+    );
+  }
+
+  if (options?.refreshTeam) {
+    jobs.push(queryClient.invalidateQueries({ queryKey: teamKeys.all }));
+  }
+
+  await Promise.all(jobs);
+}
+
 export function useCampaignTeams(campaignId?: string | null) {
   return useQuery({
     queryKey: leaderTaskKeys.campaignTeams(campaignId || ''),
@@ -32,6 +74,7 @@ export function useCampaignTeams(campaignId?: string | null) {
       return result.data ?? [];
     },
     enabled: !!campaignId,
+    ...mobileQueryOptions('normal'),
   });
 }
 
@@ -47,6 +90,7 @@ export function useCampaignTasks(
       return result.data;
     },
     enabled: !!campaignId,
+    ...mobileQueryOptions('normal', { staleTime: 1000 * 15 }),
   });
 }
 
@@ -62,6 +106,7 @@ export function useMyMemberTasks(
       return result.data;
     },
     enabled: !!campaignId,
+    ...mobileQueryOptions('normal', { staleTime: 1000 * 15 }),
   });
 }
 
@@ -74,6 +119,7 @@ export function useCampaignTaskDetail(campaignTaskId?: string | null) {
       return result.data;
     },
     enabled: !!campaignTaskId,
+    ...mobileQueryOptions('live'),
   });
 }
 
@@ -85,11 +131,11 @@ export function useCreateCampaignTask() {
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
-        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
-      ]);
+    onSuccess: async (_data, variables) => {
+      await invalidateLeaderTaskQueries(queryClient, {
+        campaignId: variables.campaignId,
+        refreshTeam: true,
+      });
     },
   });
 }
@@ -102,11 +148,11 @@ export function useUpdateCampaignTask() {
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
-        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
-      ]);
+    onSuccess: async (_data, variables) => {
+      await invalidateLeaderTaskQueries(queryClient, {
+        campaignTaskId: variables.campaignTaskId,
+        refreshTeam: true,
+      });
     },
   });
 }
@@ -119,11 +165,11 @@ export function useChangeCampaignTaskStatus() {
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
-        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
-      ]);
+    onSuccess: async (_data, variables) => {
+      await invalidateLeaderTaskQueries(queryClient, {
+        campaignTaskId: variables.campaignTaskId,
+        refreshTeam: true,
+      });
     },
   });
 }
@@ -137,10 +183,7 @@ export function useDeleteCampaignTask() {
       return result.data;
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
-        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
-      ]);
+      await invalidateLeaderTaskQueries(queryClient, { refreshTeam: true });
     },
   });
 }
@@ -153,11 +196,11 @@ export function useAssignMemberTask() {
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
-        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
-      ]);
+    onSuccess: async (_data, variables) => {
+      await invalidateLeaderTaskQueries(queryClient, {
+        campaignTaskId: variables.campaignTaskId,
+        refreshTeam: true,
+      });
     },
   });
 }
@@ -170,11 +213,11 @@ export function useBulkAssignMemberTasks() {
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
-        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
-      ]);
+    onSuccess: async (_data, variables) => {
+      await invalidateLeaderTaskQueries(queryClient, {
+        campaignTaskId: variables.campaignTaskId,
+        refreshTeam: true,
+      });
     },
   });
 }
@@ -188,10 +231,7 @@ export function useChangeMemberTaskStatus() {
       return result.data;
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: leaderTaskKeys.all }),
-        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
-      ]);
+      await invalidateLeaderTaskQueries(queryClient, { refreshTeam: true });
     },
   });
 }

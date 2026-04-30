@@ -14,11 +14,11 @@ export default function ProfileMyVolunteerProfileRoute() {
       onBack={() => router.replace('/profile')}
       onCreate={() => {
         setVolunteerDraft('create', null);
-        router.push('/profile/register-volunteer' as any);
+        router.replace('/profile/register-volunteer' as any);
       }}
       onResubmit={(profile: VolunteerProfileResponse) => {
         setVolunteerDraft('resubmit', profile);
-        router.push('/profile/register-volunteer' as any);
+        router.replace('/profile/register-volunteer' as any);
       }}
     />
   );

@@ -7,7 +7,7 @@ export default function ProfileSettingsRoute() {
   return (
     <SettingsScreen
       onBack={() => router.replace('/profile')}
-      onNavigate={(screen) => router.push(screen as any)}
+      onNavigate={(screen) => router.replace(screen as any)}
     />
   );
 }
