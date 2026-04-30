@@ -12,6 +12,7 @@ import {
   RescueActiveBatchResponse,
   rescueTeamService,
 } from '@/src/services/rescueTeamService';
+import { getPrimaryVehicleLabel, getVehicleLabels } from '@/src/utils/vehicle';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useEffect, useRef } from 'react';
@@ -288,33 +289,9 @@ export default function RescueMissionCenterScreen({
   const getVehicleLabel = (
     item: Pick<
       RescueBatchItem,
-      'vehicleName' | 'vehicleLicensePlate' | 'vehicleId'
+      'vehicleName' | 'vehicleLicensePlate' | 'vehicles'
     >,
-  ) => {
-    const vehicleName = String(item.vehicleName ?? '').trim();
-    const vehicleLicensePlate = String(item.vehicleLicensePlate ?? '').trim();
-    const hasVehicle = Boolean(
-      vehicleName || vehicleLicensePlate || item.vehicleId,
-    );
-
-    if (!hasVehicle) {
-      return 'Chưa điều phối';
-    }
-
-    if (vehicleName && vehicleLicensePlate) {
-      return `${vehicleName} - ${vehicleLicensePlate}`;
-    }
-
-    if (vehicleName) {
-      return vehicleName;
-    }
-
-    if (vehicleLicensePlate) {
-      return vehicleLicensePlate;
-    }
-
-    return 'Chưa điều phối';
-  };
+  ) => getPrimaryVehicleLabel(item);
 
   const renderLeaderMissionActions = (mission: RescueBatchItem | null) => {
     const isActiveMission =
@@ -606,12 +583,64 @@ export default function RescueMissionCenterScreen({
                   >
                     Phương tiện
                   </Text>
-                  <Text
-                    className="mt-1 text-sm font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    {getVehicleLabel(selectedMission)}
-                  </Text>
+                  <View className="mt-1 flex-row items-center gap-2">
+                    <View
+                      className="rounded-full px-2 py-1"
+                      style={{ backgroundColor: `${colors.primary}22` }}
+                    >
+                      <Text
+                        className="text-[10px] font-bold uppercase"
+                        style={{ color: colors.primary }}
+                      >
+                        Chính
+                      </Text>
+                    </View>
+                    <Text
+                      className="text-sm font-semibold"
+                      style={{ color: colors.text }}
+                    >
+                      {getPrimaryVehicleLabel(selectedMission)}
+                    </Text>
+                  </View>
+                  {selectedMission.vehicles?.length ? (
+                    <View className="mt-3 gap-2">
+                      <Text
+                        className="text-xs font-semibold uppercase tracking-wide"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Xe phụ
+                      </Text>
+                      {getVehicleLabels(selectedMission.vehicles)
+                        .filter((vehicle) => !vehicle.isPrimary)
+                        .map((vehicle) => (
+                          <View
+                            key={`${vehicle.label}-${vehicle.isPrimary}`}
+                            className="flex-row items-center justify-between rounded-lg px-3 py-2"
+                            style={{ backgroundColor: colors.card }}
+                          >
+                            <Text
+                              className="text-sm font-medium"
+                              style={{ color: colors.text }}
+                            >
+                              {vehicle.label}
+                            </Text>
+                            <View
+                              className="rounded-full px-2 py-1"
+                              style={{
+                                backgroundColor: `${colors.textSecondary}22`,
+                              }}
+                            >
+                              <Text
+                                className="text-[10px] font-bold"
+                                style={{ color: colors.textSecondary }}
+                              >
+                                Phụ
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                    </View>
+                  ) : null}
                 </View>
 
                 <View className="mt-4 flex-row gap-3">
@@ -915,7 +944,7 @@ export default function RescueMissionCenterScreen({
                           className="mt-1 text-sm"
                           style={{ color: colors.textSecondary }}
                         >
-                          Xe sử dụng: {getVehicleLabel(item)}
+                          Xe chính: {getPrimaryVehicleLabel(item)}
                         </Text>
                         <Text
                           className="mt-2 text-sm font-medium"
@@ -1152,7 +1181,7 @@ export default function RescueMissionCenterScreen({
                                 className="text-sm"
                                 style={{ color: colors.textSecondary }}
                               >
-                                Xe đã dùng: {getVehicleLabel(item)}
+                                Xe chính: {getPrimaryVehicleLabel(item)}
                               </Text>
 
                               <View className="mt-2 gap-1.5">
@@ -1369,5 +1398,3 @@ function FallbackMapPreview({
     </View>
   );
 }
-
-
