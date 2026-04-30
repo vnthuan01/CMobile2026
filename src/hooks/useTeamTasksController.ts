@@ -104,6 +104,7 @@ const mapHistoryBatches = (
           vehicleId: request.vehicleId ?? null,
           vehicleName: request.vehicleName ?? null,
           vehicleLicensePlate: request.vehicleLicensePlate ?? null,
+          vehicles: request.vehicles ?? [],
           disasterType: request.disasterType,
           rescueRequestType: normalizeRescueRequestType(
             request.rescueRequestType,

@@ -12,6 +12,10 @@ import {
   RescueActiveBatchResponse,
   rescueTeamService,
 } from '@/src/services/rescueTeamService';
+import {
+  formatVehicleLabel,
+  getPrimaryVehicleLabel,
+} from '@/src/utils/vehicle';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useEffect, useRef } from 'react';
@@ -288,33 +292,9 @@ export default function TeamTasksScreen({
   const getVehicleLabel = (
     item: Pick<
       RescueBatchItem,
-      'vehicleName' | 'vehicleLicensePlate' | 'vehicleId'
+      'vehicleName' | 'vehicleLicensePlate' | 'vehicles'
     >,
-  ) => {
-    const vehicleName = String(item.vehicleName ?? '').trim();
-    const vehicleLicensePlate = String(item.vehicleLicensePlate ?? '').trim();
-    const hasVehicle = Boolean(
-      vehicleName || vehicleLicensePlate || item.vehicleId,
-    );
-
-    if (!hasVehicle) {
-      return 'Chưa điều phối';
-    }
-
-    if (vehicleName && vehicleLicensePlate) {
-      return `${vehicleName} - ${vehicleLicensePlate}`;
-    }
-
-    if (vehicleName) {
-      return vehicleName;
-    }
-
-    if (vehicleLicensePlate) {
-      return vehicleLicensePlate;
-    }
-
-    return 'Chưa điều phối';
-  };
+  ) => getPrimaryVehicleLabel(item);
 
   const renderLeaderMissionActions = (mission: RescueBatchItem | null) => {
     const isActiveMission =
@@ -604,14 +584,58 @@ export default function TeamTasksScreen({
                     className="text-xs font-semibold"
                     style={{ color: colors.textSecondary }}
                   >
-                    Phương tiện
+                    Xe chính
                   </Text>
-                  <Text
-                    className="mt-1 text-sm font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    {getVehicleLabel(selectedMission)}
-                  </Text>
+                  <View className="mt-3 gap-2">
+                    <Text
+                      className="text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Danh sách xe
+                    </Text>
+                    {selectedMission.vehicles?.length ? (
+                      selectedMission.vehicles.map((vehicle) => (
+                        <View
+                          key={vehicle.vehicleId}
+                          className="flex-row items-center justify-between rounded-lg px-3 py-2"
+                          style={{ backgroundColor: colors.card }}
+                        >
+                          <Text
+                            className="text-sm font-medium"
+                            style={{ color: colors.text }}
+                          >
+                            {formatVehicleLabel(vehicle)}
+                          </Text>
+                          <View
+                            className="rounded-full px-2 py-1"
+                            style={{
+                              backgroundColor: vehicle.isPrimary
+                                ? `${colors.primary}22`
+                                : `${colors.textSecondary}22`,
+                            }}
+                          >
+                            <Text
+                              className="text-[10px] font-bold"
+                              style={{
+                                color: vehicle.isPrimary
+                                  ? colors.primary
+                                  : colors.textSecondary,
+                              }}
+                            >
+                              {vehicle.isPrimary ? 'Chính' : 'Phụ'}
+                            </Text>
+                          </View>
+                        </View>
+                      ))
+                    ) : (
+                      <Text
+                        className="text-sm"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Chưa có xe được phân công
+                      </Text>
+                    )}
+                  </View>
                 </View>
 
                 <View className="mt-4 flex-row gap-3">

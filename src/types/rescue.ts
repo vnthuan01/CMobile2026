@@ -1,6 +1,8 @@
+import type { AssignedVehicle } from './vehicle';
+
 // ── Enums / value types ────────────────────────────────────────────────────────
-export type RescueType = 0 | 1;        // 0 = Normal, 1 = Emergency
-export type DisasterType = 0 | 1 | 2 | 3 | 4 | 5;  // 0 = Flood, 1 = Landslide, 2 = Earthquake, 3 = Fire, 4 = Storm, 5 = Other
+export type RescueType = 0 | 1; // 0 = Normal, 1 = Emergency
+export type DisasterType = 0 | 1 | 2 | 3 | 4 | 5; // 0 = Flood, 1 = Landslide, 2 = Earthquake, 3 = Fire, 4 = Storm, 5 = Other
 
 // ── Shared domain interfaces ──────────────────────────────────────────────────
 export interface PriorityCriteria {
@@ -37,6 +39,7 @@ export interface AssignedRescueTeamInfo {
   routePolyline: string | null;
   totalDistanceKm: number | null;
   totalEstimatedMinutes: number | null;
+  vehicles?: AssignedVehicle[] | null;
 }
 
 export interface MyRescueRequestItem {
@@ -96,6 +99,7 @@ export interface RescueOperationInfo {
   status: string;
   startedAt?: string | null;
   endedAt?: string | null;
+  vehicles?: AssignedVehicle[] | null;
 }
 
 export interface UpdateRescueOperationStatusPayload {

@@ -1,3 +1,5 @@
+import type { AssignedVehicle } from './vehicle';
+
 // ── Team domain ───────────────────────────────────────────────────────────────
 
 export interface TeamSkillResponse {
@@ -91,6 +93,7 @@ export interface RescueBatchItem {
   vehicleId?: string | null;
   vehicleName?: string | null;
   vehicleLicensePlate?: string | null;
+  vehicles?: AssignedVehicle[] | null;
   disasterType: string;
   rescueRequestType: 'Normal' | 'Emergency' | string;
   priorityPoint?: number | null;
@@ -128,6 +131,7 @@ export interface RescueTeamHistoryRequestItem {
   vehicleId?: string | null;
   vehicleName?: string | null;
   vehicleLicensePlate?: string | null;
+  vehicles?: AssignedVehicle[] | null;
   address: string;
   description?: string | null;
   note?: string | null;
