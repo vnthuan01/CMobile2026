@@ -45,6 +45,131 @@ export default function ReliefPlanSection({
   >(null);
   const [sheetIndex, setSheetIndex] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const areaMarkerEntries = useMemo(
+    () =>
+      (summary?.areas ?? [])
+        .filter(
+          (area) =>
+            typeof area.latitude === 'number' &&
+            typeof area.longitude === 'number',
+        )
+        .map((area, index) => {
+          const severityScore =
+            (area.isolatedHouseholdCount ?? 0) * 20 +
+            (area.householdCount ?? 0) * 2 +
+            (area.population ?? 0) * 0.1;
+          const hasIsolatedHouseholds = (area.isolatedHouseholdCount ?? 0) > 0;
+          const isHighPriorityArea =
+            (area.isolatedHouseholdCount ?? 0) >= 2 ||
+            (area.pendingHouseholds ?? 0) >= 2 ||
+            String(area.recommendedOperationalMode || '')
+              .toLowerCase()
+              .includes('ưu tiên');
+          const id = `${area.locationId || area.areaName}-${index}`;
+
+          return {
+            id,
+            area,
+            severityScore,
+            marker: {
+              id,
+              coordinate: [
+                area.longitude as number,
+                area.latitude as number,
+              ] as [number, number],
+              color: !hasIsolatedHouseholds
+                ? colors.status.completed
+                : isHighPriorityArea
+                  ? colors.error
+                  : colors.status.pending,
+              size: !hasIsolatedHouseholds ? 14 : isHighPriorityArea ? 22 : 18,
+            } satisfies MapMarker,
+          };
+        }),
+    [
+      colors.error,
+      colors.status.completed,
+      colors.status.pending,
+      summary?.areas,
+    ],
+  );
+  const areaMarkers = useMemo(
+    () =>
+      areaMarkerEntries.map((entry) =>
+        entry.id === selectedAreaMarkerId
+          ? {
+              ...entry.marker,
+              color: colors.secondary,
+              size: (entry.marker.size ?? 18) + 8,
+            }
+          : entry.marker,
+      ),
+    [areaMarkerEntries, colors.secondary, selectedAreaMarkerId],
+  );
+  const selectedAreaEntry = useMemo(
+    () =>
+      areaMarkerEntries.find((entry) => entry.id === selectedAreaMarkerId) ??
+      areaMarkerEntries[0] ??
+      null,
+    [areaMarkerEntries, selectedAreaMarkerId],
+  );
+  const snapPoints = useMemo(() => ['18%', '50%', '84%'], []);
+  const sortedIsolatedHouseholds = useMemo(
+    () => [...(summary?.isolatedHouseholdItems ?? [])].sort(
+      (a, b) => {
+        const scoreA =
+          (a.isolationSeverityLevel ?? 0) * 100 +
+          (a.floodSeverityLevel ?? 0) * 10 +
+          (a.requiresBoat ? 5 : 0) +
+          (a.requiresLocalGuide ? 3 : 0) +
+          (a.householdSize ?? 0);
+        const scoreB =
+          (b.isolationSeverityLevel ?? 0) * 100 +
+          (b.floodSeverityLevel ?? 0) * 10 +
+          (b.requiresBoat ? 5 : 0) +
+          (b.requiresLocalGuide ? 3 : 0) +
+          (b.householdSize ?? 0);
+
+        return scoreB - scoreA;
+      },
+    ),
+    [summary?.isolatedHouseholdItems],
+  );
+  const selectedAreaHouseholds = useMemo(() => {
+    if (!selectedAreaEntry) return [];
+
+    return sortedIsolatedHouseholds.filter((item) => {
+      if (
+        typeof item.latitude === 'number' &&
+        typeof item.longitude === 'number' &&
+        typeof selectedAreaEntry.area.latitude === 'number' &&
+        typeof selectedAreaEntry.area.longitude === 'number'
+      ) {
+        const latDiff = Math.abs(
+          item.latitude - selectedAreaEntry.area.latitude,
+        );
+        const lngDiff = Math.abs(
+          item.longitude - selectedAreaEntry.area.longitude,
+        );
+        if (latDiff <= 0.03 && lngDiff <= 0.03) {
+          return true;
+        }
+      }
+
+      if (selectedAreaEntry.area.locationId && item.locationId) {
+        return item.locationId === selectedAreaEntry.area.locationId;
+      }
+
+      const normalizedAreaName = selectedAreaEntry.area.areaName
+        .replace(/Cụm tọa độ\s*/i, '')
+        .replace(/\(.+?\)/g, '')
+        .trim();
+
+      return normalizedAreaName
+        ? item.address?.includes(normalizedAreaName)
+        : false;
+    });
+  }, [selectedAreaEntry, sortedIsolatedHouseholds]);
 
   if (isLoading) {
     return (
@@ -94,123 +219,9 @@ export default function ReliefPlanSection({
     }
   };
 
-  const sortedIsolatedHouseholds = [...summary.isolatedHouseholdItems].sort(
-    (a, b) => {
-      const scoreA =
-        (a.isolationSeverityLevel ?? 0) * 100 +
-        (a.floodSeverityLevel ?? 0) * 10 +
-        (a.requiresBoat ? 5 : 0) +
-        (a.requiresLocalGuide ? 3 : 0) +
-        (a.householdSize ?? 0);
-      const scoreB =
-        (b.isolationSeverityLevel ?? 0) * 100 +
-        (b.floodSeverityLevel ?? 0) * 10 +
-        (b.requiresBoat ? 5 : 0) +
-        (b.requiresLocalGuide ? 3 : 0) +
-        (b.householdSize ?? 0);
-
-      return scoreB - scoreA;
-    },
-  );
-  const areaMarkerEntries = useMemo(
-    () =>
-      summary.areas
-        .filter(
-          (area) =>
-            typeof area.latitude === 'number' &&
-            typeof area.longitude === 'number',
-        )
-        .map((area, index) => {
-          const severityScore =
-            (area.isolatedHouseholdCount ?? 0) * 20 +
-            (area.householdCount ?? 0) * 2 +
-            (area.population ?? 0) * 0.1;
-          const hasIsolatedHouseholds = (area.isolatedHouseholdCount ?? 0) > 0;
-          const isHighPriorityArea =
-            (area.isolatedHouseholdCount ?? 0) >= 2 ||
-            (area.pendingHouseholds ?? 0) >= 2 ||
-            String(area.recommendedOperationalMode || '')
-              .toLowerCase()
-              .includes('ưu tiên');
-          const id = `${area.locationId || area.areaName}-${index}`;
-
-          return {
-            id,
-            area,
-            severityScore,
-            marker: {
-              id,
-              coordinate: [
-                area.longitude as number,
-                area.latitude as number,
-              ] as [number, number],
-              color: !hasIsolatedHouseholds
-                ? colors.status.completed
-                : isHighPriorityArea
-                  ? colors.error
-                  : colors.status.pending,
-              size: !hasIsolatedHouseholds ? 14 : isHighPriorityArea ? 22 : 18,
-            } satisfies MapMarker,
-          };
-        }),
-    [
-      colors.error,
-      colors.status.completed,
-      colors.status.pending,
-      summary.areas,
-    ],
-  );
-  const areaMarkers = areaMarkerEntries.map((entry) =>
-    entry.id === selectedAreaMarkerId
-      ? {
-          ...entry.marker,
-          color: colors.secondary,
-          size: (entry.marker.size ?? 18) + 8,
-        }
-      : entry.marker,
-  );
   const mapCenter: [number, number] = areaMarkers.length
     ? areaMarkers[0].coordinate
     : [106.629, 10.724];
-  const selectedAreaEntry =
-    areaMarkerEntries.find((entry) => entry.id === selectedAreaMarkerId) ??
-    areaMarkerEntries[0] ??
-    null;
-  const selectedAreaHouseholds = useMemo(() => {
-    if (!selectedAreaEntry) return [];
-
-    return sortedIsolatedHouseholds.filter((item) => {
-      if (
-        typeof item.latitude === 'number' &&
-        typeof item.longitude === 'number' &&
-        typeof selectedAreaEntry.area.latitude === 'number' &&
-        typeof selectedAreaEntry.area.longitude === 'number'
-      ) {
-        const latDiff = Math.abs(
-          item.latitude - selectedAreaEntry.area.latitude,
-        );
-        const lngDiff = Math.abs(
-          item.longitude - selectedAreaEntry.area.longitude,
-        );
-        if (latDiff <= 0.03 && lngDiff <= 0.03) {
-          return true;
-        }
-      }
-
-      if (selectedAreaEntry.area.locationId && item.locationId) {
-        return item.locationId === selectedAreaEntry.area.locationId;
-      }
-
-      const normalizedAreaName = selectedAreaEntry.area.areaName
-        .replace(/Cụm tọa độ\s*/i, '')
-        .replace(/\(.+?\)/g, '')
-        .trim();
-
-      return normalizedAreaName
-        ? item.address?.includes(normalizedAreaName)
-        : false;
-    });
-  }, [selectedAreaEntry, sortedIsolatedHouseholds]);
 
   const handleOpenFullMap = () => {
     if (!areaMarkerEntries.length) return;
@@ -247,7 +258,6 @@ export default function ReliefPlanSection({
             bg: `${colors.status.pending}18`,
           }
     : null;
-  const snapPoints = useMemo(() => ['18%', '50%', '84%'], []);
 
   return (
     <View className="gap-4">

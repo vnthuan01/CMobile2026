@@ -50,6 +50,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import InventorySection from './InventorySection';
+import MyVehicleScreen from './MyVehicleScreen';
 import ReliefPlanSection from './ReliefPlanSection';
 
 interface ReliefTasksScreenProps {
@@ -131,6 +132,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   const { bottom } = useSafeAreaInsets();
   const { colors } = useTheme();
   const router = useRouter();
+  const [showMyVehicleScreen, setShowMyVehicleScreen] = useState(false);
   const summaryScrollRef = useRef<ScrollView | null>(null);
   const user = useAuthStore((s) => s.user);
   const { data: myTeamData, isLoading: isTeamLoading } = useMyTeam();
@@ -637,6 +639,12 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
 
   const planSummary = apiPlanSummary ?? fallbackPlanSummary;
 
+  const shouldUseInlineMyVehicleScreen = false;
+
+  if (showMyVehicleScreen && shouldUseInlineMyVehicleScreen) {
+    return <MyVehicleScreen onBack={() => setShowMyVehicleScreen(false)} />;
+  }
+
   const handleChangeMemberStatus = async (
     memberTaskId: string,
     newStatus: MemberTaskStatus,
@@ -993,6 +1001,31 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   </Text>
                 </View>
               )}
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (shouldUseInlineMyVehicleScreen) {
+                    setShowMyVehicleScreen(true);
+                    return;
+                  }
+
+                  router.push('/profile/my-vehicle' as any);
+                }}
+                className="mt-4 rounded-2xl border px-4 py-4"
+                style={{ borderColor: 'rgba(255,255,255,0.25)', backgroundColor: 'rgba(255,255,255,0.1)' }}
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1 pr-3">
+                    <Text className="text-sm font-bold text-white">
+                      Phương tiện của tôi
+                    </Text>
+                    <Text className="mt-1 text-xs text-white/80">
+                      Xem xe đang được giao, trả phương tiện về đội hoặc bàn giao cho thành viên khác.
+                    </Text>
+                  </View>
+                  <Ionicons name="car-sport-outline" size={20} color="#fff" />
+                </View>
+              </TouchableOpacity>
             </View>
 
             {/* Tab selector */}

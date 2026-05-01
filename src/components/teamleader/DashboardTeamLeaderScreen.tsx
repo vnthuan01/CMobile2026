@@ -1,19 +1,42 @@
 import '@/global.css';
 import CustomDropdown from '@/src/components/CustomDropdown';
-import MemberCard, { type TeamMember } from '@/src/components/common/MemberCard';
+import MemberCard, {
+  type TeamMember,
+} from '@/src/components/common/MemberCard';
 import StickyFooterButton from '@/src/components/common/StickyFooterButton';
+import TeamVehicleScreen from '@/src/components/teamleader/TeamVehicleScreen';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
+import {
+  useAssignCampaignVehicleDriver,
+  useHandoffCampaignVehicle,
+  useReleaseCampaignVehicle,
+  useReturnCampaignVehicleToCoordinator,
+} from '@/src/hooks/useCampaignVehicles';
 import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
-import { CampaignTaskStatus, type CampaignTaskResponse, type CampaignTeamResponse } from '@/src/types/leaderTask';
+import {
+  CampaignTaskStatus,
+  type CampaignTaskResponse,
+  type CampaignTeamResponse,
+} from '@/src/types/leaderTask';
 import type { TeamMemberSummary } from '@/src/types/team';
+import type { CampaignAssignedVehicle } from '@/src/types/vehicle';
+import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface DashboardTeamLeaderScreenProps {
@@ -50,24 +73,37 @@ export default function DashboardTeamLeaderScreen({
 
   const team = myTeamData?.team;
   const teamMode = myTeamData?.teamMode ?? 'rescue';
-  const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(team?.teamId, !!team?.teamId);
+  const { data: fallbackAssignedCampaigns = [] } = useAssignedCampaigns(
+    team?.teamId,
+    !!team?.teamId,
+  );
   const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
     team,
     fallbackAssignedCampaigns,
   );
-  const { campaignId, activeCampaign, assignedCampaigns } = useActiveAssignedCampaign(
-    team,
-    selectedCampaignId,
-    fallbackAssignedCampaigns,
+  const { campaignId, activeCampaign, assignedCampaigns } =
+    useActiveAssignedCampaign(
+      team,
+      selectedCampaignId,
+      fallbackAssignedCampaigns,
+    );
+  const { data: campaignDetail } = useCampaignDetail(
+    campaignId || undefined,
+    !!campaignId,
   );
-  const { data: campaignDetail } = useCampaignDetail(campaignId || undefined, !!campaignId);
   const { data: campaignTeams = [] } = useCampaignTeams(campaignId);
-  const myCampaignTeam = campaignTeams.find((item: CampaignTeamResponse) => item.teamId === team?.teamId) ?? campaignTeams[0];
-  const { data: taskData, isLoading: isTasksLoading } = useCampaignTasks(campaignId, {
-    pageIndex: 1,
-    pageSize: 50,
-    campaignTeamId: myCampaignTeam?.campaignTeamId,
-  });
+  const myCampaignTeam =
+    campaignTeams.find(
+      (item: CampaignTeamResponse) => item.teamId === team?.teamId,
+    ) ?? campaignTeams[0];
+  const { data: taskData, isLoading: isTasksLoading } = useCampaignTasks(
+    campaignId,
+    {
+      pageIndex: 1,
+      pageSize: 50,
+      campaignTeamId: myCampaignTeam?.campaignTeamId,
+    },
+  );
 
   const members: TeamMember[] = useMemo(() => {
     const source = team?.members ?? [];
@@ -81,40 +117,361 @@ export default function DashboardTeamLeaderScreen({
     }));
   }, [team?.members]);
 
-  const filteredMembers = activeChip === 1
-    ? members.filter((member) => member.status === 'ready')
-    : members;
+  const filteredMembers =
+    activeChip === 1
+      ? members.filter((member) => member.status === 'ready')
+      : members;
 
   const taskItems = useMemo(() => taskData?.items ?? [], [taskData?.items]);
-  const completed = taskItems.filter((task: CampaignTaskResponse) => task.status === CampaignTaskStatus.Completed).length;
-  const inProgress = taskItems.filter((task: CampaignTaskResponse) => task.status === CampaignTaskStatus.InProgress).length;
-  const progress = taskItems.length ? Math.round((completed / taskItems.length) * 100) : 0;
+  const completed = taskItems.filter(
+    (task: CampaignTaskResponse) =>
+      task.status === CampaignTaskStatus.Completed,
+  ).length;
+  const inProgress = taskItems.filter(
+    (task: CampaignTaskResponse) =>
+      task.status === CampaignTaskStatus.InProgress,
+  ).length;
+  const progress = taskItems.length
+    ? Math.round((completed / taskItems.length) * 100)
+    : 0;
   const currentTask = taskItems[0];
   const campaignOptions = useMemo(
-    () => assignedCampaigns.map((campaign) => ({ label: campaign.campaignName || campaign.campaignId, value: campaign.campaignId })),
+    () =>
+      assignedCampaigns.map((campaign) => ({
+        label: campaign.campaignName || campaign.campaignId,
+        value: campaign.campaignId,
+      })),
     [assignedCampaigns],
   );
-  const campaignName = campaignDetail?.name || activeCampaign?.campaignName || myCampaignTeam?.campaignName || team?.name || 'Chưa có chiến dịch';
-  const campaignStartDate = campaignDetail?.startDate || activeCampaign?.startDate;
+  const campaignName =
+    campaignDetail?.name ||
+    activeCampaign?.campaignName ||
+    myCampaignTeam?.campaignName ||
+    team?.name ||
+    'Chưa có chiến dịch';
+  const campaignStartDate =
+    campaignDetail?.startDate || activeCampaign?.startDate;
   const campaignEndDate = campaignDetail?.endDate || activeCampaign?.endDate;
+  const [showVehicleScreen, setShowVehicleScreen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<CampaignAssignedVehicle | null>(null);
+  const [driverAction, setDriverAction] = useState<
+    'assign' | 'handoff' | 'release' | 'return-to-coordinator' | null
+  >(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [vehicleNote, setVehicleNote] = useState('');
+  const assignDriverMutation = useAssignCampaignVehicleDriver();
+  const releaseVehicleMutation = useReleaseCampaignVehicle();
+  const handoffVehicleMutation = useHandoffCampaignVehicle();
+  const returnToCoordinatorMutation = useReturnCampaignVehicleToCoordinator();
+
+  const driverCandidates = useMemo(
+    () =>
+      (team?.members ?? []).filter(
+        (member) =>
+          member.volunteerProfileId &&
+          member.volunteerProfileId !== selectedVehicle?.assignedDriverId,
+      ),
+    [selectedVehicle?.assignedDriverId, team?.members],
+  );
+
+  const openVehicleAction = (
+    action: 'assign' | 'handoff' | 'release' | 'return-to-coordinator',
+    vehicle: CampaignAssignedVehicle,
+  ) => {
+    setSelectedVehicle(vehicle);
+    setDriverAction(action);
+    setSelectedDriverId(
+      action === 'assign' ? (vehicle.assignedDriverId ?? null) : null,
+    );
+    setVehicleNote(vehicle.note?.trim() || '');
+  };
+
+  const closeVehicleAction = () => {
+    setDriverAction(null);
+    setSelectedVehicle(null);
+    setSelectedDriverId(null);
+    setVehicleNote('');
+  };
+
+  const handleSubmitVehicleAction = async () => {
+    if (!campaignId || !selectedVehicle || !driverAction) {
+      showErrorToast(
+        'Thiếu dữ liệu',
+        'Không xác định được phương tiện hoặc chiến dịch hiện tại.',
+      );
+      return;
+    }
+
+    try {
+      if (driverAction === 'assign') {
+        if (!selectedDriverId) {
+          showErrorToast(
+            'Chưa chọn người lái',
+            'Vui lòng chọn thành viên để giao phương tiện.',
+          );
+          return;
+        }
+
+        await assignDriverMutation.mutateAsync({
+          campaignId,
+          campaignVehicleId: selectedVehicle.campaignVehicleId,
+          request: {
+            assignedDriverId: selectedDriverId,
+            note:
+              vehicleNote.trim() ||
+              'Điều phối phương tiện cho thành viên trong đội.',
+          },
+        });
+        showSuccessToast('Đã chỉ định người lái');
+      }
+
+      if (driverAction === 'handoff') {
+        if (!selectedDriverId) {
+          showErrorToast(
+            'Chưa chọn người nhận',
+            'Vui lòng chọn thành viên nhận bàn giao.',
+          );
+          return;
+        }
+
+        await handoffVehicleMutation.mutateAsync({
+          campaignId,
+          campaignVehicleId: selectedVehicle.campaignVehicleId,
+          request: {
+            toVolunteerProfileId: selectedDriverId,
+            note:
+              vehicleNote.trim() ||
+              'Trưởng nhóm bàn giao phương tiện cho thành viên khác.',
+          },
+        });
+        showSuccessToast('Đã bàn giao phương tiện');
+      }
+
+      if (driverAction === 'release') {
+        await releaseVehicleMutation.mutateAsync({
+          campaignId,
+          campaignVehicleId: selectedVehicle.campaignVehicleId,
+          request: {
+            note:
+              vehicleNote.trim() ||
+              'Bỏ gán người sử dụng và đánh giấu xe đang sẵn sàng.',
+          },
+        });
+        showSuccessToast('Đã đánh giấu xe đang sẵn sàng');
+      }
+
+      if (driverAction === 'return-to-coordinator') {
+        await returnToCoordinatorMutation.mutateAsync({
+          campaignId,
+          campaignVehicleId: selectedVehicle.campaignVehicleId,
+          request: {
+            note:
+              vehicleNote.trim() ||
+              'Trả hẳn phương tiện về điều phối trung tâm để phân công lại.',
+          },
+        });
+        showSuccessToast('Đã trả hẳn phương tiện về điều phối trung tâm');
+      }
+
+      closeVehicleAction();
+    } catch (error: any) {
+      showErrorToast('Không thể cập nhật phương tiện', error?.message);
+    }
+  };
+
+  if (showVehicleScreen) {
+    return (
+      <>
+        <TeamVehicleScreen
+          onBack={() => setShowVehicleScreen(false)}
+          onAssignDriver={(vehicle) => openVehicleAction('assign', vehicle)}
+          onReleaseVehicle={(vehicle) => openVehicleAction('release', vehicle)}
+          onHandoffVehicle={(vehicle) => openVehicleAction('handoff', vehicle)}
+          onReturnToCoordinator={(vehicle) =>
+            openVehicleAction('return-to-coordinator', vehicle)
+          }
+        />
+        <Modal
+          visible={!!driverAction && !!selectedVehicle}
+          transparent
+          animationType="fade"
+          onRequestClose={closeVehicleAction}
+        >
+          <View className="flex-1 items-center justify-center bg-black/45 px-5">
+            <Pressable
+              className="absolute inset-0"
+              onPress={closeVehicleAction}
+            />
+            <View
+              className="w-full rounded-3xl p-5"
+              style={{ backgroundColor: colors.card }}
+            >
+              <Text
+                className="text-lg font-bold"
+                style={{ color: colors.text }}
+              >
+                {driverAction === 'assign'
+                  ? 'Chỉ định người lái'
+                  : driverAction === 'handoff'
+                    ? 'Bàn giao phương tiện'
+                    : driverAction === 'release'
+                      ? 'Đánh giấu xe đang sẵn sàng'
+                      : 'Trả hẳn xe về điều phối trung tâm'}
+              </Text>
+              <Text
+                className="mt-2 text-sm"
+                style={{ color: colors.textSecondary }}
+              >
+                {selectedVehicle?.licensePlate} -{' '}
+                {selectedVehicle?.vehicleTypeName || 'Phương tiện cứu trợ'}
+              </Text>
+              <Text className="mt-1 text-xs font-semibold" style={{ color: colors.primary }}>
+                Loại xe: {selectedVehicle?.vehicleTypeName || 'Chưa rõ loại phương tiện'}
+              </Text>
+
+              {driverAction === 'assign' || driverAction === 'handoff' ? (
+                <View className="mt-4 gap-2">
+                  {driverCandidates.length > 0 ? (
+                    driverCandidates.map((member) => {
+                      const selected =
+                        selectedDriverId === member.volunteerProfileId;
+                      return (
+                        <TouchableOpacity
+                          key={member.userId}
+                          onPress={() =>
+                            setSelectedDriverId(
+                              member.volunteerProfileId || null,
+                            )
+                          }
+                          className="rounded-2xl border px-4 py-3"
+                          style={{
+                            borderColor: selected
+                              ? colors.primary
+                              : colors.border,
+                            backgroundColor: selected
+                              ? `${colors.primary}10`
+                              : colors.background,
+                          }}
+                        >
+                          <Text
+                            className="text-sm font-semibold"
+                            style={{ color: colors.text }}
+                          >
+                            {member.displayName}
+                          </Text>
+                          <Text
+                            className="mt-1 text-xs"
+                            style={{ color: colors.textSecondary }}
+                          >
+                            {member.role || 'Thành viên'}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })
+                  ) : (
+                    <Text
+                      className="text-sm"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Không có thành viên phù hợp trong đội hiện tại.
+                    </Text>
+                  )}
+                </View>
+              ) : null}
+
+              <TextInput
+                value={vehicleNote}
+                onChangeText={setVehicleNote}
+                placeholder="Nhập ghi chú điều phối phương tiện"
+                placeholderTextColor={colors.textSecondary}
+                className="mt-4 rounded-2xl border px-4 py-3 text-sm"
+                style={{
+                  borderColor: colors.border,
+                  color: colors.text,
+                  backgroundColor: colors.background,
+                }}
+                multiline
+              />
+
+              <View className="mt-4 flex-row gap-3">
+                <TouchableOpacity
+                  onPress={closeVehicleAction}
+                  className="flex-1 rounded-2xl border py-3"
+                  style={{ borderColor: colors.border }}
+                >
+                  <Text
+                    className="text-center font-semibold"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Hủy
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSubmitVehicleAction}
+                  disabled={
+                    assignDriverMutation.isPending ||
+                    handoffVehicleMutation.isPending ||
+                    releaseVehicleMutation.isPending
+                      || returnToCoordinatorMutation.isPending
+                  }
+                  className="flex-1 rounded-2xl py-3"
+                  style={{
+                    backgroundColor: colors.primary,
+                    opacity:
+                      assignDriverMutation.isPending ||
+                      handoffVehicleMutation.isPending ||
+                      releaseVehicleMutation.isPending ||
+                      returnToCoordinatorMutation.isPending
+                        ? 0.7
+                        : 1,
+                  }}
+                >
+                  <Text className="text-center font-bold text-white">
+                    Xác nhận
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </>
+    );
+  }
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <View
-        style={{ paddingTop: top, backgroundColor: colors.card, borderBottomColor: colors.border }}
+        style={{
+          paddingTop: top,
+          backgroundColor: colors.card,
+          borderBottomColor: colors.border,
+        }}
         className="flex-row items-center justify-between border-b px-4 pb-2 shadow-sm"
       >
         <View className="min-w-0 flex-1 flex-row items-center pr-2">
           <View
             className="h-10 w-10 shrink-0 items-center justify-center rounded-full"
-            style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb', borderWidth: 2, borderColor: `${colors.primary}30` }}
+            style={{
+              backgroundColor: isDark ? '#374151' : '#e5e7eb',
+              borderWidth: 2,
+              borderColor: `${colors.primary}30`,
+            }}
           >
-            <Text className="text-sm font-bold" style={{ color: colors.textSecondary }}>
+            <Text
+              className="text-sm font-bold"
+              style={{ color: colors.textSecondary }}
+            >
               {initialsOf(team?.leader?.displayName || team?.name)}
             </Text>
           </View>
           <View className="ml-3 min-w-0 flex-1 pr-1">
-            <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>Nhóm trưởng</Text>
+            <Text
+              className="text-xs font-medium"
+              style={{ color: colors.textSecondary }}
+            >
+              Nhóm trưởng
+            </Text>
             <Text
               className="text-base font-bold leading-tight"
               style={{ color: colors.text }}
@@ -126,43 +483,125 @@ export default function DashboardTeamLeaderScreen({
           </View>
         </View>
         <TouchableOpacity className="relative h-10 w-10 shrink-0 items-center justify-center rounded-full">
-          <Ionicons name="notifications-outline" size={24} color={colors.textSecondary} />
+          <Ionicons
+            name="notifications-outline"
+            size={24}
+            color={colors.textSecondary}
+          />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: bottom + 100 }} className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: bottom + 100 }}
+        className="flex-1 px-4 pt-4"
+        showsVerticalScrollIndicator={false}
+      >
         {isTeamLoading || isTasksLoading ? (
           <>
             <View className="mb-6">
-              <View className="rounded-2xl border p-4 mb-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-                <View className="h-4 w-24 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-                <View className="h-6 w-48 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-                <View className="h-4 w-64 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              <View
+                className="mb-4 rounded-2xl border p-4"
+                style={{
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                }}
+              >
+                <View
+                  className="mb-2 h-4 w-24 rounded bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
+                <View
+                  className="mb-2 h-6 w-48 rounded bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
+                <View
+                  className="h-4 w-64 rounded bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
               </View>
 
-              <View className="h-8 w-40 rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-              <View className="rounded-2xl border p-5" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-                <View className="h-4 w-32 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-                <View className="h-6 w-3/4 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-                <View className="h-12 rounded bg-gray-200 mb-4" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-                <View className="h-10 w-full rounded-xl bg-gray-200 mb-4" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-                <View className="h-4 w-24 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              <View
+                className="mb-3 h-8 w-40 rounded bg-gray-200"
+                style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+              />
+              <View
+                className="rounded-2xl border p-5"
+                style={{
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                }}
+              >
+                <View
+                  className="mb-2 h-4 w-32 rounded bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
+                <View
+                  className="mb-2 h-6 w-3/4 rounded bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
+                <View
+                  className="mb-4 h-12 rounded bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
+                <View
+                  className="mb-4 h-10 w-full rounded-xl bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
+                <View
+                  className="h-4 w-24 rounded bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
               </View>
             </View>
 
             <View>
-              <View className="h-8 w-56 rounded bg-gray-200 mb-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 16 }}>
-                <View className="h-9 w-20 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-                <View className="h-9 w-24 rounded-full bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+              <View
+                className="mb-3 h-8 w-56 rounded bg-gray-200"
+                style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingBottom: 16 }}
+              >
+                <View
+                  className="h-9 w-20 rounded-full bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
+                <View
+                  className="h-9 w-24 rounded-full bg-gray-200"
+                  style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                />
               </ScrollView>
               <View className="gap-3">
                 {[...Array(3)].map((_, i) => (
-                  <View key={i} className="flex-row items-center p-4 rounded-lg border" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-                    <View className="h-12 w-12 rounded-full bg-gray-200 mr-3" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                  <View
+                    key={i}
+                    className="flex-row items-center rounded-lg border p-4"
+                    style={{
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <View
+                      className="mr-3 h-12 w-12 rounded-full bg-gray-200"
+                      style={{
+                        backgroundColor: isDark ? '#374151' : '#e5e7eb',
+                      }}
+                    />
                     <View className="flex-1">
-                      <View className="h-4 w-32 rounded bg-gray-200 mb-2" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
-                      <View className="h-3 w-24 rounded bg-gray-200" style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} />
+                      <View
+                        className="mb-2 h-4 w-32 rounded bg-gray-200"
+                        style={{
+                          backgroundColor: isDark ? '#374151' : '#e5e7eb',
+                        }}
+                      />
+                      <View
+                        className="h-3 w-24 rounded bg-gray-200"
+                        style={{
+                          backgroundColor: isDark ? '#374151' : '#e5e7eb',
+                        }}
+                      />
                     </View>
                   </View>
                 ))}
@@ -170,19 +609,37 @@ export default function DashboardTeamLeaderScreen({
             </View>
           </>
         ) : teamMode !== 'relief' ? (
-          <View className="rounded-2xl border border-dashed p-5" style={{ borderColor: colors.border }}>
+          <View
+            className="rounded-2xl border border-dashed p-5"
+            style={{ borderColor: colors.border }}
+          >
             <Text className="text-lg font-bold" style={{ color: colors.text }}>
               Màn hình này dành cho đội cứu trợ
             </Text>
-            <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
-              Đội cứu hộ sử dụng nhiệm vụ chung của nhóm tại Trung tâm nhiệm vụ thay vì phân công công việc cá nhân.
+            <Text
+              className="mt-2 text-sm"
+              style={{ color: colors.textSecondary }}
+            >
+              Đội cứu hộ sử dụng nhiệm vụ chung của nhóm tại Trung tâm nhiệm vụ
+              thay vì phân công công việc cá nhân.
             </Text>
           </View>
         ) : (
           <>
             <View className="mb-6">
-              <View className="rounded-2xl border p-4 mb-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-                <Text className="text-sm" style={{ color: colors.textSecondary }}>Chiến dịch đang xem</Text>
+              <View
+                className="mb-4 rounded-2xl border p-4"
+                style={{
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                }}
+              >
+                <Text
+                  className="text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Chiến dịch đang xem
+                </Text>
                 {assignedCampaigns.length > 1 ? (
                   <View className="mt-2">
                     <CustomDropdown
@@ -194,89 +651,238 @@ export default function DashboardTeamLeaderScreen({
                     />
                   </View>
                 ) : (
-                  <View className="mt-2 self-start rounded-full px-3 py-1.5" style={{ backgroundColor: `${colors.primary}10` }}>
-                    <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                  <View
+                    className="mt-2 self-start rounded-full px-3 py-1.5"
+                    style={{ backgroundColor: `${colors.primary}10` }}
+                  >
+                    <Text
+                      className="text-xs font-semibold"
+                      style={{ color: colors.primary }}
+                    >
                       Chiến dịch hiện tại đã tự đồng bộ
                     </Text>
                   </View>
                 )}
                 {isTasksLoading ? (
-                  <View className="mt-3 rounded-xl px-3 py-3" style={{ backgroundColor: `${colors.primary}08` }}>
-                    <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                  <View
+                    className="mt-3 rounded-xl px-3 py-3"
+                    style={{ backgroundColor: `${colors.primary}08` }}
+                  >
+                    <Text
+                      className="text-xs font-semibold"
+                      style={{ color: colors.primary }}
+                    >
                       Đang đồng bộ chiến dịch...
                     </Text>
                   </View>
                 ) : null}
-                <Text className="mt-2 text-base font-bold" style={{ color: colors.text }}>{campaignName}</Text>
-                <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                  Từ {dinhDangNgay(campaignStartDate)} đến {dinhDangNgay(campaignEndDate)}
+                <Text
+                  className="mt-2 text-base font-bold"
+                  style={{ color: colors.text }}
+                >
+                  {campaignName}
+                </Text>
+                <Text
+                  className="mt-1 text-xs"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Từ {dinhDangNgay(campaignStartDate)} đến{' '}
+                  {dinhDangNgay(campaignEndDate)}
                 </Text>
               </View>
 
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>Nhiệm vụ hiện tại</Text>
-                <TouchableOpacity onPress={onViewMissionDetail} className="flex-row items-center gap-1" disabled={!taskItems.length} style={{ opacity: taskItems.length ? 1 : 0.45 }}>
-                  <Text className="text-sm font-medium" style={{ color: colors.secondary }}>Chi tiết</Text>
-                  <Ionicons name="arrow-forward" size={14} color={colors.secondary} />
+              <View className="mb-3 flex-row items-center justify-between">
+                <Text
+                  className="text-lg font-bold"
+                  style={{ color: colors.text }}
+                >
+                  Nhiệm vụ hiện tại
+                </Text>
+                <TouchableOpacity
+                  onPress={onViewMissionDetail}
+                  className="flex-row items-center gap-1"
+                  disabled={!taskItems.length}
+                  style={{ opacity: taskItems.length ? 1 : 0.45 }}
+                >
+                  <Text
+                    className="text-sm font-medium"
+                    style={{ color: colors.secondary }}
+                  >
+                    Chi tiết
+                  </Text>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={14}
+                    color={colors.secondary}
+                  />
                 </TouchableOpacity>
               </View>
 
-              <View className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-                <Text className="text-xs font-semibold" style={{ color: colors.textSecondary }}>
+              <View
+                className="rounded-2xl border p-5 shadow-sm"
+                style={{
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                }}
+              >
+                <Text
+                  className="text-xs font-semibold"
+                  style={{ color: colors.textSecondary }}
+                >
                   {myCampaignTeam?.teamName || team?.name || 'Đội hiện tại'}
                 </Text>
-                <Text className="mt-2 text-lg font-bold leading-tight" style={{ color: colors.text }}>
+                <Text
+                  className="mt-2 text-lg font-bold leading-tight"
+                  style={{ color: colors.text }}
+                >
                   {currentTask?.title || 'Chưa có nhiệm vụ nào'}
                 </Text>
-                <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-                  {currentTask?.description || 'Hãy tạo hoặc phân công công việc mới cho chiến dịch hiện tại.'}
+                <Text
+                  className="mt-1 text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
+                  {currentTask?.description ||
+                    'Hãy tạo hoặc phân công công việc mới cho chiến dịch hiện tại.'}
                 </Text>
 
                 {taskItems.length > 0 ? (
                   <TouchableOpacity
                     onPress={onViewMissionDetail}
                     className="mt-4 flex-row items-center justify-between rounded-xl px-4 py-3"
-                    style={{ backgroundColor: `${colors.secondary}12`, borderWidth: 1, borderColor: `${colors.secondary}25` }}
+                    style={{
+                      backgroundColor: `${colors.secondary}12`,
+                      borderWidth: 1,
+                      borderColor: `${colors.secondary}25`,
+                    }}
                   >
                     <View className="flex-1 pr-3">
-                      <Text className="text-sm font-bold" style={{ color: colors.secondary }}>
+                      <Text
+                        className="text-sm font-bold"
+                        style={{ color: colors.secondary }}
+                      >
                         Xem chi tiết nhiệm vụ của đội
                       </Text>
-                      <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }} numberOfLines={2}>
-                        Mở trung tâm công việc để xem đầy đủ nhiệm vụ, phần việc và tiến độ thành viên.
+                      <Text
+                        className="mt-1 text-xs"
+                        style={{ color: colors.textSecondary }}
+                        numberOfLines={2}
+                      >
+                        Mở trung tâm công việc để xem đầy đủ nhiệm vụ, phần việc
+                        và tiến độ thành viên.
                       </Text>
                     </View>
-                    <Ionicons name="arrow-forward-circle" size={22} color={colors.secondary} />
+                    <Ionicons
+                      name="arrow-forward-circle"
+                      size={22}
+                      color={colors.secondary}
+                    />
                   </TouchableOpacity>
                 ) : null}
 
-                <View className="mt-3 rounded-xl border p-3" style={{ borderColor: colors.border, backgroundColor: `${colors.primary}08` }}>
+                <TouchableOpacity
+                  onPress={() => setShowVehicleScreen(true)}
+                  className="mt-3 flex-row items-center justify-between rounded-xl px-4 py-3"
+                  style={{
+                    backgroundColor: `${colors.primary}12`,
+                    borderWidth: 1,
+                    borderColor: `${colors.primary}25`,
+                  }}
+                >
+                  <View className="flex-1 pr-3">
+                    <Text
+                      className="text-sm font-bold"
+                      style={{ color: colors.primary }}
+                    >
+                      Quản lý phương tiện của đội
+                    </Text>
+                    <Text
+                      className="mt-1 text-xs"
+                      style={{ color: colors.textSecondary }}
+                      numberOfLines={2}
+                    >
+                      Chỉ định người dùng, đánh giấu xe đang sẵn sàng hoặc bàn
+                      giao nhanh ngay trong chiến dịch hiện tại.
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="car-sport-outline"
+                    size={22}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+
+                <View
+                  className="mt-3 rounded-xl border p-3"
+                  style={{
+                    borderColor: colors.border,
+                    backgroundColor: `${colors.primary}08`,
+                  }}
+                >
                   <View className="flex-row items-center gap-2">
-                    <Ionicons name="time-outline" size={16} color={colors.primary} />
-                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <Text
+                      className="text-sm font-semibold"
+                      style={{ color: colors.text }}
+                    >
                       Thời gian hoạt động chiến dịch
                     </Text>
                   </View>
-                  <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                    Từ {dinhDangNgay(campaignStartDate)} đến {dinhDangNgay(campaignEndDate)}
+                  <Text
+                    className="mt-1 text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Từ {dinhDangNgay(campaignStartDate)} đến{' '}
+                    {dinhDangNgay(campaignEndDate)}
                   </Text>
                 </View>
 
                 <View className="mb-4 mt-4">
-                  <View className="flex-row justify-between mb-1">
-                    <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>Tiến độ chung</Text>
-                    <Text className="text-sm font-bold" style={{ color: colors.primary }}>{progress}%</Text>
+                  <View className="mb-1 flex-row justify-between">
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Tiến độ chung
+                    </Text>
+                    <Text
+                      className="text-sm font-bold"
+                      style={{ color: colors.primary }}
+                    >
+                      {progress}%
+                    </Text>
                   </View>
-                  <View className="h-2.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}>
-                    <View className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: colors.primary }} />
+                  <View
+                    className="h-2.5 w-full overflow-hidden rounded-full"
+                    style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}
+                  >
+                    <View
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${progress}%`,
+                        backgroundColor: colors.primary,
+                      }}
+                    />
                   </View>
                 </View>
 
-                <View className="flex-row items-center justify-between border-t pt-3" style={{ borderTopColor: colors.border }}>
-                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                <View
+                  className="flex-row items-center justify-between border-t pt-3"
+                  style={{ borderTopColor: colors.border }}
+                >
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     {completed}/{taskItems.length} hoàn thành
                   </Text>
-                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     {inProgress} đang xử lý
                   </Text>
                 </View>
@@ -284,33 +890,68 @@ export default function DashboardTeamLeaderScreen({
             </View>
 
             <View>
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                  Thành viên nhóm <Text style={{ color: colors.textSecondary }}>({members.length})</Text>
+              <View className="mb-3 flex-row items-center justify-between">
+                <Text
+                  className="text-lg font-bold"
+                  style={{ color: colors.text }}
+                >
+                  Thành viên nhóm{' '}
+                  <Text style={{ color: colors.textSecondary }}>
+                    ({members.length})
+                  </Text>
                 </Text>
               </View>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 16 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingBottom: 16 }}
+              >
                 {FILTER_CHIPS.map((chip, i) => (
                   <TouchableOpacity
                     key={chip}
                     onPress={() => setActiveChip(i)}
-                    className="shrink-0 items-center justify-center rounded-full px-4 py-1.5 border"
+                    className="shrink-0 items-center justify-center rounded-full border px-4 py-1.5"
                     style={{
-                      backgroundColor: activeChip === i ? (isDark ? '#fff' : '#111418') : colors.card,
-                      borderColor: activeChip === i ? 'transparent' : colors.border,
+                      backgroundColor:
+                        activeChip === i
+                          ? isDark
+                            ? '#fff'
+                            : '#111418'
+                          : colors.card,
+                      borderColor:
+                        activeChip === i ? 'transparent' : colors.border,
                     }}
                   >
-                    <Text className="text-sm font-medium" style={{ color: activeChip === i ? (isDark ? '#111418' : '#fff') : colors.textSecondary }}>{chip}</Text>
+                    <Text
+                      className="text-sm font-medium"
+                      style={{
+                        color:
+                          activeChip === i
+                            ? isDark
+                              ? '#111418'
+                              : '#fff'
+                            : colors.textSecondary,
+                      }}
+                    >
+                      {chip}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
               <View className="gap-3">
-                {filteredMembers.map((member) => <MemberCard key={member.id} member={member} />)}
+                {filteredMembers.map((member) => (
+                  <MemberCard key={member.id} member={member} />
+                ))}
                 {filteredMembers.length === 0 ? (
-                  <View className="rounded-2xl border border-dashed p-5" style={{ borderColor: colors.border }}>
-                    <Text style={{ color: colors.textSecondary }}>Chưa có thành viên phù hợp.</Text>
+                  <View
+                    className="rounded-2xl border border-dashed p-5"
+                    style={{ borderColor: colors.border }}
+                  >
+                    <Text style={{ color: colors.textSecondary }}>
+                      Chưa có thành viên phù hợp.
+                    </Text>
                   </View>
                 ) : null}
               </View>
@@ -320,7 +961,12 @@ export default function DashboardTeamLeaderScreen({
       </ScrollView>
 
       {teamMode === 'relief' ? (
-        <StickyFooterButton title="Phân công công việc" icon="add-circle" backgroundColor={colors.secondary} onPress={onAllocateTask} />
+        <StickyFooterButton
+          title="Phân công công việc"
+          icon="add-circle"
+          backgroundColor={colors.secondary}
+          onPress={onAllocateTask}
+        />
       ) : null}
     </View>
   );
