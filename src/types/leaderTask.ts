@@ -58,6 +58,7 @@ export interface BulkAssignMembersTaskRequest {
 
 export interface ChangeMemberTaskStatusRequest {
   status: MemberTaskStatus;
+  failureReason?: string;
 }
 
 // Response DTOs
@@ -83,6 +84,7 @@ export interface MemberTaskResponse {
   volunteerName: string;
   subTaskTitle: string;
   taskNote?: string;
+  failureReason?: string;
   assignedAt: string;
   completedAt?: string;
   status: MemberTaskStatus;
@@ -136,6 +138,7 @@ export interface MyMemberTaskResponse {
   volunteerName: string;
   subTaskTitle: string;
   taskNote?: string;
+  failureReason?: string;
   assignedAt: string;
   completedAt?: string;
   status: MemberTaskStatus;

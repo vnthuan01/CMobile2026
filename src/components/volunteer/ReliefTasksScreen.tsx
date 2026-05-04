@@ -24,6 +24,7 @@ import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import { useAuthStore } from '@/src/store/authStore';
 import {
   CampaignTaskStatus,
+  CampaignTaskStatusLabels,
   MemberTaskStatus,
   TaskPriority,
   type CampaignTaskDetailResponse,
@@ -43,8 +44,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -321,6 +324,10 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   }, [taskDetail, myVolunteerProfileId]);
 
   const changeMemberStatusMutation = useChangeMemberTaskStatus();
+  const [pendingFailedMemberTaskId, setPendingFailedMemberTaskId] = useState<
+    string | null
+  >(null);
+  const [failureReasonInput, setFailureReasonInput] = useState('');
 
   useEffect(() => {
     if (!selectedTaskId && tasks.length > 0) {
@@ -329,8 +336,15 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   }, [selectedTaskId, tasks]);
 
   useEffect(() => {
-    setSelectedTaskId(tasks[0]?.campaignTaskId ?? null);
-  }, [campaignId, tasks]);
+    if (!selectedTaskId) {
+      setSelectedTaskId(tasks[0]?.campaignTaskId ?? null);
+      return;
+    }
+
+    if (!tasks.some((task) => task.campaignTaskId === selectedTaskId)) {
+      setSelectedTaskId(tasks[0]?.campaignTaskId ?? null);
+    }
+  }, [campaignId, selectedTaskId, tasks]);
 
   const completed = tasks.filter(
     (task: CampaignTaskResponse) =>
@@ -473,10 +487,16 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
         population: 0,
         pendingHouseholds: 0,
       };
-      if (typeof existing.latitude !== 'number' && typeof household.latitude === 'number') {
+      if (
+        typeof existing.latitude !== 'number' &&
+        typeof household.latitude === 'number'
+      ) {
         existing.latitude = household.latitude;
       }
-      if (typeof existing.longitude !== 'number' && typeof household.longitude === 'number') {
+      if (
+        typeof existing.longitude !== 'number' &&
+        typeof household.longitude === 'number'
+      ) {
         existing.longitude = household.longitude;
       }
       existing.householdCount += 1;
@@ -650,6 +670,19 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
     newStatus: MemberTaskStatus,
   ) => {
     const statusInfo = MEMBER_STATUS_MAP[newStatus];
+    if (newStatus === MemberTaskStatus.Failed) {
+      setPendingFailedMemberTaskId(memberTaskId);
+      setFailureReasonInput('');
+      return;
+    }
+    const selectedMemberTask = myMemberTasks.find(
+      (item) => item.memberTaskId === memberTaskId,
+    );
+    const failureReason =
+      newStatus === MemberTaskStatus.Failed
+        ? selectedMemberTask?.taskNote?.trim() ||
+          'Không thể hoàn thành theo điều kiện thực tế.'
+        : undefined;
     Alert.alert(
       'Xác nhận thay đổi',
       `Bạn muốn đổi trạng thái sang "${statusInfo.label}"?`,
@@ -661,7 +694,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
             try {
               await changeMemberStatusMutation.mutateAsync({
                 memberTaskId,
-                request: { status: newStatus },
+                request: { status: newStatus, failureReason },
               });
               showSuccessToast(`Đã cập nhật: ${statusInfo.label}`);
             } catch (error: any) {
@@ -671,6 +704,32 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
         },
       ],
     );
+  };
+
+  const handleConfirmFailedStatus = async () => {
+    if (!pendingFailedMemberTaskId) return;
+    if (!failureReasonInput.trim()) {
+      showErrorToast(
+        'Thiếu lý do thất bại',
+        'Vui lòng nhập lý do thất bại trước khi xác nhận.',
+      );
+      return;
+    }
+
+    try {
+      await changeMemberStatusMutation.mutateAsync({
+        memberTaskId: pendingFailedMemberTaskId,
+        request: {
+          status: MemberTaskStatus.Failed,
+          failureReason: failureReasonInput.trim(),
+        },
+      });
+      showSuccessToast('Đã cập nhật: Thất bại');
+      setPendingFailedMemberTaskId(null);
+      setFailureReasonInput('');
+    } catch (error: any) {
+      showErrorToast('Cập nhật thất bại', error?.message);
+    }
   };
 
   const openTaskProgress = (campaignTaskId: string) => {
@@ -801,6 +860,66 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <Modal
+        visible={!!pendingFailedMemberTaskId}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setPendingFailedMemberTaskId(null);
+          setFailureReasonInput('');
+        }}
+      >
+        <View className="flex-1 items-center justify-center bg-black/40 px-4">
+          <View
+            className="w-full max-w-[420px] rounded-2xl border p-4"
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          >
+            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              Lý do thất bại
+            </Text>
+            <Text
+              className="mt-1 text-sm"
+              style={{ color: colors.textSecondary }}
+            >
+              Hãy mô tả ngắn gọn vì sao phần việc này không thể hoàn thành.
+            </Text>
+            <TextInput
+              value={failureReasonInput}
+              onChangeText={setFailureReasonInput}
+              placeholder="Ví dụ: Không tiếp cận được khu vực do ngập sâu, thiếu xuồng hỗ trợ..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              textAlignVertical="top"
+              className="mt-4 min-h-[120px] rounded-xl border p-3"
+              style={{
+                borderColor: colors.border,
+                color: colors.text,
+                backgroundColor: colors.background,
+              }}
+            />
+            <View className="mt-4 flex-row justify-end gap-2">
+              <TouchableOpacity
+                onPress={() => {
+                  setPendingFailedMemberTaskId(null);
+                  setFailureReasonInput('');
+                }}
+                className="rounded-lg border px-4 py-2"
+                style={{ borderColor: colors.border }}
+              >
+                <Text style={{ color: colors.textSecondary }}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirmFailedStatus}
+                className="rounded-lg px-4 py-2"
+                style={{ backgroundColor: colors.status.error }}
+              >
+                <Text className="font-bold text-white">Xác nhận thất bại</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ScreenHeader title="Trung tâm công việc" onBack={onBack} />
 
       <ScrollView
@@ -1012,7 +1131,10 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                   router.push('/profile/my-vehicle' as any);
                 }}
                 className="mt-4 rounded-2xl border px-4 py-4"
-                style={{ borderColor: 'rgba(255,255,255,0.25)', backgroundColor: 'rgba(255,255,255,0.1)' }}
+                style={{
+                  borderColor: 'rgba(255,255,255,0.25)',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                }}
               >
                 <View className="flex-row items-center justify-between">
                   <View className="flex-1 pr-3">
@@ -1020,7 +1142,8 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                       Phương tiện của tôi
                     </Text>
                     <Text className="mt-1 text-xs text-white/80">
-                      Xem xe đang được giao, trả phương tiện về đội hoặc bàn giao cho thành viên khác.
+                      Xem xe đang được giao, trả phương tiện về đội hoặc bàn
+                      giao cho thành viên khác.
                     </Text>
                   </View>
                   <Ionicons name="car-sport-outline" size={20} color="#fff" />
@@ -1213,9 +1336,9 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                                     key={memberTask.memberTaskId}
                                     className="rounded-lg px-3 py-2"
                                     style={{
-                                      backgroundColor: colors.card,
+                                      backgroundColor: `${MEMBER_STATUS_MAP[memberTask.status]?.color || colors.textSecondary}10`,
                                       borderWidth: 1,
-                                      borderColor: colors.border,
+                                      borderColor: `${MEMBER_STATUS_MAP[memberTask.status]?.color || colors.border}35`,
                                     }}
                                   >
                                     <Text
@@ -1224,13 +1347,33 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                                     >
                                       {memberTask.subTaskTitle}
                                     </Text>
-                                    <Text
-                                      className="mt-1 text-xs"
-                                      style={{ color: colors.textSecondary }}
+                                    <View
+                                      className="mt-2 self-start rounded-full px-2.5 py-1"
+                                      style={{
+                                        backgroundColor: `${MEMBER_STATUS_MAP[memberTask.status]?.color || colors.textSecondary}18`,
+                                      }}
                                     >
-                                      {MEMBER_STATUS_MAP[memberTask.status]
-                                        ?.label || 'Đã giao'}
-                                    </Text>
+                                      <Text
+                                        className="text-xs font-bold"
+                                        style={{
+                                          color:
+                                            MEMBER_STATUS_MAP[memberTask.status]
+                                              ?.color || colors.textSecondary,
+                                        }}
+                                      >
+                                        {MEMBER_STATUS_MAP[memberTask.status]
+                                          ?.label || 'Đã giao'}
+                                      </Text>
+                                    </View>
+                                    {memberTask.failureReason ? (
+                                      <Text
+                                        className="mt-2 text-xs font-semibold"
+                                        style={{ color: colors.status.error }}
+                                      >
+                                        Lý do thất bại:{' '}
+                                        {memberTask.failureReason}
+                                      </Text>
+                                    ) : null}
                                   </View>
                                 ))}
                               </View>
@@ -1340,6 +1483,14 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
 
                         <View className="flex-row flex-wrap gap-2">
                           <StatusPill
+                            label={`Trạng thái: ${taskDetail.status === CampaignTaskStatus.Blocked ? 'Bị chặn do nhiệm vụ con thất bại' : CampaignTaskStatusLabels[taskDetail.status] || 'Chưa rõ'}`}
+                            color={
+                              taskDetail.status === CampaignTaskStatus.Blocked
+                                ? colors.status.error
+                                : colors.primary
+                            }
+                          />
+                          <StatusPill
                             label={`Bắt đầu: ${formatDate(taskDetail.startDate)}`}
                             color={colors.primary}
                           />
@@ -1359,6 +1510,31 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                         >
                           Phần việc thành viên
                         </Text>
+                        {taskDetail.status === CampaignTaskStatus.Blocked ? (
+                          <View
+                            className="rounded-xl border p-3"
+                            style={{
+                              borderColor: `${colors.status.error}35`,
+                              backgroundColor: `${colors.status.error}10`,
+                            }}
+                          >
+                            <Text
+                              className="text-sm font-semibold"
+                              style={{ color: colors.status.error }}
+                            >
+                              Nhiệm vụ chính đang bị chặn do có nhiệm vụ con
+                              thất bại
+                            </Text>
+                            <Text
+                              className="mt-1 text-xs"
+                              style={{ color: colors.textSecondary }}
+                            >
+                              Hướng xử lý: giao lại cho người khác, mở lại xử lý
+                              với người hiện tại, hoặc hủy nhiệm vụ con nếu
+                              không còn cần thiết.
+                            </Text>
+                          </View>
+                        ) : null}
                         {(
                           (taskDetail as CampaignTaskDetailResponse)
                             .memberTasks || []
