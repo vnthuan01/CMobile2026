@@ -1,5 +1,4 @@
 import '@/global.css';
-import ImageUploader from '@/src/components/common/ImageUploader';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import StatusRadioOption from '@/src/components/common/StatusRadioOption';
 import StickyFooterButton from '@/src/components/common/StickyFooterButton';
@@ -200,8 +199,7 @@ export default function ProgressForReliefScreen({
   const deliveryGuideLines = shouldShowSubtaskTab
     ? [
         '1) Giao hàng cho các hộ được gán',
-        '2) Tải ảnh minh chứng',
-        '3) Quay lại màn Nhiệm vụ con để bấm Hoàn thành',
+        '2) Quay lại màn Nhiệm vụ con để bấm Hoàn thành',
       ]
     : [
         '1) Kiểm tra đúng danh sách hộ theo flow đang chọn',
@@ -387,26 +385,48 @@ export default function ProgressForReliefScreen({
             ? item.deliveryMode === 0 || item.isIsolated
             : item.deliveryMode === 1,
         )
-        .map((item) => ({
-          householdDeliveryId: item.householdDeliveryId,
-          campaignId: item.campaignId,
-          campaignHouseholdId: item.campaignHouseholdId || '',
-          householdCode: item.householdCode || '',
-          headOfHouseholdName: item.headOfHouseholdName || 'Chưa rõ hộ dân',
-          campaignTeamId: item.campaignTeamId,
-          campaignTeamName: item.campaignTeamName,
-          distributionPointId: item.distributionPointId,
-          distributionPointName: item.distributionPointName,
-          reliefPackageDefinitionId: item.reliefPackageDefinitionId || '',
-          reliefPackageDefinitionName:
-            item.reliefPackageDefinitionName || 'Gói cứu trợ',
-          deliveryMode: item.deliveryMode,
-          status: item.status,
-          scheduledAt: item.scheduledAt || '',
-          deliveredAt: item.deliveredAt,
-          notes: item.notes,
-          proofCount: item.proofCount ?? 0,
-        }));
+        .map((item) => {
+          const matchedChecklist = checklistByDeliveryId.get(
+            item.householdDeliveryId,
+          );
+          const resolvedDeliveryStatus =
+            (item as any).deliveryStatus ??
+            (item as any).DeliveryStatus ??
+            matchedChecklist?.status ??
+            item.status;
+
+          return {
+            householdDeliveryId: item.householdDeliveryId,
+            campaignId: item.campaignId,
+            campaignHouseholdId:
+              item.campaignHouseholdId || matchedChecklist?.campaignHouseholdId || '',
+            householdCode: item.householdCode || matchedChecklist?.householdCode || '',
+            headOfHouseholdName:
+              item.headOfHouseholdName ||
+              matchedChecklist?.headOfHouseholdName ||
+              'Chưa rõ hộ dân',
+            campaignTeamId: item.campaignTeamId || matchedChecklist?.campaignTeamId,
+            campaignTeamName: item.campaignTeamName || matchedChecklist?.campaignTeamName,
+            distributionPointId:
+              item.distributionPointId || matchedChecklist?.distributionPointId,
+            distributionPointName:
+              item.distributionPointName || matchedChecklist?.distributionPointName,
+            reliefPackageDefinitionId:
+              item.reliefPackageDefinitionId ||
+              matchedChecklist?.reliefPackageDefinitionId ||
+              '',
+            reliefPackageDefinitionName:
+              item.reliefPackageDefinitionName ||
+              matchedChecklist?.reliefPackageDefinitionName ||
+              'Gói cứu trợ',
+            deliveryMode: item.deliveryMode,
+            status: resolvedDeliveryStatus,
+            scheduledAt: item.scheduledAt || matchedChecklist?.scheduledAt || '',
+            deliveredAt: item.deliveredAt || matchedChecklist?.deliveredAt,
+            notes: item.notes || matchedChecklist?.notes,
+            proofCount: matchedChecklist?.proofCount ?? item.proofCount ?? 0,
+          };
+        });
     }
 
     if (teamWorklistItems.length > 0) {
@@ -440,11 +460,11 @@ export default function ProgressForReliefScreen({
               matchedChecklist?.reliefPackageDefinitionName ||
               'Gói cứu trợ',
             deliveryMode: item.deliveryMode,
-            status: item.status,
+            status: matchedChecklist?.status ?? item.status,
             scheduledAt: item.scheduledAt || '',
             deliveredAt: item.deliveredAt,
-            notes: item.notes,
-            proofCount: item.proofCount ?? 0,
+            notes: item.notes || matchedChecklist?.notes,
+            proofCount: matchedChecklist?.proofCount ?? item.proofCount ?? 0,
           };
         });
     }
@@ -782,12 +802,11 @@ export default function ProgressForReliefScreen({
           fulfillmentStatus: item.status,
           createdAt: item.scheduledAt,
         })) as CampaignHouseholdResponse[],
-        proofImageUrls: images,
         hasHouseholdDeliveryIds: deliveryItems.every(
           (item) => !!item.householdDeliveryId,
         ),
       }),
-    [activeMemberTask, deliveryItems, images, selectedMemberTaskStatus],
+    [activeMemberTask, deliveryItems, selectedMemberTaskStatus],
   );
 
   // Mutations
@@ -1907,75 +1926,6 @@ export default function ProgressForReliefScreen({
               </View>
             </View>
           </View>
-
-          {/* Notes */}
-          <View className="mb-4">
-            <Text
-              className="px-4 pb-3 pt-4 text-left text-lg font-bold leading-tight tracking-tight"
-              style={{ color: colors.text }}
-            >
-              Ghi chú
-            </Text>
-            <View className="px-4">
-              <TextInput
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Nhập tình trạng đường đi, lý do thất bại hoặc ghi chú thêm (tùy chọn)..."
-                placeholderTextColor={colors.textSecondary}
-                multiline
-                numberOfLines={5}
-                textAlignVertical="top"
-                className="min-h-[120px] w-full rounded-xl border p-4 text-sm"
-                style={{
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  color: colors.text,
-                }}
-              />
-            </View>
-          </View>
-
-          {/* Proof images for delivery-related subtasks */}
-          {isPersonalView &&
-          activeMemberTask &&
-          isDeliveryTask(activeMemberTask) ? (
-            <View className="mb-4 px-4">
-              <Text
-                className="pb-3 text-left text-lg font-bold leading-tight tracking-tight"
-                style={{ color: colors.text }}
-              >
-                Ảnh minh chứng phát hàng
-              </Text>
-              <Text
-                className="mb-3 text-sm"
-                style={{ color: colors.textSecondary }}
-              >
-                Với subtask liên quan tới phát hàng, bạn phải giao đủ hộ được
-                gán và tải ảnh minh chứng trước khi bấm hoàn thành.
-              </Text>
-              <ImageUploader
-                images={images}
-                onAddImage={() =>
-                  expandedDeliveryId
-                    ? openProofPicker(expandedDeliveryId)
-                    : showErrorToast(
-                        'Chọn hộ dân trước',
-                        'Hãy mở chi tiết một hộ dân để thêm bằng chứng đúng cho hộ đó.',
-                      )
-                }
-                onRemoveImage={(index) =>
-                  expandedDeliveryId
-                    ? setProofAssetsByDeliveryId((prev) => ({
-                        ...prev,
-                        [expandedDeliveryId]: (
-                          prev[expandedDeliveryId] ?? []
-                        ).filter((_, idx) => idx !== index),
-                      }))
-                    : undefined
-                }
-              />
-            </View>
-          ) : null}
 
           <View className="h-8" />
         </ScrollView>
