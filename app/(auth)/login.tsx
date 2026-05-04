@@ -1,12 +1,14 @@
 import '@/global.css';
+import { AppDialog } from '@/src/components/common/AppDialog';
+import { SosFloatingButton } from '@/src/components/common/SosFloatingButton';
+import { useLogin } from '@/src/hooks/useAuthActions';
+import { getScreenScaleConfig } from '@/src/utils/responsive';
+import { showErrorToast, showInfoToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,231 +16,359 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { authService } from '../../src/services/authService';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { bottom } = useSafeAreaInsets();
+  const { width, height, fontScale } = useWindowDimensions();
+  const screenScale = getScreenScaleConfig(width, height, fontScale);
+  const loginMutation = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [successDialogVisible, setSuccessDialogVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Đăng nhập thành công');
+  const loading = loginMutation.isPending;
+  const isShortScreen = screenScale.isCompactHeight;
+  const fieldHeight = Math.round((isShortScreen ? 46 : 52) * screenScale.scale);
+  const fieldRadius = 16;
+  const fieldFontSize = Math.round(
+    (isShortScreen ? 15 : 16) * screenScale.scale,
+  );
+  const fieldIconSize = Math.round(
+    (isShortScreen ? 18 : 20) * screenScale.scale,
+  );
+  const sosSize = 78;
+  const sosBottomOffset = bottom + 28;
+  const scrollBottomPadding = sosBottomOffset + sosSize + 20;
 
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, {
-          toValue: 1.2,
-          duration: 500,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
+  const dangerRed = '#E52521';
+  const neutralLine = '#E6E6E6';
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ email và mật khẩu');
+      const msg = 'Vui lòng nhập đầy đủ email và mật khẩu.';
+      setInlineError(msg);
+      showErrorToast('Thiếu thông tin', msg);
       return;
     }
 
-    setLoading(true);
+    setInlineError(null);
 
     try {
-      const result = await authService.login({
+      const result = await loginMutation.mutateAsync({
         email: email.trim(),
         password: password.trim(),
       });
 
       if (result.success) {
-        Alert.alert('Thành công', result.message || 'Đăng nhập thành công', [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/'),
-          },
-        ]);
+        setSuccessMessage('Đăng nhập thành công. Chào mừng bạn quay lại!');
+        setSuccessDialogVisible(true);
       } else {
-        Alert.alert('Lỗi', result.message || 'Đăng nhập thất bại');
+        const msg =
+          result.message?.trim() || 'Đăng nhập thất bại. Vui lòng thử lại.';
+        setInlineError(msg);
+        showErrorToast('Đăng nhập thất bại', msg);
       }
-    } catch {
-      Alert.alert('Lỗi', 'Có lỗi xảy ra, vui lòng thử lại');
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Vui lòng thử lại sau';
+      setInlineError(msg);
+      showErrorToast('Có lỗi xảy ra', msg);
     }
   };
 
+  const handleGoogleLogin = () => {
+    showInfoToast('Thông báo', 'Tính năng đang được phát triển');
+  };
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background-light"
+    <SafeAreaView
+      edges={['top']}
+      style={{ flex: 1, backgroundColor: '#FFFFFF' }}
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+        className="flex-1"
       >
-        <View className="w-full max-w-[420px] flex-1 self-center px-6 pb-8 pt-10">
-          {/* Header */}
-          <View className="mb-10 items-center">
-            <View className="mb-4 h-20 w-20 items-center justify-center rounded-full bg-primary">
-              <Ionicons name="shield-checkmark" size={40} color="#ffffff" />
-            </View>
-            <View className="absolute right-0 top-0">
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: Math.max(
+              isShortScreen ? 24 : 36,
+              scrollBottomPadding,
+            ),
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View
+            className="w-full self-center"
+            style={{
+              paddingTop: isShortScreen ? 10 : 18,
+              paddingHorizontal: screenScale.horizontalPadding,
+              maxWidth: screenScale.contentMaxWidth,
+            }}
+          >
+            <View className="mb-4 mt-2 flex-row items-center justify-end">
               <TouchableOpacity
                 onPress={() => router.push('/donate')}
-                className="flex-row items-center px-3 h-14 rounded-full border border-surface-dark bg-white"
+                className="flex-row items-center gap-1 rounded-full border px-4 py-2"
                 style={{
-                  shadowColor: '#ff4a4aff',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 6,
-                  elevation: 5,
+                  borderColor: '#F3D1D0',
+                  backgroundColor: '#FFFFFF',
+                  shadowColor: '#CB2D28',
+                  shadowOffset: { width: 0, height: 5 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 10,
+                  elevation: 2,
                 }}
               >
-                <Animated.View style={{ transform: [{ scale }] }}>
-                  <Ionicons name="heart-outline" size={20} color="#DA251D" className='mt-1' />
-                </Animated.View>
-
-                {/* Label che border */}
-                <View className="px-1 bg-white">
-                  <Text className="text-sm font-bold text-[#DA251D]">
-                    Donation
-                  </Text>
-                </View>
+                <Ionicons name="heart-outline" size={16} color={dangerRed} />
+                <Text className="font-semibold" style={{ color: dangerRed }}>
+                  Ủng hộ
+                </Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push('/hotline')}
-              className="flex-row items-center gap-1 rounded-full bg-red-50 px-3 py-1.5"
-            >
-              <Ionicons name="alert-circle" size={18} color="#dc2626" />
-              <Text className="text-sm font-bold text-red-600">Cần hỗ trợ ngay lập tức!</Text>
-            </TouchableOpacity>
 
-            <Text className="text-[32px] font-bold text-text-primary">
-              Đăng nhập
-            </Text>
-            <Text className="mt-2 text-center text-base text-text-secondary">
-              Kết nối để nhận hỗ trợ khẩn cấp và cập nhật tình hình thiên tai.
-            </Text>
-          </View>
-
-          {/* Form */}
-          <View className="space-y-5">
-            {/* Email / Phone */}
-            <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
-                Email hoặc số điện thoại
+            <View style={{ marginBottom: isShortScreen ? 20 : 24 }}>
+              <Text
+                className="mt-2 font-extrabold"
+                style={{
+                  color: '#1F2937',
+                  lineHeight: Math.round(52 * screenScale.scale),
+                  fontSize: Math.round(46 * screenScale.scale),
+                }}
+              >
+                Đăng nhập
               </Text>
-              <TextInput
-                className="h-14 rounded-xl border border-surface-dark bg-surface px-4 text-base text-text-primary"
-                placeholder="Nhập email hoặc số điện thoại"
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!loading}
-              />
+              <Text
+                className="mt-2 text-base"
+                style={{
+                  color: '#4B5563',
+                  lineHeight: Math.round(24 * screenScale.scale),
+                }}
+              >
+                Kết nối để nhận hỗ trợ khẩn cấp và cập nhật tình hình thiên tai.
+              </Text>
             </View>
 
-            {/* Password */}
-            <View>
-              <Text className="mb-2 text-base font-medium text-text-primary">
-                Mật khẩu
-              </Text>
-
-              <View className="relative">
-                <TextInput
-                  className="h-14 rounded-xl border border-surface-dark bg-surface px-4 pr-12 text-base text-text-primary"
-                  placeholder="Nhập mật khẩu"
-                  placeholderTextColor="#9CA3AF"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  editable={!loading}
-                />
-
-                <TouchableOpacity
-                  className="absolute right-4 top-[18px]"
-                  onPress={() => setShowPassword(!showPassword)}
-                  disabled={loading}
+            <View className="rounded-xl" style={{ backgroundColor: '#FFFFFF' }}>
+              <View className="mb-4">
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: '#111827' }}
                 >
-                  <Text className="text-lg text-text-secondary">
-                    {showPassword ? '🙈' : '👁️'}
-                  </Text>
-                </TouchableOpacity>
+                  Email hoặc số điện thoại
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F5F5F5',
+                  }}
+                >
+                  <TextInput
+                    className="flex-1"
+                    style={{
+                      color: '#111827',
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="Nhập email hoặc số điện thoại"
+                    placeholderTextColor="#9CA3AF"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    editable={!loading}
+                  />
+                </View>
               </View>
 
+              <View>
+                <Text
+                  className="mb-2 text-sm font-semibold"
+                  style={{ color: '#111827' }}
+                >
+                  Mật khẩu
+                </Text>
+                <View
+                  className="flex-row items-center px-3"
+                  style={{
+                    height: fieldHeight,
+                    borderRadius: fieldRadius,
+                    borderWidth: 1,
+                    borderColor: neutralLine,
+                    backgroundColor: '#F5F5F5',
+                  }}
+                >
+                  <TextInput
+                    className="flex-1"
+                    style={{
+                      color: '#111827',
+                      fontSize: fieldFontSize,
+                    }}
+                    placeholder="Nhập mật khẩu"
+                    placeholderTextColor="#9CA3AF"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((prev) => !prev)}
+                    disabled={loading}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={fieldIconSize}
+                      color="#6B7280"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {!!inlineError && (
+                <View className="mt-3 flex-row items-center">
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={16}
+                    color={dangerRed}
+                  />
+                  <Text
+                    className="ml-1 flex-1 text-sm"
+                    style={{ color: dangerRed }}
+                  >
+                    {inlineError}
+                  </Text>
+                </View>
+              )}
+
               <TouchableOpacity
-                className="mt-2 self-end"
+                className="mt-3 self-end"
                 onPress={() => router.push('/forgot-password')}
               >
-                <Text className="text-sm font-semibold text-primary">
+                <Text
+                  className="text-sm font-semibold"
+                  style={{ color: dangerRed }}
+                >
                   Quên mật khẩu?
                 </Text>
               </TouchableOpacity>
-            </View>
 
-            {/* Login Button */}
-            <TouchableOpacity
-              className={`mt-4 h-12 items-center justify-center rounded-xl ${loading ? 'bg-primary/50' : 'bg-primary'
-                }`}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-base font-bold text-white">
-                  Đăng nhập
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Biometric */}
-            <View className="mt-6 items-center">
-              <View className="mb-4 flex-row items-center gap-3">
-                <View className="h-px flex-1 bg-surface-dark" />
-                <Text className="text-sm text-text-secondary">
-                  Hoặc đăng nhập bằng
-                </Text>
-                <View className="h-px flex-1 bg-surface-dark" />
-              </View>
-
-              <TouchableOpacity className="h-14 w-14 items-center justify-center rounded-full border border-surface-dark bg-white">
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={26}
-                  color="#111827"
-                />
+              <TouchableOpacity
+                className="mt-5 h-12 items-center justify-center rounded-xl"
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.85}
+                style={{
+                  borderRadius: 999,
+                  backgroundColor: loading ? '#F4A9A6' : dangerRed,
+                }}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-base font-bold text-white">
+                    Đăng nhập
+                  </Text>
+                )}
               </TouchableOpacity>
+
+              <View className="mt-6 items-center">
+                <View className="mb-4 w-full items-center justify-center">
+                  <View
+                    className="h-px w-full"
+                    style={{ backgroundColor: neutralLine }}
+                  />
+                  <Text
+                    className="absolute px-3 text-sm"
+                    style={{ color: '#6B7280', backgroundColor: '#FFFFFF' }}
+                  >
+                    Hoặc đăng nhập
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  className="h-12 w-full flex-row items-center justify-center rounded-xl"
+                  style={{
+                    borderColor: neutralLine,
+                    borderWidth: 1,
+                    backgroundColor: '#FFFFFF',
+                  }}
+                  onPress={handleGoogleLogin}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="logo-google" size={20} color={dangerRed} />
+                  <Text
+                    className="ml-2 text-base font-semibold"
+                    style={{ color: '#1F2937' }}
+                  >
+                    Tiếp tục với Google
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
+
+            <Pressable
+              className="items-center"
+              style={{
+                marginTop: isShortScreen ? 24 : 32,
+                width: '100%',
+              }}
+              onPress={() => router.push('/register')}
+            >
+              <Text
+                className="text-sm"
+                style={{ color: '#6B7280', textAlign: 'center' }}
+              >
+                Chưa có tài khoản?
+              </Text>
+              <Text
+                className="mt-1 font-bold"
+                style={{ color: dangerRed, textAlign: 'center' }}
+              >
+                Đăng ký ngay
+              </Text>
+            </Pressable>
           </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-          {/* Footer */}
+      <AppDialog
+        visible={successDialogVisible}
+        title="Thành công"
+        message={successMessage}
+        type="success"
+        confirmLabel="Vào ứng dụng"
+        showCancel={false}
+        onCancel={() => setSuccessDialogVisible(false)}
+        onConfirm={() => {
+          setSuccessDialogVisible(false);
+          router.replace('/(tabs)');
+        }}
+      />
 
-          <Pressable
-            className="mt-10 items-center"
-            onPress={() => router.push('/register')}
-          >
-            <Text className="text-sm text-text-secondary">
-              Chưa có tài khoản?
-            </Text>
-            <Text className="font-bold text-primary">Đăng ký ngay</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <SosFloatingButton
+        align="center"
+        size={sosSize}
+        bottom={sosBottomOffset}
+        onPress={() => router.push('/sos-request')}
+      />
+    </SafeAreaView>
   );
 }

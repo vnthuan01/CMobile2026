@@ -1,31 +1,42 @@
 import { useTheme } from '@/src/context/ThemeContext';
+import {
+  getTabBarBottomPadding,
+  getTabBarHeight,
+} from '@/src/hooks/useBottomContentInset';
+import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Animated, Platform, View } from 'react-native';
+import { Animated, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const TAB_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
+type TabIconProps = {
+  color: string;
+};
+
 const ICON_SIZE = 24;
 
 export default function TabsLayout() {
   const user = useAuthStore((s) => s.user);
-  const fakeUser = {
-    ...user,
-    role: 'Volunteer',
-  };
-  const isVolunteer = fakeUser?.role === 'Volunteer';
+  const role = (user?.role ?? '').toLowerCase();
+  const { data: myTeamData } = useMyTeam(role === 'volunteer');
+  const teamMode = myTeamData?.teamMode ?? 'rescue';
+  const { bottom } = useSafeAreaInsets();
   /* ================= THEME ================= */
   const { colors, isDark } = useTheme();
 
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0.6)).current;
+  const ringOne = useRef(new Animated.Value(0)).current;
+  const ringTwo = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(1)).current;
 
   // Theme Colors from Context
   const activeColor = colors.primary;
   const inactiveColor = colors.textSecondary;
   const tabBgColor = colors.card;
   const borderColor = colors.border;
+  const tabBarBottomPadding = getTabBarBottomPadding(bottom);
+  const tabBarHeight = getTabBarHeight(bottom);
 
   /* ================= COMMON OPTIONS ================= */
   const screenOptions = {
@@ -37,9 +48,9 @@ export default function TabsLayout() {
     tabBarAllowFontScaling: false,
 
     tabBarStyle: {
-      height: TAB_HEIGHT,
-      paddingTop: 6,
-      paddingBottom: Platform.OS === 'ios' ? 14 : 8,
+      height: tabBarHeight,
+      paddingTop: 2,
+      paddingBottom: tabBarBottomPadding,
       borderTopWidth: 0.5,
       borderTopColor: borderColor,
       backgroundColor: tabBgColor,
@@ -47,7 +58,8 @@ export default function TabsLayout() {
     },
 
     tabBarItemStyle: {
-      paddingVertical: 4,
+      paddingTop: 2,
+      paddingBottom: 2,
     },
 
     tabBarLabelStyle: {
@@ -58,16 +70,73 @@ export default function TabsLayout() {
     },
   } as const;
 
+  useEffect(() => {
+    const ringOneLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ringOne, {
+          toValue: 1,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ringOne, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    const ringTwoLoop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(900),
+        Animated.timing(ringTwo, {
+          toValue: 1,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ringTwo, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.06,
+          duration: 850,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 850,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    ringOneLoop.start();
+    ringTwoLoop.start();
+    pulseLoop.start();
+
+    return () => {
+      ringOneLoop.stop();
+      ringTwoLoop.stop();
+      pulseLoop.stop();
+    };
+  }, [pulse, ringOne, ringTwo]);
 
   /* ================= VOLUNTEER ================= */
-  if (isVolunteer) {
+  if (role === 'volunteer') {
     return (
       <Tabs screenOptions={screenOptions}>
         <Tabs.Screen
           name="index"
           options={{
             title: 'Trang chủ',
-            tabBarIcon: ({ color }) => (
+            tabBarIcon: ({ color }: TabIconProps) => (
               <Ionicons name="home-outline" size={ICON_SIZE} color={color} />
             ),
           }}
@@ -76,9 +145,13 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="tasks"
           options={{
-            title: 'Nhiệm vụ',
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="list-outline" size={ICON_SIZE} color={color} />
+            title: teamMode === 'relief' ? 'Công việc' : 'Nhiệm vụ',
+            tabBarIcon: ({ color }: TabIconProps) => (
+              <Ionicons
+                name={teamMode === 'relief' ? 'clipboard-outline' : 'list-outline'}
+                size={ICON_SIZE}
+                color={color}
+              />
             ),
           }}
         />
@@ -87,7 +160,7 @@ export default function TabsLayout() {
           name="profile"
           options={{
             title: 'Hồ sơ',
-            tabBarIcon: ({ color }) => (
+            tabBarIcon: ({ color }: TabIconProps) => (
               <Ionicons name="person-outline" size={ICON_SIZE} color={color} />
             ),
           }}
@@ -98,26 +171,10 @@ export default function TabsLayout() {
         <Tabs.Screen name="home/volunteer" options={{ href: null }} />
         <Tabs.Screen name="create-request" options={{ href: null }} />
         <Tabs.Screen name="requests" options={{ href: null }} />
+        <Tabs.Screen name="notifications/index" options={{ href: null }} />
       </Tabs>
     );
   }
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.parallel([
-        Animated.timing(scale, {
-          toValue: 1.6,
-          duration: 1600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 1600,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
 
   /* ================= USER ================= */
   return (
@@ -126,7 +183,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Trang chủ',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color }: TabIconProps) => (
             <Ionicons name="home-outline" size={ICON_SIZE} color={color} />
           ),
         }}
@@ -138,59 +195,100 @@ export default function TabsLayout() {
         options={{
           title: '',
           tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: () => (
             <View
               style={{
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: -24,
+                marginTop: -20,
               }}
             >
-              {/* Pulse outline */}
               <Animated.View
                 style={{
                   position: 'absolute',
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
+                  width: 62,
+                  height: 62,
+                  borderRadius: 31,
                   borderWidth: 2,
-                  borderColor: colors.primary,
-                  transform: [{ scale }],
-                  opacity,
+                  borderColor: colors.status.error,
+                  transform: [
+                    {
+                      scale: ringOne.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.85],
+                      }),
+                    },
+                  ],
+                  opacity: ringOne.interpolate({
+                    inputRange: [0, 0.7, 1],
+                    outputRange: [0.35, 0.18, 0],
+                  }),
                 }}
               />
 
-              {/* Main button */}
-              <View
+              <Animated.View
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: colors.primary,
+                  position: 'absolute',
+                  width: 62,
+                  height: 62,
+                  borderRadius: 31,
+                  borderWidth: 2,
+                  borderColor: colors.status.error,
+                  transform: [
+                    {
+                      scale: ringTwo.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.85],
+                      }),
+                    },
+                  ],
+                  opacity: ringTwo.interpolate({
+                    inputRange: [0, 0.7, 1],
+                    outputRange: [0.28, 0.12, 0],
+                  }),
+                }}
+              />
+
+              <Animated.View
+                style={{
+                  width: 62,
+                  height: 62,
+                  borderRadius: 31,
+                  backgroundColor: colors.status.error,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  shadowColor: colors.primary,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 8,
-                  elevation: 10,
+                  shadowColor: colors.status.error,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
+                  elevation: 11,
                   borderWidth: 4,
-                  borderColor: isDark ? colors.card : '#ffffff',
+                  borderColor: isDark ? colors.card : colors.white,
+                  transform: [{ scale: pulse }],
                 }}
               >
-                <Ionicons name="add" size={32} color="#fff" />
-              </View>
+                <Ionicons name="warning" size={23} color={colors.white} />
+                <Text
+                  style={{
+                    marginTop: -1,
+                    color: colors.white,
+                    fontSize: 10,
+                    fontWeight: '900',
+                  }}
+                >
+                  SOS
+                </Text>
+              </Animated.View>
             </View>
           ),
         }}
       />
 
-
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Hồ sơ',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color }: TabIconProps) => (
             <Ionicons name="person-outline" size={ICON_SIZE} color={color} />
           ),
         }}
@@ -199,9 +297,9 @@ export default function TabsLayout() {
       {/* hidden routes */}
       <Tabs.Screen name="home/user" options={{ href: null }} />
       <Tabs.Screen name="home/volunteer" options={{ href: null }} />
-      {/* hidden routes */}
       <Tabs.Screen name="tasks" options={{ href: null }} />
       <Tabs.Screen name="requests" options={{ href: null }} />
+      <Tabs.Screen name="notifications/index" options={{ href: null }} />
     </Tabs>
   );
 }

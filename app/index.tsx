@@ -3,16 +3,11 @@ import { Redirect } from 'expo-router';
 
 export default function HomeRouter() {
   const user = useAuthStore((s) => s.user);
-  const fakeUser = {
-    ...user,
-    role: 'Volunteer',
-  };
+  const isLoading = useAuthStore((s) => s.isLoading);
 
-  if (!user) return <Redirect href="/login" />;
+  if (isLoading) return null;
 
-  if (fakeUser.role === 'Volunteer') {
-    return <Redirect href="/home/volunteer" />;
-  }
+  if (!user) return <Redirect href="/welcome" />;
 
-  return <Redirect href="/home/user" />;
+  return <Redirect href="/(tabs)" />;
 }

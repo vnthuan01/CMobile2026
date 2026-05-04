@@ -36,7 +36,7 @@ const ROLE_CONFIG: Record<string, { color: string; bgColor: string }> = {
 export default function MemberCard({ member, onCall, onChat }: MemberCardProps) {
     const { colors, isDark } = useTheme();
     const status = STATUS_CONFIG[member.status];
-    const roleStyle = ROLE_CONFIG[member.role] ?? { color: colors.textSecondary, bgColor: isDark ? '#374151' : '#f3f4f6' };
+    const roleStyle = ROLE_CONFIG[member.role] ?? { color: colors.textSecondary, bgColor: colors.surface };
 
     return (
         <View
@@ -47,7 +47,7 @@ export default function MemberCard({ member, onCall, onChat }: MemberCardProps) 
             <View className="relative">
                 <View
                     className="h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }}
+                    style={{ backgroundColor: colors.surface }}
                 >
                     <Text className="text-base font-bold" style={{ color: colors.textSecondary }}>
                         {member.initials}
@@ -112,7 +112,7 @@ export default function MemberCard({ member, onCall, onChat }: MemberCardProps) 
             <TouchableOpacity
                 onPress={member.status === 'busy' ? onChat : onCall}
                 className="h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}
+                style={{ backgroundColor: colors.surface }}
             >
                 <Ionicons
                     name={member.status === 'busy' ? 'chatbubble-outline' : 'call-outline'}

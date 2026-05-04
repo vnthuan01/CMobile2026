@@ -1,0 +1,112 @@
+import * as Location from 'expo-location';
+import { Alert, Platform } from 'react-native';
+import type { LocationResult } from '../types/rescue';
+
+const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY ?? '';
+const GOONG_REVERSE_GEOCODE = 'https://rsapi.goong.io/Geocode';
+const APP_NAME = 'CMobile-Reliefcare-26';
+
+async function requestLocationConsentInVietnamese(): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+
+  return new Promise((resolve) => {
+    Alert.alert(
+      `${APP_NAME} yêu cầu cấp quyền truy cập vị trí`,
+      'Ứng dụng cần quyền vị trí để xác định vị trí cứu hộ chính xác.',
+      [
+        {
+          text: 'Từ chối',
+          style: 'cancel',
+          onPress: () => resolve(false),
+        },
+        {
+          text: 'Cho phép',
+          onPress: () => resolve(true),
+        },
+      ],
+      {
+        cancelable: true,
+        onDismiss: () => resolve(false),
+      },
+    );
+  });
+}
+
+/**
+ * Requests permission and gets the current GPS location, then reverse-geocodes
+ * the coordinates using Goong Maps API (preferred) or expo-location fallback.
+ */
+export async function getCurrentLocation(): Promise<LocationResult> {
+  const existingPermission = await Location.getForegroundPermissionsAsync();
+  let status = existingPermission.status;
+
+  if (status !== 'granted') {
+    const userAcceptedPrompt = await requestLocationConsentInVietnamese();
+    if (!userAcceptedPrompt) {
+      throw new Error('Bạn đã từ chối cấp quyền vị trí.');
+    }
+
+    const permissionResult = await Location.requestForegroundPermissionsAsync();
+    status = permissionResult.status;
+  }
+
+  if (status !== 'granted') {
+    throw new Error(
+      'Không có quyền truy cập vị trí. Vui lòng bật quyền vị trí trong cài đặt ứng dụng.',
+    );
+  }
+
+  const loc = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.High,
+  });
+
+  const { latitude, longitude } = loc.coords;
+  const accuracy = Math.round(loc.coords.accuracy ?? 0);
+
+  // ── Try Goong Maps first ──────────────────────────────────────────────────
+  if (GOONG_API_KEY) {
+    try {
+      const url = `${GOONG_REVERSE_GEOCODE}?latlng=${latitude},${longitude}&api_key=${GOONG_API_KEY}`;
+      const resp = await fetch(url);
+      const json = await resp.json();
+      const result = json?.results?.[0];
+      if (result) {
+        const address: string = result.formatted_address ?? '';
+        return {
+          latitude,
+          longitude,
+          accuracy,
+          address,
+          displayLabel: `${address} (±${accuracy}m)`,
+        };
+      }
+    } catch {
+      // fall through to expo-location
+    }
+  }
+
+  // ── Fallback: expo-location reverse geocode ───────────────────────────────
+  const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
+  if (geo.length > 0) {
+    const g = geo[0];
+    const parts = [g.street, g.district, g.city].filter(Boolean);
+    const address = parts.join(', ');
+    return {
+      latitude,
+      longitude,
+      accuracy,
+      address,
+      displayLabel: `${address} (±${accuracy}m)`,
+    };
+  }
+
+  return {
+    latitude,
+    longitude,
+    accuracy,
+    address: '',
+    displayLabel: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+  };
+}

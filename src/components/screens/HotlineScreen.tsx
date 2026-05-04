@@ -11,6 +11,8 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 
 interface HotlineScreenProps {
     onBack?: () => void;
@@ -95,7 +97,9 @@ const LOCAL_DIRECTORIES: LocalDirectory[] = [
 
 export default function HotlineScreen({ onBack }: HotlineScreenProps) {
     const router = useRouter();
-    const { top, bottom } = useSafeAreaInsets();
+    const { top } = useSafeAreaInsets();
+    const bottomInset = useBottomContentInset(24);
+    const { colors } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRegion, setSelectedRegion] = useState('Miền Bắc');
     const [expandedCity, setExpandedCity] = useState<string | null>('Hà Nội');
@@ -118,11 +122,11 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
     };
 
     return (
-        <View className="flex-1 bg-background-light dark:bg-background-dark">
+        <View className="flex-1" style={{ backgroundColor: colors.background }}>
             {/* Header */}
             <View
-                style={{ paddingTop: top }}
-                className="mb-2 flex-row items-center justify-between border-b border-gray-100 bg-white px-4 py-3 pb-2 dark:border-gray-800 dark:bg-[#111418]"
+                className="mb-2 flex-row items-center justify-between border-b px-4 py-3 pb-2"
+                style={{ paddingTop: top, borderColor: colors.border, backgroundColor: colors.card }}
             >
                 <TouchableOpacity
                     onPress={handleBack}
@@ -131,34 +135,34 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
                     <Ionicons
                         name="chevron-back"
                         size={22}
-                        className="text-[#0f172a] dark:text-white"
-                        color="currentColor"
+                        color={colors.text}
                     />
                 </TouchableOpacity>
 
-                <Text className="flex-1 pr-12 text-center text-lg font-bold text-[#111418] dark:text-white">
+                <Text className="flex-1 pr-12 text-center text-lg font-bold" style={{ color: colors.text }}>
                     Hotline Khẩn cấp
                 </Text>
 
-                <TouchableOpacity className="flex-row items-center gap-1 rounded-full bg-red-50 px-3 py-1.5">
-                    <Ionicons name="alert-circle" size={18} color="#dc2626" />
-                    <Text className="text-sm font-bold text-red-600">SOS</Text>
+                <TouchableOpacity className="flex-row items-center gap-1 rounded-full px-3 py-1.5" style={{ backgroundColor: `${colors.status.error}18` }}>
+                    <Ionicons name="alert-circle" size={18} color={colors.status.error} />
+                    <Text className="text-sm font-bold" style={{ color: colors.status.error }}>SOS</Text>
                 </TouchableOpacity>
             </View>
 
             <ScrollView
                 className="flex-1"
-                contentContainerStyle={{ paddingBottom: bottom + 24 }}
+                contentContainerStyle={{ paddingBottom: bottomInset }}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Search Bar */}
-                <View className="sticky top-0 z-20 bg-background-light px-4 py-4 dark:bg-[#0b1118]">
-                    <View className="relative flex-row items-center rounded-2xl bg-white px-4 shadow-sm dark:bg-[#1c2630]">
-                        <Ionicons name="search" size={20} className="text-gray-400" color="currentColor" />
+                <View className="sticky top-0 z-20 px-4 py-4" style={{ backgroundColor: colors.background }}>
+                    <View className="relative flex-row items-center rounded-2xl px-4 shadow-sm" style={{ backgroundColor: colors.card }}>
+                        <Ionicons name="search" size={20} color={colors.textSecondary} />
                         <TextInput
-                            className="flex-1 py-3.5 pl-3 pr-4 text-base text-[#111418] dark:text-white"
+                            className="flex-1 py-3.5 pl-3 pr-4 text-base"
+                            style={{ color: colors.text }}
                             placeholder="Tìm kiếm tỉnh/thành phố..."
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor={colors.textSecondary}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
@@ -167,7 +171,7 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
 
                 {/* National Emergency */}
                 <View className="mb-6 px-4">
-                    <Text className="mb-3 px-1 text-sm font-bold uppercase tracking-wider text-gray-500">
+                    <Text className="mb-3 px-1 text-sm font-bold uppercase tracking-wider" style={{ color: colors.textSecondary }}>
                         Gọi Khẩn Cấp Quốc Gia
                     </Text>
                     <View className="flex-row gap-3">
@@ -175,16 +179,16 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
                             <TouchableOpacity
                                 key={index}
                                 onPress={() => handleCall(item.number)}
-                                className="flex-1 items-center justify-center rounded-2xl border-b-4 border-primary bg-white p-4 shadow-sm active:scale-95 dark:bg-[#1c2630]"
+                                className="flex-1 items-center justify-center rounded-2xl border-b-4 border-primary p-4 shadow-sm active:scale-95"
+                                style={{ backgroundColor: colors.card }}
                             >
-                                <View className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30">
-                                    {/* Using MaterialIcons equivalent or similar */}
-                                    <Ionicons name={item.number === '113' ? 'shield-checkmark' : item.number === '114' ? 'flame' : 'medkit'} size={28} className={item.color} color="#DA251D" />
+                                <View className="mb-2 flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: `${colors.status.error}12` }}>
+                                    <Ionicons name={item.number === '113' ? 'shield-checkmark' : item.number === '114' ? 'flame' : 'medkit'} size={28} color={colors.status.error} />
                                 </View>
-                                <Text className="text-2xl font-black leading-none text-gray-800 dark:text-white">
+                                <Text className="text-2xl font-black leading-none" style={{ color: colors.text }}>
                                     {item.number}
                                 </Text>
-                                <Text className="mt-1 text-xs font-semibold text-gray-500">
+                                <Text className="mt-1 text-xs font-semibold" style={{ color: colors.textSecondary }}>
                                     {item.name}
                                 </Text>
                             </TouchableOpacity>
@@ -194,21 +198,23 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
 
                 {/* Regions Tabs */}
                 <View className="px-4 pb-4">
-                    <View className="flex-row rounded-xl bg-white p-1.5 shadow-sm dark:bg-[#1c2630]">
+                    <View className="flex-row rounded-xl p-1.5 shadow-sm" style={{ backgroundColor: colors.card }}>
                         {REGIONS.map((region) => (
                             <TouchableOpacity
                                 key={region}
                                 onPress={() => setSelectedRegion(region)}
                                 className={`flex-1 rounded-lg py-2.5 ${selectedRegion === region
                                     ? 'bg-primary shadow-md'
-                                    : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                                    : ''
                                     }`}
+                                style={selectedRegion !== region ? { backgroundColor: colors.surface } : {}}
                             >
                                 <Text
                                     className={`text-center text-sm ${selectedRegion === region
                                         ? 'font-bold text-white'
-                                        : 'font-medium text-gray-500 dark:text-gray-400'
+                                        : 'font-medium'
                                         }`}
+                                    style={selectedRegion !== region ? { color: colors.textSecondary } : {}}
                                 >
                                     {region}
                                 </Text>
@@ -219,39 +225,41 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
 
                 {/* Local Directory */}
                 <View className="flex-col gap-4 px-4">
-                    <Text className="px-1 text-sm font-bold uppercase tracking-wider text-gray-500">
+                    <Text className="px-1 text-sm font-bold uppercase tracking-wider" style={{ color: colors.textSecondary }}>
                         Danh bạ địa phương
                     </Text>
 
                     {LOCAL_DIRECTORIES.map((dir, index) => (
                         <View
                             key={index}
-                            className="overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-[#1c2630]"
+                            className="overflow-hidden rounded-2xl shadow-sm"
+                            style={{ backgroundColor: colors.card }}
                         >
                             <TouchableOpacity
                                 onPress={() =>
                                     setExpandedCity(expandedCity === dir.city ? null : dir.city)
                                 }
-                                className="flex-row items-center justify-between border-b border-gray-100 p-4 dark:border-gray-800"
+                                className="flex-row items-center justify-between border-b p-4"
+                                style={{ borderColor: colors.border }}
                             >
                                 <View className="flex-row items-center gap-4">
-                                    <View className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/20">
+                                    <View className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ backgroundColor: `${colors.secondary}18` }}>
                                         <Ionicons
                                             name={dir.city === 'Hà Nội' ? 'business' : dir.city === 'Hải Phòng' ? 'boat' : 'map'}
                                             size={24}
-                                            color="#1565C0"
+                                            color={colors.secondary}
                                         />
                                     </View>
                                     <View>
-                                        <Text className="text-lg font-bold text-[#111418] dark:text-white">
+                                        <Text className="text-lg font-bold" style={{ color: colors.text }}>
                                             {dir.city}
                                         </Text>
-                                        <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
                                             {dir.description}
                                         </Text>
                                     </View>
                                 </View>
-                                <View className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800">
+                                <View className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
                                     <Ionicons
                                         name={
                                             expandedCity === dir.city
@@ -259,43 +267,43 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
                                                 : 'chevron-down'
                                         }
                                         size={20}
-                                        className="text-gray-500"
-                                        color="currentColor"
+                                        color={colors.textSecondary}
                                     />
                                 </View>
                             </TouchableOpacity>
                             {expandedCity === dir.city && (
-                                <View className="space-y-3 bg-gray-50/30 p-4 dark:bg-[#1c2630]">
+                                <View className="space-y-3 p-4" style={{ backgroundColor: colors.surface }}>
                                     {dir.contacts.map((contact, cIndex) => (
                                         <View
                                             key={cIndex}
-                                            className="mb-3 flex-row items-center justify-between rounded-xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-[#252f38]"
+                                            className="mb-3 flex-row items-center justify-between rounded-xl border p-3"
+                                            style={{ borderColor: colors.border, backgroundColor: colors.card }}
                                         >
                                             <View className="flex-row items-center gap-3">
-                                                {/* Use icons logic */}
-                                                <Ionicons name="information-circle" size={20} className={contact.color} color={contact.color.includes('primary') ? '#DA251D' : contact.color.includes('secondary') ? '#1565C0' : '#FFCC00'} />
-                                                <Text className="text-sm font-semibold text-[#111418] dark:text-gray-200">
+                                                <Ionicons name="information-circle" size={20} color={contact.color.includes('primary') ? colors.primary : contact.color.includes('secondary') ? colors.secondary : colors.status.pending} />
+                                                <Text className="text-sm font-semibold" style={{ color: colors.text }}>
                                                     {contact.name}
                                                 </Text>
                                             </View>
                                             <TouchableOpacity
                                                 onPress={() => handleCall(contact.number)}
-                                                className={`flex-row items-center gap-2 rounded-lg px-4 py-2 transition-colors ${contact.displayNumber
-                                                    ? 'border border-gray-200 bg-white dark:border-gray-700 dark:bg-transparent'
-                                                    : 'bg-secondary text-white shadow-sm shadow-blue-200 dark:shadow-none'
+                                                className={`flex-row items-center gap-2 rounded-lg px-4 py-2 ${contact.displayNumber
+                                                    ? 'border'
+                                                    : 'shadow-sm'
                                                     }`}
+                                                style={contact.displayNumber
+                                                    ? { borderColor: colors.border, backgroundColor: colors.card }
+                                                    : { backgroundColor: colors.secondary }
+                                                }
                                             >
                                                 <Ionicons
                                                     name="call"
                                                     size={14}
-                                                    color={contact.displayNumber ? 'currentColor' : '#ffffff'}
-                                                    className={contact.displayNumber ? "text-gray-700 dark:text-gray-300" : ""}
+                                                    color={contact.displayNumber ? colors.textSecondary : colors.white}
                                                 />
                                                 <Text
-                                                    className={`text-sm font-bold ${contact.displayNumber
-                                                        ? 'text-gray-700 dark:text-gray-300'
-                                                        : 'text-white'
-                                                        }`}
+                                                    className="text-sm font-bold"
+                                                    style={{ color: contact.displayNumber ? colors.text : colors.white }}
                                                 >
                                                     {contact.displayNumber || 'Gọi ngay'}
                                                 </Text>
@@ -308,8 +316,8 @@ export default function HotlineScreen({ onBack }: HotlineScreenProps) {
                     ))}
                     <View className="py-4 text-center">
                         <View className="flex-row items-center justify-center gap-1">
-                            <Ionicons name="checkmark-circle" size={14} color="#9CA3AF" />
-                            <Text className="text-xs text-gray-400">Dữ liệu đã được lưu offline</Text>
+                            <Ionicons name="checkmark-circle" size={14} color={colors.textSecondary} />
+                            <Text className="text-xs" style={{ color: colors.textSecondary }}>Dữ liệu đã được lưu offline</Text>
                         </View>
                     </View>
                 </View>

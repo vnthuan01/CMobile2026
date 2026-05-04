@@ -1,191 +1,216 @@
 import '@/global.css';
-import UserHomeContent from '@/src/components/home/UserHomeContent';
-import VolunteerHomeContent from '@/src/components/home/VolunteerHomeContent';
+import WebViewMap from '@/src/components/common/WebViewMap';
 import { useTheme } from '@/src/context/ThemeContext';
+import UserHomeContent from '@/src/features/rescue/containers/UserHomeContent';
+import VolunteerHomeContent from '@/src/features/volunteer/containers/VolunteerHomeContent';
+import { useCitizenProfile } from '@/src/hooks/useCitizenProfile';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
+import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
 import { useAuthStore } from '@/src/store/authStore';
+import { useNotificationStore } from '@/src/store/notificationStore';
+import {
+    getTimeGreeting,
+    resolveAvatarUrl,
+    resolveDisplayName,
+} from '@/src/utils/userPresentation';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, ImageBackground, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function IndexScreen() {
-    const { top, bottom } = useSafeAreaInsets();
-    const user = useAuthStore((s) => s.user);
-    const fakeUser = {
-        ...user,
-        role: 'Volunteer',
-    };
-    const { colors, isDark } = useTheme();
-    const isVolunteer = fakeUser?.role === 'Volunteer';
+  const router = useRouter();
+  const { top } = useSafeAreaInsets();
+  const bottomInset = useBottomContentInset(24);
+  const { width } = useWindowDimensions();
+  const user = useAuthStore((s) => s.user);
+  const role = (user?.role ?? '').toLowerCase();
+  const isVolunteer = role === 'volunteer' || role === 'leader';
+  const profileQuery = useCitizenProfile(Boolean(user));
+  const profile = profileQuery.data?.profile ?? null;
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
-    const STICKY_HEIGHT = 88; // chiều cao khu SOS
-    const iconWrapperBg = isDark ? 'bg-gray-700' : 'bg-gray-100'; // Keep or refactor to style if specific color needed
+  const { colors, isDark } = useTheme();
+  const iconWrapperBg = isDark ? colors.border : colors.surface;
+  const mapHeight = Math.max(220, Math.round((width - 32) * 0.78));
+  const [mapReloadKey, setMapReloadKey] = useState(0);
+  const previousLocationRef = useRef<string>('');
 
-    const avatarSource = require('@/src/assets/images/Anh-avatar-nam-dep.jpeg');
+  const { latitude, longitude, locationLabel, locating } =
+    useCurrentRescueLocation();
 
-    const pulseAnim = useRef(new Animated.Value(1)).current;
-    const flashAnim = useRef(new Animated.Value(1)).current;
+  const displayName = resolveDisplayName({
+    profileDisplayName: profile?.displayName,
+    authUserName: user?.user_name,
+    email: user?.email,
+  });
+  const avatarUrl = resolveAvatarUrl({
+    profilePictureUrl: profile?.pictureUrl,
+    authPictureUrl: null,
+  });
+  const greetingText = useMemo(
+    () => `${getTimeGreeting()}, ${displayName}`,
+    [displayName],
+  );
 
-    useEffect(() => {
-        // Pulse button
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.06,
-                    duration: 700,
-                    easing: Easing.out(Easing.ease),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 700,
-                    easing: Easing.in(Easing.ease),
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
+  useEffect(() => {
+    if (latitude == null || longitude == null) return;
 
-        // Flash icon
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(flashAnim, {
-                    toValue: 0.4,
-                    duration: 500,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(flashAnim, {
-                    toValue: 1,
-                    duration: 500,
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
-    }, []);
+    const currentLocationKey = `${latitude.toFixed(5)},${longitude.toFixed(5)}`;
 
-    return (
-        <View
-            className="flex-1 relative justify-center"
-            style={{ backgroundColor: colors.background }}
-        >
-            {/* ===== CONTENT ===== */}
-            <ScrollView
-                style={{ paddingTop: top }}
-                contentContainerStyle={{ paddingBottom: bottom + STICKY_HEIGHT }}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Header */}
-                <View className="bg-transparent px-4 py-6 shadow-sm">
-                    <View className="flex-row items-center justify-between">
+    if (
+      previousLocationRef.current &&
+      previousLocationRef.current !== currentLocationKey
+    ) {
+      setMapReloadKey((v) => v + 1);
+    }
 
-                        {/* Avatar + Text */}
-                        <View className="flex-row items-center gap-3">
-                            <Image
-                                source={avatarSource}
-                                className="rounded-full"
-                                resizeMode="cover"
-                                style={{ width: 48, height: 48 }}
-                            />
+    previousLocationRef.current = currentLocationKey;
+  }, [latitude, longitude]);
 
-
-                            <View>
-                                <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                                    Xin chào, {user?.full_name}
-                                </Text>
-                                <Text
-                                    className="text-sm"
-                                    style={{ color: colors.textSecondary }}
-                                >
-                                    {isVolunteer ? 'Tình nguyện viên' : 'Người dùng'}
-                                </Text>
-                            </View>
-                        </View>
-
-                        {/* Icon */}
-                        <TouchableOpacity
-                            className={`h-10 w-10 items-center justify-center rounded-full ${iconWrapperBg}`}
-                        >
-                            <Ionicons
-                                name="notifications-outline"
-                                size={22}
-                                color={isDark ? '#fff' : '#111418'}
-                            />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-
-
-
-                {/* Map */}
-                <View className="mb-4 px-4">
-                    <View className={`h-48 items-center justify-center overflow-hidden rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
-                        <Ionicons name="map" size={48} color="#6b7280" />
-                        <Text className="mt-2 text-sm text-gray-500">
-                            Bản đồ khu vực cứu trợ
-                        </Text>
-                    </View>
-                </View>
-
-                {/* Featured Card */}
-                {!isVolunteer && (
-                    <View className="px-4">
-                        <TouchableOpacity
-                            activeOpacity={0.9}
-                            className="flex-col overflow-hidden rounded-xl border shadow-sm"
-                            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                        >
-                            <ImageBackground
-                                source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuADA3ptc33mj9-QnO5js6wAoZXkoUSE1R17u2KWXra7ld4GqZO2f8mzYWqTSzfDyEh-5-MUjBGTOecWmqk602YOJctr9Z_vRqQj53t46_OAEVjxx-mVNcjJyKXudNlKoG_XFIAa5z9oQnEpS_1U57h-rthlqgNarTuDzjVRKjqfFGbu1Fdn9cp8uOIWTF0RFaERy8fam04bvXFNEC2Q2Ojasy0dYAA1E9jZetQbSi3FWmlIMJlWJx9MsuTJlu40BRQcu8Y3b0TsbH0" }}
-                                className="h-40 w-full justify-end"
-                                resizeMode="cover"
-                            >
-                                <LinearGradient
-                                    colors={['transparent', 'rgba(0,0,0,0.7)']}
-                                    className="absolute inset-0"
-                                />
-                                <View className="p-4">
-                                    <View className="mb-1 self-start rounded bg-primary px-2 py-1">
-                                        <Text className="text-[10px] font-bold text-white uppercase">Ưu tiên</Text>
-                                    </View>
-                                    <Text className="text-xl font-bold text-white leading-tight">Gửi yêu cầu cứu trợ</Text>
-                                </View>
-                            </ImageBackground>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* Role content */}
-                {isVolunteer ? <VolunteerHomeContent /> : <UserHomeContent />}
-            </ScrollView>
-
-            {/* ===== STICKY SOS ===== */}
-            <View
-                style={{
-                    position: 'absolute',
-                    right: 10,
-                    bottom: 10, // tránh tab bar / home indicator
-                    zIndex: 100,
-                }}
-            >
-                <Animated.View
-                    style={{
-                        transform: [{ scale: pulseAnim }],
-                    }}
+  return (
+    <View
+      className="relative flex-1 justify-center"
+      style={{ backgroundColor: colors.background }}
+    >
+      {/* ===== CONTENT ===== */}
+      <ScrollView
+        style={{ paddingTop: top }}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View className="bg-transparent px-4 py-6 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            {/* Avatar + Text */}
+            <View className="flex-row items-center gap-3">
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  className="rounded-full"
+                  resizeMode="cover"
+                  style={{ width: 48, height: 48 }}
+                />
+              ) : (
+                <View
+                  className="h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.card }}
                 >
-                    <TouchableOpacity
-                        activeOpacity={0.85}
-                        className="h-12 w-12 items-center justify-center rounded-full bg-red-600 shadow-lg"
-                    >
-                        {/* Icon flash */}
-                        <Animated.View style={{ opacity: flashAnim }}>
-                            <Ionicons name="warning" size={30} color="#ffdd00ff" />
-                        </Animated.View>
-                    </TouchableOpacity>
-                </Animated.View>
+                  <Ionicons
+                    name="person"
+                    size={24}
+                    color={colors.textSecondary}
+                  />
+                </View>
+              )}
+
+              <View>
+                <Text
+                  className="text-lg font-bold"
+                  style={{ color: colors.text }}
+                >
+                  {greetingText}
+                </Text>
+                <Text
+                  className="text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
+                  {isVolunteer ? 'Tình nguyện viên' : 'Người dân'}
+                </Text>
+              </View>
             </View>
 
+            {/* Icon */}
+            <TouchableOpacity
+              onPress={() => router.push('/notifications')}
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: iconWrapperBg }}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={colors.text}
+              />
 
+              {unreadCount > 0 ? (
+                <View
+                  className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: colors.status.error }}
+                />
+              ) : null}
+            </TouchableOpacity>
+          </View>
         </View>
-    );
+
+        {/* Map */}
+        <View className="mb-4 px-4">
+          <View
+            className="overflow-hidden rounded-xl"
+            style={{
+              height: mapHeight,
+              backgroundColor: colors.surface,
+            }}
+          >
+            {latitude !== null && longitude !== null ? (
+              <WebViewMap
+                key={`home-map-${mapReloadKey}`}
+                center={[longitude, latitude]}
+                zoom={15}
+                markers={[
+                  {
+                    id: 'home-current-location',
+                    coordinate: [longitude, latitude],
+                    color: colors.status.error,
+                    size: 18,
+                  },
+                ]}
+                height={mapHeight}
+                style={{ width: '100%', borderWidth: 0 }}
+              />
+            ) : (
+              <View className="items-center px-5">
+                {locating ? (
+                  <>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text
+                      className="mt-2 text-sm"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Đang lấy vị trí hiện tại...
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons
+                      name="location-outline"
+                      size={40}
+                      color={colors.textSecondary}
+                    />
+                    <Text
+                      className="mt-2 text-center text-sm"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {locationLabel || 'Không thể lấy vị trí hiện tại.'}
+                    </Text>
+                  </>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Role content */}
+        {isVolunteer ? <VolunteerHomeContent /> : <UserHomeContent />}
+      </ScrollView>
+    </View>
+  );
 }

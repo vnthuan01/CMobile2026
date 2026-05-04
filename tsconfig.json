@@ -11,8 +11,14 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    "**/*.d.ts",
+    "src/types/**/*.d.ts",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "trsh",
+    "node_modules"
   ]
 }

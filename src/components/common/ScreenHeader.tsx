@@ -1,56 +1,123 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenHeaderProps {
-    title: string;
-    onBack?: () => void;
-    backgroundColor?: string;
-    titleColor?: string;
-    iconColor?: string;
-    rightAction?: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  onBack?: () => void;
+  rightAction?: React.ReactNode;
+  backgroundColor?: string;
+  titleColor?: string;
+  showBottomBorder?: boolean;
+  showShadow?: boolean;
+  // Legacy aliases for backward compatibility with Header
+  center?: boolean;
+  rightComponent?: React.ReactNode;
 }
 
 export default function ScreenHeader({
-    title,
-    onBack,
-    backgroundColor,
-    titleColor,
-    iconColor,
-    rightAction,
+  title,
+  subtitle,
+  onBack,
+  rightAction,
+  backgroundColor,
+  titleColor,
+  showBottomBorder = true,
+  showShadow = true,
+  center: _center,
+  rightComponent,
 }: ScreenHeaderProps) {
-    const { top } = useSafeAreaInsets();
-    const { colors } = useTheme();
+  const { top } = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const sideSlotWidth = 56;
 
-    const bgColor = backgroundColor ?? colors.background;
-    const txtColor = titleColor ?? colors.text;
-    const icnColor = iconColor ?? colors.text;
+  const bgColor = backgroundColor ?? colors.card;
+  const txtColor = titleColor ?? colors.text;
+  const resolvedRightAction = rightAction ?? rightComponent ?? null;
+  const isPrimaryHeader = bgColor === colors.primary;
+  const backButtonBg = isPrimaryHeader
+    ? 'rgba(255,255,255,0.16)'
+    : isDark
+      ? colors.surface
+      : `${colors.primary}15`;
+  const backIconColor = isPrimaryHeader ? '#fff' : colors.primary;
 
-    return (
+  return (
+    <View
+      style={[
+        {
+          paddingTop: top + 10,
+          paddingBottom: 10,
+          paddingHorizontal: 16,
+          backgroundColor: bgColor,
+          borderBottomColor: showBottomBorder ? colors.border : 'transparent',
+          borderBottomWidth: showBottomBorder ? 1 : 0,
+        },
+        !isDark && showShadow && styles.shadow,
+      ]}
+      className={showBottomBorder ? 'border-b' : ''}
+    >
+      <View className="flex-row items-center">
         <View
-            style={{
-                paddingTop: top,
-                backgroundColor: bgColor,
-                borderBottomColor: colors.border,
-            }}
-            className="flex-row items-center justify-between border-b px-4 pb-3"
+          style={{ width: sideSlotWidth, alignItems: 'flex-start' }}
+          className="shrink-0"
         >
+          {onBack ? (
             <TouchableOpacity
-                onPress={onBack}
-                className="h-10 w-10 items-center justify-center rounded-full"
+              onPress={onBack}
+              style={{ width: 40, height: 40, backgroundColor: backButtonBg }}
+              className="items-center justify-center rounded-full"
             >
-                <Ionicons name="arrow-back" size={24} color={icnColor} />
+              <Ionicons
+                name="arrow-back-outline"
+                size={22}
+                color={backIconColor}
+              />
             </TouchableOpacity>
-            <Text
-                className="flex-1 text-center text-lg font-bold leading-tight tracking-tight"
-                style={{ color: txtColor }}
-                numberOfLines={1}
-            >
-                {title}
-            </Text>
-            {rightAction ? rightAction : <View className="w-10" />}
+          ) : null}
         </View>
-    );
+
+        <View className="min-w-0 flex-1 items-center px-1">
+          <Text
+            style={{ color: txtColor, fontSize: 18 }}
+            className="text-center font-bold leading-tight"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text
+              style={{ color: colors.textSecondary, fontSize: 13 }}
+              className="mt-0.5 text-center"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+
+        <View
+          style={{ width: sideSlotWidth }}
+          className="shrink-0 items-end justify-center"
+        >
+          {resolvedRightAction}
+        </View>
+      </View>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+});

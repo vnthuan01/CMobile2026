@@ -1,18 +1,19 @@
 import '@/global.css';
-import Header from '@/src/components/header/header';
+import ScreenHeader from '@/src/components/common/ScreenHeader';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SettingsScreenProps {
     onBack?: () => void;
+    onNavigate?: (screen: '/profile/requests') => void;
 }
 
-export default function SettingsScreen({ onBack }: SettingsScreenProps) {
-    const { bottom } = useSafeAreaInsets();
+export default function SettingsScreen({ onBack, onNavigate }: SettingsScreenProps) {
+    const bottomInset = useBottomContentInset(32);
     const [notifications, setNotifications] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [vibrationEnabled, setVibrationEnabled] = useState(true);
@@ -34,8 +35,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                 setVibrationEnabled(parsed.vibrationEnabled ?? true);
                 setLocationEnabled(parsed.locationEnabled ?? true);
             }
-        } catch (error) {
-            console.log('Error loading settings:', error);
+        } catch {
         }
     };
 
@@ -45,8 +45,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
             const parsed = settings ? JSON.parse(settings) : {};
             parsed[key] = value;
             await AsyncStorage.setItem('app_settings', JSON.stringify(parsed));
-        } catch (error) {
-            console.log('Error saving settings:', error);
+        } catch {
         }
     };
 
@@ -55,10 +54,10 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
             className="flex-1"
             style={{ backgroundColor: colors.background }}
         >
-            <Header title="Cài đặt" onBack={onBack} />
+            <ScreenHeader title="Cài đặt" onBack={onBack} />
 
             <ScrollView
-                contentContainerStyle={{ paddingBottom: bottom + 32 }}
+                contentContainerStyle={{ paddingBottom: bottomInset }}
                 className="flex-1"
                 showsVerticalScrollIndicator={false}
             >
@@ -77,7 +76,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                         <View className="flex-row items-center gap-3">
                             <View
                                 className="h-10 w-10 items-center justify-center rounded-full"
-                                style={{ backgroundColor: isDark ? '#374151' : 'rgba(19, 127, 236, 0.1)' }}
+                                style={{ backgroundColor: colors.surface }}
                             >
                                 <Ionicons name="moon-outline" size={20} color={colors.primary} />
                             </View>
@@ -86,8 +85,8 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                         <Switch
                             value={isDark}
                             onValueChange={toggleTheme}
-                            trackColor={{ false: '#e5e7eb', true: '#93c5fd' }}
-                            thumbColor={isDark ? colors.primary : '#f4f3f4'}
+                            trackColor={{ false: colors.border, true: `${colors.primary}66` }}
+                            thumbColor={colors.primary}
                         />
                     </View>
                 </View>
@@ -152,6 +151,22 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                     />
                 </View>
 
+                <View className="mt-4" style={{ backgroundColor: colors.card }}>
+                    <View className="px-4 py-3">
+                        <Text className="text-base font-bold" style={{ color: colors.text }}>
+                            Yêu cầu của tôi
+                        </Text>
+                    </View>
+
+                    <SettingItem
+                        icon="time-outline"
+                        title="Lịch sử yêu cầu"
+                        value="Xem danh sách yêu cầu"
+                        showArrow
+                        onPress={() => onNavigate?.('/profile/requests')}
+                    />
+                </View>
+
                 {/* App Info Section */}
                 <View className="mt-4" style={{ backgroundColor: colors.card }}>
                     <View className="px-4 py-3">
@@ -182,7 +197,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                 {/* Danger Zone */}
                 <View className="mt-4" style={{ backgroundColor: colors.card }}>
                     <View className="px-4 py-3">
-                        <Text className="text-base font-bold text-red-500">
+                        <Text className="text-base font-bold" style={{ color: colors.status.error }}>
                             Vùng nguy hiểm
                         </Text>
                     </View>
@@ -191,14 +206,14 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                         className="flex-row items-center gap-3 border-b px-4 py-4"
                         style={{ borderColor: colors.border }}
                     >
-                        <View className="h-10 w-10 items-center justify-center rounded-full bg-red-50">
-                            <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                        <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: `${colors.status.error}12` }}>
+                            <Ionicons name="trash-outline" size={20} color={colors.status.error} />
                         </View>
                         <View className="flex-1">
-                            <Text className="text-base font-medium text-red-500">
+                            <Text className="text-base font-medium" style={{ color: colors.status.error }}>
                                 Xóa tài khoản
                             </Text>
-                            <Text className="text-xs text-gray-500">
+                            <Text className="text-xs" style={{ color: colors.textSecondary }}>
                                 Xóa vĩnh viễn tài khoản và dữ liệu
                             </Text>
                         </View>
@@ -234,7 +249,7 @@ function SettingToggle({
             <View className="flex-row flex-1 items-center gap-3">
                 <View
                     className="h-10 w-10 items-center justify-center rounded-full"
-                    style={{ backgroundColor: isDark ? '#374151' : 'rgba(19, 127, 236, 0.1)' }}
+                    style={{ backgroundColor: colors.surface }}
                 >
                     <Ionicons name={icon} size={20} color={colors.primary} />
                 </View>
@@ -246,8 +261,8 @@ function SettingToggle({
             <Switch
                 value={value}
                 onValueChange={onValueChange}
-                trackColor={{ false: '#e5e7eb', true: '#93c5fd' }}
-                thumbColor={value ? colors.primary : '#f4f3f4'}
+                trackColor={{ false: colors.border, true: `${colors.primary}66` }}
+                thumbColor={value ? colors.primary : colors.white}
             />
         </View>
     );
@@ -258,30 +273,33 @@ function SettingItem({
     title,
     value,
     showArrow,
+    onPress,
 }: {
     icon: keyof typeof Ionicons.glyphMap;
     title: string;
     value?: string;
     showArrow?: boolean;
+    onPress?: () => void;
 }) {
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
 
     return (
         <TouchableOpacity
+            onPress={onPress}
             className="flex-row items-center justify-between border-b px-4 py-4"
             style={{ borderColor: colors.border }}
         >
             <View className="flex-row items-center gap-3">
                 <View
                     className="h-10 w-10 items-center justify-center rounded-full"
-                    style={{ backgroundColor: isDark ? '#374151' : 'rgba(19, 127, 236, 0.1)' }}
+                    style={{ backgroundColor: colors.surface }}
                 >
                     <Ionicons name={icon} size={20} color={colors.primary} />
                 </View>
                 <Text className="text-base font-medium" style={{ color: colors.text }}>{title}</Text>
             </View>
             {value && <Text className="text-sm" style={{ color: colors.textSecondary }}>{value}</Text>}
-            {showArrow && <Ionicons name="chevron-forward" size={20} color={isDark ? '#9ca3af' : '#6b7280'} />}
+            {showArrow && <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
         </TouchableOpacity>
     );
 }

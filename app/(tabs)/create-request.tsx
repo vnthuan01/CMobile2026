@@ -1,5 +1,5 @@
 import '@/global.css';
-import RequestRescueScreen from '@/src/components/user/RequestRescueScreen';
+import RequestRescueScreen from '@/src/features/rescue/screens/RequestRescueScreen';
 import { useRouter } from 'expo-router';
 
 export default function CreateRequestScreen() {
