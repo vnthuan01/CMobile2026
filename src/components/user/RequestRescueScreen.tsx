@@ -6,6 +6,7 @@ import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
 import { usePriorityCriteria } from '@/src/hooks/useRescueMeta';
 import { useSubmitRescueRequest } from '@/src/hooks/useSubmitRescueRequest';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
+import { useUserProfile } from '@/src/hooks/useUserProfile';
 import {
   DisasterType,
   RescueAttachment,
@@ -21,6 +22,7 @@ import {
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -88,10 +90,13 @@ export default function RequestRescueScreen({
   const screenScale = getScreenScaleConfig(width, height, fontScale);
   const addPhotoSize = Math.max(80, scaleSize(88, screenScale));
   const { colors } = useTheme();
+  const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authUser = useAuthStore((s) => s.user);
   const { dialogProps, showDialog } = useDialog();
   const uploadImageMutation = useUploadImage();
   const submitRescueRequestMutation = useSubmitRescueRequest();
+  const userProfileQuery = useUserProfile(isAuthenticated);
 
   // ── Form state ───────────────────────────────────────────────────────────
   const [rescueType, setRescueType] = useState<RescueType>(
@@ -100,7 +105,6 @@ export default function RequestRescueScreen({
   const [disasterType, setDisasterType] = useState<DisasterType>(0); // Bão lũ first
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
-  const [note, setNote] = useState('');
   const [reporterFullName, setReporterFullName] = useState('');
   const [reporterPhone, setReporterPhone] = useState('');
   const [attachments, setAttachments] = useState<RescueAttachment[]>([]);
@@ -132,11 +136,42 @@ export default function RequestRescueScreen({
   const loadingCriteria = priorityCriteriaQuery.isLoading;
   const submitting = submitRescueRequestMutation.isPending;
 
+  const userProfile = userProfileQuery.data?.profile;
+  const profileContactLoading = isAuthenticated && userProfileQuery.isLoading;
+  const resolvedReporterFullName =
+    userProfile?.displayName?.trim() || authUser?.user_name?.trim() || '';
+  const resolvedReporterPhone = userProfile?.phoneNumber?.trim() || '';
+  const hasLockedFullName = Boolean(resolvedReporterFullName);
+  const hasLockedPhone = Boolean(resolvedReporterPhone);
+  const needsProfileCompletion =
+    isAuthenticated && (!resolvedReporterFullName || !resolvedReporterPhone);
+
   useEffect(() => {
     if (detectedAddress && !address) {
       setAddress(detectedAddress);
     }
   }, [address, detectedAddress]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    if (
+      resolvedReporterFullName &&
+      reporterFullName !== resolvedReporterFullName
+    ) {
+      setReporterFullName(resolvedReporterFullName);
+    }
+
+    if (resolvedReporterPhone && reporterPhone !== resolvedReporterPhone) {
+      setReporterPhone(resolvedReporterPhone);
+    }
+  }, [
+    isAuthenticated,
+    reporterFullName,
+    reporterPhone,
+    resolvedReporterFullName,
+    resolvedReporterPhone,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated && rescueType === 0) {
@@ -261,7 +296,6 @@ export default function RequestRescueScreen({
         longitude: longitude!,
         accuracy: accuracy ?? 0,
         address: address.trim(),
-        note: note.trim(),
         reporterPhone: reporterPhone.trim(),
         reporterFullName: reporterFullName.trim(),
         attachments,
@@ -449,6 +483,55 @@ export default function RequestRescueScreen({
         <Section>
           <SectionTitle title="Thông tin liên hệ" colors={colors} />
 
+          {needsProfileCompletion ? (
+            <View
+              className="rounded-xl border p-3"
+              style={{
+                backgroundColor: `${colors.status.pending}12`,
+                borderColor: `${colors.status.pending}55`,
+              }}
+            >
+              <View className="flex-row items-start gap-2">
+                <Ionicons
+                  name="person-circle-outline"
+                  size={18}
+                  color={colors.status.pending}
+                />
+                <View className="flex-1">
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
+                    Thông tin tài khoản chưa đầy đủ
+                  </Text>
+                  <Text
+                    className="mt-1 text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Hãy cập nhật họ tên và số điện thoại trong hồ sơ để form tự
+                    đồng bộ chính xác.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => router.push('/profile/edit' as any)}
+                    className="mt-3 self-start rounded-full px-3 py-2"
+                    style={{ backgroundColor: colors.primary }}
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons
+                        name="create-outline"
+                        size={14}
+                        color={colors.white}
+                      />
+                      <Text style={{ color: colors.white, fontWeight: '600' }}>
+                        Cập nhật thông tin cá nhân
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
           {/* Name — optional for emergency */}
           {rescueType === 0 ? (
             <LabeledInput
@@ -456,6 +539,22 @@ export default function RequestRescueScreen({
               placeholder="Nguyễn Văn A"
               value={reporterFullName}
               onChangeText={setReporterFullName}
+              editable={!hasLockedFullName}
+              loading={profileContactLoading}
+              helperText={
+                hasLockedFullName
+                  ? 'Đã đồng bộ từ tài khoản của bạn'
+                  : isAuthenticated
+                    ? 'Chưa có trong tài khoản - bạn có thể cập nhật ở hồ sơ'
+                    : undefined
+              }
+              helperIcon={
+                hasLockedFullName
+                  ? 'shield-checkmark-outline'
+                  : isAuthenticated
+                    ? 'alert-circle-outline'
+                    : undefined
+              }
               colors={colors}
             />
           ) : (
@@ -464,16 +563,48 @@ export default function RequestRescueScreen({
               placeholder="Nguyễn Văn A"
               value={reporterFullName}
               onChangeText={setReporterFullName}
+              editable={!hasLockedFullName}
+              loading={profileContactLoading}
+              helperText={
+                hasLockedFullName
+                  ? 'Đã đồng bộ từ tài khoản của bạn'
+                  : isAuthenticated
+                    ? 'Chưa có trong tài khoản - bạn có thể cập nhật ở hồ sơ'
+                    : undefined
+              }
+              helperIcon={
+                hasLockedFullName
+                  ? 'shield-checkmark-outline'
+                  : isAuthenticated
+                    ? 'alert-circle-outline'
+                    : undefined
+              }
               colors={colors}
             />
           )}
 
           <LabeledInput
             label="Số điện thoại *"
-            placeholder="0901234567"
+            placeholder="090xxxxxxxx"
             value={reporterPhone}
             onChangeText={setReporterPhone}
             keyboardType="phone-pad"
+            editable={!hasLockedPhone}
+            loading={profileContactLoading}
+            helperText={
+              hasLockedPhone
+                ? 'Đã đồng bộ từ tài khoản của bạn'
+                : isAuthenticated
+                  ? 'Chưa có trong tài khoản - bạn có thể cập nhật ở hồ sơ'
+                  : undefined
+            }
+            helperIcon={
+              hasLockedPhone
+                ? 'shield-checkmark-outline'
+                : isAuthenticated
+                  ? 'alert-circle-outline'
+                  : undefined
+            }
             colors={colors}
           />
         </Section>
@@ -556,7 +687,7 @@ export default function RequestRescueScreen({
 
         <Divider colors={colors} />
 
-        {/* ── Description & Note — only for Normal rescue ───────────── */}
+        {/* ── Description — only for Normal rescue ───────────── */}
         {rescueType === 0 && (
           <>
             <Section>
@@ -589,14 +720,6 @@ export default function RequestRescueScreen({
                   }}
                 />
               </View>
-
-              <LabeledInput
-                label="Ghi chú thêm"
-                placeholder="Mực nước đang dâng nhanh…"
-                value={note}
-                onChangeText={setNote}
-                colors={colors}
-              />
             </Section>
 
             <Divider colors={colors} />
@@ -925,6 +1048,10 @@ function LabeledInput({
   value,
   onChangeText,
   keyboardType,
+  editable = true,
+  loading = false,
+  helperText,
+  helperIcon,
   colors,
 }: {
   label: string;
@@ -932,6 +1059,10 @@ function LabeledInput({
   value: string;
   onChangeText: (t: string) => void;
   keyboardType?: any;
+  editable?: boolean;
+  loading?: boolean;
+  helperText?: string;
+  helperIcon?: keyof typeof Ionicons.glyphMap;
   colors: any;
 }) {
   return (
@@ -945,11 +1076,12 @@ function LabeledInput({
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        editable={editable && !loading}
         placeholder={placeholder}
         placeholderTextColor={colors.textSecondary}
         keyboardType={keyboardType}
         style={{
-          backgroundColor: colors.card,
+          backgroundColor: loading ? colors.surface : colors.card,
           borderColor: colors.border,
           color: colors.text,
           borderWidth: 1,
@@ -957,8 +1089,31 @@ function LabeledInput({
           paddingHorizontal: 14,
           paddingVertical: 10,
           fontSize: 14,
+          opacity: editable && !loading ? 1 : 0.7,
         }}
       />
+      {loading ? (
+        <View
+          pointerEvents="none"
+          className="absolute bottom-0 left-0 right-0 top-0 justify-center rounded-xl px-4"
+          style={{ backgroundColor: `${colors.surface}CC` }}
+        >
+          <View
+            className="h-4 rounded-full"
+            style={{ backgroundColor: colors.border, width: '58%' }}
+          />
+        </View>
+      ) : null}
+      {helperText ? (
+        <View className="mt-2 flex-row items-center gap-1.5">
+          {helperIcon ? (
+            <Ionicons name={helperIcon} size={14} color={colors.primary} />
+          ) : null}
+          <Text className="text-xs" style={{ color: colors.textSecondary }}>
+            {helperText}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
