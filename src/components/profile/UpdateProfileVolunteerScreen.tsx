@@ -3,11 +3,12 @@ import ScreenHeader from '@/src/components/common/ScreenHeader';
 import StickyFooterButton from '@/src/components/common/StickyFooterButton';
 import { useTheme } from '@/src/context/ThemeContext';
 import {
-    useAllSkills,
-    useMyVolunteerProfile,
-    volunteerProfileKeys,
+  useAllSkills,
+  useMyVolunteerProfile,
+  volunteerProfileKeys,
 } from '@/src/hooks/useMyVolunteerProfile';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
+import { useUpdateVolunteerProfile } from '@/src/hooks/useVolunteerActions';
 import {
     useUpdateUserProfile,
     useUserProfile,
@@ -23,12 +24,17 @@ import {
     showWarningToast,
 } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Image,
+    Platform,
     ScrollView,
     Text,
     TextInput,
@@ -41,6 +47,16 @@ interface UpdateProfileVolunteerScreenProps {
   onBack?: () => void;
 }
 
+const EMPTY_CERTIFICATE: CreateVolunteerCertificateRequest = {
+  name: '',
+  issuedBy: '',
+  issuedDate: '',
+  expiryDate: '',
+  fileUrl: '',
+};
+
+type PickingField = 'issuedDate' | 'expiryDate';
+
 export default function UpdateProfileVolunteerScreen({
   onBack,
 }: UpdateProfileVolunteerScreenProps) {
@@ -52,6 +68,7 @@ export default function UpdateProfileVolunteerScreen({
   const allSkillsQuery = useAllSkills();
   const userProfileQuery = useUserProfile();
   const updateProfileMutation = useUpdateUserProfile();
+  const updateVolunteerProfileMutation = useUpdateVolunteerProfile();
   const uploadImageMutation = useUploadImage();
 
   const volunteerProfile = volunteerProfileQuery.data?.profile ?? null;
@@ -64,6 +81,20 @@ export default function UpdateProfileVolunteerScreen({
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [hasNoCertificates, setHasNoCertificates] = useState(false);
+  const [certificates, setCertificates] = useState<
+    CreateVolunteerCertificateRequest[]
+  >([{ ...EMPTY_CERTIFICATE }]);
+  const [uploadingCertificateIndex, setUploadingCertificateIndex] = useState<
+    number | null
+  >(null);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [pickerDate, setPickerDate] = useState(new Date());
+  const [pickingTarget, setPickingTarget] = useState<{
+    index: number;
+    field: PickingField;
+  } | null>(null);
 
   useEffect(() => {
     const resolvedName =
@@ -75,12 +106,35 @@ export default function UpdateProfileVolunteerScreen({
     setFullName(resolvedName);
     setPhone(resolvedPhone);
     setAvatarUrl(resolvedAvatar);
+    setSelectedSkillIds(
+      (volunteerProfile?.skills || [])
+        .map((skillEntry: VolunteerProfileResponse['skills'][number]) =>
+          getProfileSkillId(skillEntry),
+        )
+        .filter(Boolean),
+    );
+    setCertificates(
+      volunteerProfile?.certificates?.length
+        ? volunteerProfile.certificates.map(
+            (certificate: CreateVolunteerCertificateRequest) => ({
+              name: certificate.name || '',
+              issuedBy: certificate.issuedBy || '',
+              issuedDate: certificate.issuedDate || '',
+              expiryDate: certificate.expiryDate || '',
+              fileUrl: certificate.fileUrl || '',
+            }),
+          )
+        : [{ ...EMPTY_CERTIFICATE }],
+    );
+    setHasNoCertificates(!volunteerProfile?.certificates?.length);
   }, [
     userProfile?.displayName,
     userProfile?.phoneNumber,
     userProfile?.pictureUrl,
+    volunteerProfile?.certificates,
     volunteerProfile?.fullName,
     volunteerProfile?.phoneNumber,
+    volunteerProfile?.skills,
   ]);
 
   const loading =
@@ -88,24 +142,236 @@ export default function UpdateProfileVolunteerScreen({
     allSkillsQuery.isLoading ||
     userProfileQuery.isLoading;
 
-  const resolvedSkills = useMemo(() => {
-    if (!volunteerProfile?.skills?.length) return [] as string[];
+  const resolvedCertificates = useMemo(() => {
+    if (hasNoCertificates) return [] as CreateVolunteerCertificateRequest[];
+    return certificates;
+  }, [certificates, hasNoCertificates]);
 
-    return volunteerProfile.skills
-      .map((skillEntry: VolunteerProfileResponse['skills'][number]) => {
-        const skillId = getProfileSkillId(skillEntry);
-        const matched = allSkills.find(
-          (skill: SkillResponse) => skill.skillId === skillId,
+  const loadingAnyMutation =
+    updateProfileMutation.isPending ||
+    updateVolunteerProfileMutation.isPending ||
+    uploadImageMutation.isPending;
+
+  const toggleSkill = (skillId: string) => {
+    setSelectedSkillIds((prev) =>
+      prev.includes(skillId)
+        ? prev.filter((id) => id !== skillId)
+        : [...prev, skillId],
+    );
+  };
+
+  const updateCertificate = (
+    index: number,
+    key: keyof CreateVolunteerCertificateRequest,
+    value: string,
+  ) => {
+    setCertificates((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [key]: value };
+      return next;
+    });
+  };
+
+  const addCertificate = () => {
+    setCertificates((prev) => [...prev, { ...EMPTY_CERTIFICATE }]);
+  };
+
+  const removeCertificate = (index: number) => {
+    setCertificates((prev) => {
+      if (prev.length === 1) return prev;
+      return prev.filter((_, currentIndex) => currentIndex !== index);
+    });
+  };
+
+  const toDateOnly = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const toDateOnlyString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getTodayDateOnly = () => toDateOnly(new Date());
+
+  const getTomorrowDateOnly = () => {
+    const today = getTodayDateOnly();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    return tomorrow;
+  };
+
+  const getDatePickerBounds = (field: PickingField) => {
+    if (field === 'issuedDate') {
+      return {
+        minimumDate: undefined as Date | undefined,
+        maximumDate: getTodayDateOnly(),
+      };
+    }
+
+    return {
+      minimumDate: getTomorrowDateOnly(),
+      maximumDate: undefined as Date | undefined,
+    };
+  };
+
+  const openDateTimePicker = (index: number, field: PickingField) => {
+    const current = certificates[index]?.[field];
+    const parsed = current ? new Date(current) : new Date();
+    const baseDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+    const { minimumDate, maximumDate } = getDatePickerBounds(field);
+    let initialDate = toDateOnly(baseDate);
+
+    if (minimumDate && initialDate < minimumDate) {
+      initialDate = minimumDate;
+    }
+
+    if (maximumDate && initialDate > maximumDate) {
+      initialDate = maximumDate;
+    }
+
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: initialDate,
+        mode: 'date',
+        is24Hour: true,
+        minimumDate,
+        maximumDate,
+        onChange: (event, selectedDate) => {
+          if (event.type === 'dismissed' || !selectedDate) return;
+          updateCertificate(index, field, toDateOnlyString(selectedDate));
+        },
+      });
+      return;
+    }
+
+    setPickerDate(initialDate);
+    setPickingTarget({ index, field });
+    setPickerVisible(true);
+  };
+
+  const onDateTimeChange = (
+    event: DateTimePickerEvent,
+    selected?: Date,
+  ) => {
+    if (event.type === 'dismissed') {
+      setPickerVisible(false);
+      setPickingTarget(null);
+      return;
+    }
+
+    if (!selected || !pickingTarget) return;
+
+    updateCertificate(
+      pickingTarget.index,
+      pickingTarget.field,
+      toDateOnlyString(selected),
+    );
+    setPickerDate(selected);
+    setPickerVisible(false);
+    setPickingTarget(null);
+  };
+
+  const pickAndUploadCertificateImage = async (index: number) => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showWarningToast(
+        'Cần quyền truy cập',
+        'Bạn cần cấp quyền thư viện ảnh để chọn chứng chỉ.',
+      );
+      return;
+    }
+
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.9,
+    });
+
+    if (picked.canceled || !picked.assets?.[0]) return;
+
+    const asset = picked.assets[0];
+    setUploadingCertificateIndex(index);
+    try {
+      const uploadResult = await uploadImageMutation.mutateAsync({
+        localUri: asset.uri,
+        fileName: asset.fileName || `certificate_${Date.now()}.jpg`,
+        mimeType: asset.mimeType || 'image/jpeg',
+      });
+
+      if (!uploadResult.success || !uploadResult.url) {
+        showErrorToast(
+          'Upload ảnh thất bại',
+          uploadResult.message || 'Upload ảnh thất bại.',
         );
-        return getLocalizedSkillName(matched?.name || skillId, matched?.code);
-      })
-      .filter(Boolean);
-  }, [allSkills, volunteerProfile?.skills]);
+        return;
+      }
 
-  const resolvedCertificates = useMemo(
-    () => volunteerProfile?.certificates ?? [],
-    [volunteerProfile?.certificates],
-  );
+      updateCertificate(index, 'fileUrl', uploadResult.url);
+      showSuccessToast(
+        'Upload thành công',
+        'Đã upload ảnh chứng chỉ thành công.',
+      );
+    } finally {
+      setUploadingCertificateIndex(null);
+    }
+  };
+
+  const validateVolunteerSection = () => {
+    const isValidDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+    if (selectedSkillIds.length === 0) {
+      showWarningToast('Thiếu thông tin', 'Vui lòng chọn ít nhất 1 kỹ năng.');
+      return false;
+    }
+
+    if (!hasNoCertificates) {
+      for (const certificate of certificates) {
+        if (
+          !certificate.name.trim() ||
+          !certificate.issuedBy.trim() ||
+          !certificate.issuedDate.trim() ||
+          !certificate.fileUrl.trim()
+        ) {
+          showWarningToast(
+            'Thiếu thông tin',
+            'Vui lòng điền đủ thông tin chứng chỉ bắt buộc hoặc chọn không có chứng chỉ.',
+          );
+          return false;
+        }
+
+        if (!/^https?:\/\//i.test(certificate.fileUrl.trim())) {
+          showWarningToast(
+            'Dữ liệu chưa hợp lệ',
+            'File URL của chứng chỉ phải là link hợp lệ (http/https).',
+          );
+          return false;
+        }
+
+        if (!isValidDateOnly(certificate.issuedDate.trim())) {
+          showWarningToast(
+            'Dữ liệu chưa hợp lệ',
+            'Ngày cấp chứng chỉ phải đúng định dạng YYYY-MM-DD.',
+          );
+          return false;
+        }
+
+        if (
+          certificate.expiryDate?.trim() &&
+          !isValidDateOnly(certificate.expiryDate.trim())
+        ) {
+          showWarningToast(
+            'Dữ liệu chưa hợp lệ',
+            'Ngày hết hạn chứng chỉ phải đúng định dạng YYYY-MM-DD.',
+          );
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
 
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -146,13 +412,35 @@ export default function UpdateProfileVolunteerScreen({
   };
 
   const handleSave = async () => {
+    if (!validateVolunteerSection()) return;
+
     const picturePublicId = extractCloudinaryPublicId(avatarUrl);
-    const userResult = await updateProfileMutation.mutateAsync({
-      displayName: fullName.trim() || undefined,
-      phoneNumber: phone.trim() || undefined,
-      pictureUrl: avatarUrl || undefined,
-      picturePublicId: picturePublicId || undefined,
-    });
+    const volunteerPayload = {
+      descriptions: volunteerProfile?.descriptions?.trim() || '',
+      yearsOfExperience: volunteerProfile?.yearsOfExperience ?? null,
+      preferredTeamRole:
+        Number(volunteerProfile?.preferredTeamRole) || 1,
+      skillIds: selectedSkillIds,
+      certificates: hasNoCertificates
+        ? []
+        : certificates.map((certificate) => ({
+            name: certificate.name.trim(),
+            issuedBy: certificate.issuedBy.trim(),
+            issuedDate: certificate.issuedDate.trim(),
+            expiryDate: certificate.expiryDate?.trim() || null,
+            fileUrl: certificate.fileUrl.trim(),
+          })),
+    };
+
+    const [userResult, volunteerResult] = await Promise.all([
+      updateProfileMutation.mutateAsync({
+        displayName: fullName.trim() || undefined,
+        phoneNumber: phone.trim() || undefined,
+        pictureUrl: avatarUrl || undefined,
+        picturePublicId: picturePublicId || undefined,
+      }),
+      updateVolunteerProfileMutation.mutateAsync(volunteerPayload),
+    ]);
 
     console.log(
       `[UpdateProfileVolunteer] update profile status: ${userResult?.status ?? 'unknown'}`,
@@ -164,8 +452,16 @@ export default function UpdateProfileVolunteerScreen({
 
     if (!isSuccessStatus) {
       showErrorToast(
-        'Không thể cập nhật avatar',
+        'Không thể cập nhật hồ sơ',
         `API cập nhật trả status ${statusCode || 'không xác định'}.`,
+      );
+      return;
+    }
+
+    if (!volunteerResult?.success) {
+      showErrorToast(
+        'Không thể cập nhật kỹ năng',
+        volunteerResult?.message || 'Không thể cập nhật kỹ năng và chứng chỉ.',
       );
       return;
     }
@@ -173,7 +469,10 @@ export default function UpdateProfileVolunteerScreen({
     await queryClient.invalidateQueries({ queryKey: volunteerProfileKeys.all });
     await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     await queryClient.invalidateQueries({ queryKey: ['citizenProfile'] });
-    showSuccessToast('Thành công', 'Đã lưu cập nhật hồ sơ và avatar mới.');
+    showSuccessToast(
+      'Thành công',
+      'Đã lưu cập nhật hồ sơ, kỹ năng, chứng chỉ và avatar mới.',
+    );
     onBack?.();
   };
 
@@ -342,23 +641,27 @@ export default function UpdateProfileVolunteerScreen({
             </View>
             {allSkills.length > 0 ? (
               <View className="flex-row flex-wrap gap-2">
-                {resolvedSkills.map((skill: string, index: number) => (
-                  <View
-                    key={`${skill}-${index}`}
-                    className="rounded-full border px-4 py-2"
-                    style={{
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    <Text
-                      className="text-sm font-medium"
-                      style={{ color: colors.text }}
+                {allSkills.map((skill: SkillResponse) => {
+                  const active = selectedSkillIds.includes(skill.skillId);
+                  return (
+                    <TouchableOpacity
+                      key={skill.skillId}
+                      onPress={() => toggleSkill(skill.skillId)}
+                      className="rounded-full border px-4 py-2"
+                      style={{
+                        backgroundColor: active ? colors.primary : colors.surface,
+                        borderColor: active ? colors.primary : colors.border,
+                      }}
                     >
-                      {skill}
-                    </Text>
-                  </View>
-                ))}
+                      <Text
+                        className="text-sm font-medium"
+                        style={{ color: active ? colors.white : colors.text }}
+                      >
+                        {getLocalizedSkillName(skill.name, skill.code)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             ) : (
               <Text style={{ color: colors.textSecondary }}>
@@ -384,6 +687,52 @@ export default function UpdateProfileVolunteerScreen({
               </View>
             </View>
             <View className="gap-3">
+              <TouchableOpacity
+                onPress={() => {
+                  setHasNoCertificates((prev) => {
+                    const next = !prev;
+                    if (!next && certificates.length === 0) {
+                      setCertificates([{ ...EMPTY_CERTIFICATE }]);
+                    }
+                    return next;
+                  });
+                }}
+                className="flex-row items-center gap-3 rounded-xl border px-4 py-3"
+                style={{
+                  borderColor: hasNoCertificates ? colors.primary : colors.border,
+                  backgroundColor: colors.card,
+                }}
+              >
+                <View
+                  className="h-5 w-5 items-center justify-center rounded border"
+                  style={{
+                    borderColor: hasNoCertificates ? colors.primary : colors.border,
+                    backgroundColor: hasNoCertificates ? colors.primary : 'transparent',
+                  }}
+                >
+                  {hasNoCertificates ? (
+                    <Ionicons name="checkmark" size={14} color={colors.white} />
+                  ) : null}
+                </View>
+                <Text
+                  className="flex-1 text-sm font-medium"
+                  style={{ color: colors.text }}
+                >
+                  Tôi không có chứng chỉ
+                </Text>
+              </TouchableOpacity>
+
+              {!hasNoCertificates ? (
+                <TouchableOpacity onPress={addCertificate}>
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.primary }}
+                  >
+                    + Thêm chứng chỉ
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+
               {resolvedCertificates.length ? (
                 resolvedCertificates.map(
                   (
@@ -391,90 +740,123 @@ export default function UpdateProfileVolunteerScreen({
                     index: number,
                   ) => (
                     <View
-                      key={`${certificate.name}-${index}`}
+                      key={`certificate-${index}`}
                       className="rounded-xl border p-3"
                       style={{
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
                       }}
                     >
-                      <Text
-                        className="text-sm font-bold"
-                        style={{ color: colors.text }}
-                      >
-                        Chứng chỉ #{index + 1}
-                      </Text>
+                      <View className="flex-row items-center justify-between">
+                        <Text
+                          className="text-sm font-bold"
+                          style={{ color: colors.text }}
+                        >
+                          Chứng chỉ #{index + 1}
+                        </Text>
+                        {resolvedCertificates.length > 1 ? (
+                          <TouchableOpacity onPress={() => removeCertificate(index)}>
+                            <Ionicons
+                              name="trash-outline"
+                              size={18}
+                              color={colors.status?.error || colors.primary}
+                            />
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
 
-                      <View
-                        className="mt-2 rounded-lg border px-3 py-2.5"
-                        style={{ borderColor: colors.border }}
+                      <TextInput
+                        value={certificate.name}
+                        onChangeText={(value) => updateCertificate(index, 'name', value)}
+                        placeholder="Tên chứng chỉ"
+                        placeholderTextColor={colors.textSecondary}
+                        className="mt-3 h-12 rounded-lg border px-3"
+                        style={{
+                          borderColor: colors.border,
+                          backgroundColor: colors.card,
+                          color: colors.text,
+                        }}
+                      />
+                      <TextInput
+                        value={certificate.issuedBy}
+                        onChangeText={(value) =>
+                          updateCertificate(index, 'issuedBy', value)
+                        }
+                        placeholder="Đơn vị cấp"
+                        placeholderTextColor={colors.textSecondary}
+                        className="mt-2 h-12 rounded-lg border px-3"
+                        style={{
+                          borderColor: colors.border,
+                          backgroundColor: colors.card,
+                          color: colors.text,
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={() => openDateTimePicker(index, 'issuedDate')}
+                        className="mt-2 h-12 flex-row items-center justify-center gap-2 rounded-lg border"
+                        style={{
+                          borderColor: colors.border,
+                          backgroundColor: colors.card,
+                        }}
                       >
-                        <Text
-                          className="text-xs"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Tên chứng chỉ
-                        </Text>
+                        <Ionicons
+                          name="calendar-outline"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
                         <Text style={{ color: colors.text }}>
-                          {certificate.name || '--'}
+                          {formatDate(certificate.issuedDate, 'Chọn ngày cấp')}
                         </Text>
-                      </View>
-                      <View
-                        className="mt-2 rounded-lg border px-3 py-2.5"
-                        style={{ borderColor: colors.border }}
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => openDateTimePicker(index, 'expiryDate')}
+                        className="mt-2 h-12 flex-row items-center justify-center gap-2 rounded-lg border"
+                        style={{
+                          borderColor: colors.border,
+                          backgroundColor: colors.card,
+                        }}
                       >
-                        <Text
-                          className="text-xs"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Đơn vị cấp
-                        </Text>
+                        <Ionicons
+                          name="time-outline"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
                         <Text style={{ color: colors.text }}>
-                          {certificate.issuedBy || '--'}
+                          {formatDate(certificate.expiryDate, 'Chọn ngày hết hạn')}
                         </Text>
-                      </View>
-                      <View
-                        className="mt-2 rounded-lg border px-3 py-2.5"
-                        style={{ borderColor: colors.border }}
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => pickAndUploadCertificateImage(index)}
+                        disabled={uploadingCertificateIndex === index}
+                        className="mt-2 h-12 flex-row items-center justify-center gap-2 rounded-lg"
+                        style={{ backgroundColor: colors.primary }}
                       >
-                        <Text
-                          className="text-xs"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Ngày cấp
-                        </Text>
-                        <Text style={{ color: colors.text }}>
-                          {formatDate(certificate.issuedDate)}
-                        </Text>
-                      </View>
-                      <View
-                        className="mt-2 rounded-lg border px-3 py-2.5"
-                        style={{ borderColor: colors.border }}
-                      >
-                        <Text
-                          className="text-xs"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Ngày hết hạn
-                        </Text>
-                        <Text style={{ color: colors.text }}>
-                          {formatDate(certificate.expiryDate)}
-                        </Text>
-                      </View>
-                      {certificate.fileUrl ? (
+                        {uploadingCertificateIndex === index ? (
+                          <ActivityIndicator size="small" color={colors.white} />
+                        ) : (
+                          <>
+                            <Ionicons
+                              name="images-outline"
+                              size={18}
+                              color={colors.white}
+                            />
+                            <Text style={{ color: colors.white, fontWeight: '600' }}>
+                              Chọn ảnh từ thư viện
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                      {!!certificate.fileUrl?.trim() &&
+                      /^https?:\/\//i.test(certificate.fileUrl.trim()) ? (
                         <View
-                          className="mt-2 rounded-lg border px-3 py-2.5"
+                          className="mt-2 overflow-hidden rounded-lg border"
                           style={{ borderColor: colors.border }}
                         >
-                          <Text
-                            className="text-xs"
-                            style={{ color: colors.textSecondary }}
-                          >
-                            Ảnh chứng chỉ
-                          </Text>
-                          <Text style={{ color: colors.status.completed }}>
-                            Đã nộp ảnh chứng chỉ
-                          </Text>
+                          <Image
+                            source={{ uri: certificate.fileUrl.trim() }}
+                            className="h-40 w-full"
+                            resizeMode="cover"
+                          />
                         </View>
                       ) : null}
                     </View>
@@ -491,17 +873,28 @@ export default function UpdateProfileVolunteerScreen({
       </ScrollView>
 
       <StickyFooterButton
-        title={updateProfileMutation.isPending ? 'Đang lưu...' : 'Lưu cập nhật'}
+        title={loadingAnyMutation ? 'Đang lưu...' : 'Lưu cập nhật'}
         icon="save"
-        onPress={updateProfileMutation.isPending ? undefined : handleSave}
+        onPress={loadingAnyMutation ? undefined : handleSave}
         backgroundColor={colors.primary}
       />
+
+      {pickerVisible && pickingTarget ? (
+        <DateTimePicker
+          value={pickerDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onDateTimeChange}
+          maximumDate={getDatePickerBounds(pickingTarget.field).maximumDate}
+          minimumDate={getDatePickerBounds(pickingTarget.field).minimumDate}
+        />
+      ) : null}
     </View>
   );
 }
 
-function formatDate(value?: string | null) {
-  if (!value) return '--';
+function formatDate(value?: string | null, fallback = '--') {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('vi-VN');

@@ -26,6 +26,7 @@ import {
 import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import { uploadService } from '@/src/services/uploadService';
 import {
+  CampaignTaskStatus,
   MemberTaskStatus,
   type CampaignTeamResponse,
   type MyMemberTaskResponse,
@@ -37,10 +38,7 @@ import {
   type CampaignHouseholdResponse,
   type HouseholdChecklistItemResponse,
 } from '@/src/types/reliefDistribution';
-import {
-  getVolunteerTaskCategoryLabel,
-  isDeliveryTask,
-} from '@/src/utils/taskClassification';
+import { getVolunteerTaskCategoryLabel } from '@/src/utils/taskClassification';
 import { showErrorToast, showSuccessToast } from '@/src/utils/toast';
 import { validateVolunteerTaskCompletion } from '@/src/utils/volunteerTaskValidation';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,10 +48,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  LayoutAnimation,
   Alert,
   FlatList,
   Image,
+  LayoutAnimation,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -269,6 +267,8 @@ export default function ProgressForReliefScreen({
   >(null);
   const [selectedMemberTaskStatus, setSelectedMemberTaskStatus] =
     useState<MemberTaskStatus | null>(null);
+  const [failureReasonInput, setFailureReasonInput] = useState('');
+  const [showFailureReasonModal, setShowFailureReasonModal] = useState(false);
   const [notes, setNotes] = useState('');
   const [proofAssetsByDeliveryId, setProofAssetsByDeliveryId] =
     useState<ProofAssetMap>({});
@@ -399,18 +399,24 @@ export default function ProgressForReliefScreen({
             householdDeliveryId: item.householdDeliveryId,
             campaignId: item.campaignId,
             campaignHouseholdId:
-              item.campaignHouseholdId || matchedChecklist?.campaignHouseholdId || '',
-            householdCode: item.householdCode || matchedChecklist?.householdCode || '',
+              item.campaignHouseholdId ||
+              matchedChecklist?.campaignHouseholdId ||
+              '',
+            householdCode:
+              item.householdCode || matchedChecklist?.householdCode || '',
             headOfHouseholdName:
               item.headOfHouseholdName ||
               matchedChecklist?.headOfHouseholdName ||
               'Chưa rõ hộ dân',
-            campaignTeamId: item.campaignTeamId || matchedChecklist?.campaignTeamId,
-            campaignTeamName: item.campaignTeamName || matchedChecklist?.campaignTeamName,
+            campaignTeamId:
+              item.campaignTeamId || matchedChecklist?.campaignTeamId,
+            campaignTeamName:
+              item.campaignTeamName || matchedChecklist?.campaignTeamName,
             distributionPointId:
               item.distributionPointId || matchedChecklist?.distributionPointId,
             distributionPointName:
-              item.distributionPointName || matchedChecklist?.distributionPointName,
+              item.distributionPointName ||
+              matchedChecklist?.distributionPointName,
             reliefPackageDefinitionId:
               item.reliefPackageDefinitionId ||
               matchedChecklist?.reliefPackageDefinitionId ||
@@ -421,7 +427,8 @@ export default function ProgressForReliefScreen({
               'Gói cứu trợ',
             deliveryMode: item.deliveryMode,
             status: resolvedDeliveryStatus,
-            scheduledAt: item.scheduledAt || matchedChecklist?.scheduledAt || '',
+            scheduledAt:
+              item.scheduledAt || matchedChecklist?.scheduledAt || '',
             deliveredAt: item.deliveredAt || matchedChecklist?.deliveredAt,
             notes: item.notes || matchedChecklist?.notes,
             proofCount: matchedChecklist?.proofCount ?? item.proofCount ?? 0,
@@ -705,7 +712,8 @@ export default function ProgressForReliefScreen({
     if (
       isPersonalView &&
       flowMode === 'isolated' &&
-      myCampaignTasks.length > 0
+      myCampaignTasks.length > 0 &&
+      !selectedMemberTaskId
     ) {
       setSelectedMemberTaskId(myCampaignTasks[0].memberTaskId);
       setSelectedTaskId(myCampaignTasks[0].campaignTaskId);
@@ -730,6 +738,17 @@ export default function ProgressForReliefScreen({
       return;
     }
 
+    if (
+      selectedMemberTaskId &&
+      !myCampaignTasks.some(
+        (task) => task.memberTaskId === selectedMemberTaskId,
+      )
+    ) {
+      setSelectedMemberTaskId(myCampaignTasks[0]?.memberTaskId ?? null);
+      setSelectedTaskId(myCampaignTasks[0]?.campaignTaskId ?? null);
+      return;
+    }
+
     if (!selectedTaskId && myCampaignTasks.length > 0) {
       setSelectedTaskId(myCampaignTasks[0].campaignTaskId);
       setSelectedMemberTaskId(myCampaignTasks[0].memberTaskId);
@@ -740,6 +759,7 @@ export default function ProgressForReliefScreen({
     myCampaignTasks,
     params.campaignTaskId,
     params.memberTaskId,
+    selectedMemberTaskId,
     selectedTaskId,
   ]);
 
@@ -776,14 +796,8 @@ export default function ProgressForReliefScreen({
       );
       if (selectedMemberTask) return selectedMemberTask;
     }
-    if (selectedTaskId) {
-      const selectedTaskMember = sortedMyMemberTasks.find(
-        (task) => task.campaignTaskId === selectedTaskId,
-      );
-      if (selectedTaskMember) return selectedTaskMember;
-    }
     return sortedMyMemberTasks[0] ?? null;
-  }, [selectedMemberTaskId, selectedTaskId, sortedMyMemberTasks]);
+  }, [selectedMemberTaskId, sortedMyMemberTasks]);
   const selectedTaskValidation = useMemo(
     () =>
       validateVolunteerTaskCompletion({
@@ -1201,6 +1215,14 @@ export default function ProgressForReliefScreen({
       return;
     }
 
+    if (
+      selectedMemberTaskStatus === MemberTaskStatus.Failed &&
+      !failureReasonInput.trim()
+    ) {
+      setShowFailureReasonModal(true);
+      return;
+    }
+
     if (!selectedTaskValidation.isValid) {
       showErrorToast(
         'Chưa thể hoàn thành nhiệm vụ',
@@ -1217,10 +1239,18 @@ export default function ProgressForReliefScreen({
     try {
       await changeMemberStatusMutation.mutateAsync({
         memberTaskId: activeMemberTask.memberTaskId,
-        request: { status: selectedMemberTaskStatus },
+        request: {
+          status: selectedMemberTaskStatus,
+          failureReason:
+            selectedMemberTaskStatus === MemberTaskStatus.Failed
+              ? failureReasonInput.trim()
+              : undefined,
+        },
       });
       showSuccessToast('Đã cập nhật trạng thái nhiệm vụ');
       setSelectedMemberTaskStatus(null);
+      setFailureReasonInput('');
+      setShowFailureReasonModal(false);
       setNotes('');
     } catch (error: any) {
       showErrorToast('Cập nhật thất bại', error?.message);
@@ -1325,7 +1355,8 @@ export default function ProgressForReliefScreen({
                 } else {
                   await completeDeliveryMutation.mutateAsync({
                     campaignId,
-                    householdDeliveryId: primaryDeliveryItem.householdDeliveryId,
+                    householdDeliveryId:
+                      primaryDeliveryItem.householdDeliveryId,
                     request: {
                       reliefPackageDefinitionId:
                         primaryDeliveryItem.reliefPackageDefinitionId ||
@@ -1368,7 +1399,9 @@ export default function ProgressForReliefScreen({
                 });
                 return next;
               });
-              clearSelectedPackagesForHousehold(getHouseholdGroupKey(household));
+              clearSelectedPackagesForHousehold(
+                getHouseholdGroupKey(household),
+              );
             } catch (error: any) {
               showErrorToast('Cập nhật thất bại', error?.message);
             } finally {
@@ -1493,16 +1526,42 @@ export default function ProgressForReliefScreen({
       <View className="bg-transparent px-4 pb-2 pt-1">
         <View
           className="rounded-xl border p-1"
-          style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+          style={{
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }}
         >
           <View className="flex-row gap-2">
-          {shouldShowSubtaskTab ? (
+            {shouldShowSubtaskTab ? (
+              <TouchableOpacity
+                onPress={() => setActiveTab('subtask')}
+                className="flex-1 items-center rounded-lg px-4 py-2"
+                style={{
+                  backgroundColor:
+                    activeTab === 'subtask' ? colors.card : 'transparent',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Text
+                  className="text-sm font-bold"
+                  style={{
+                    color:
+                      activeTab === 'subtask'
+                        ? colors.secondary
+                        : colors.textSecondary,
+                  }}
+                >
+                  Nhiệm vụ con
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
-              onPress={() => setActiveTab('subtask')}
+              onPress={() => setActiveTab('delivery')}
               className="flex-1 items-center rounded-lg px-4 py-2"
               style={{
                 backgroundColor:
-                  activeTab === 'subtask' ? colors.card : 'transparent',
+                  activeTab === 'delivery' ? colors.card : 'transparent',
                 borderWidth: 1,
                 borderColor: colors.border,
               }}
@@ -1511,42 +1570,19 @@ export default function ProgressForReliefScreen({
                 className="text-sm font-bold"
                 style={{
                   color:
-                    activeTab === 'subtask'
+                    activeTab === 'delivery'
                       ? colors.secondary
                       : colors.textSecondary,
                 }}
               >
-                Nhiệm vụ con
+                Phát hàng (
+                {
+                  deliveryItems.filter((h) => h.status === 0 || h.status === 1)
+                    .length
+                }
+                )
               </Text>
             </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity
-            onPress={() => setActiveTab('delivery')}
-            className="flex-1 items-center rounded-lg px-4 py-2"
-            style={{
-              backgroundColor:
-                activeTab === 'delivery' ? colors.card : 'transparent',
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text
-              className="text-sm font-bold"
-              style={{
-                color:
-                  activeTab === 'delivery'
-                    ? colors.secondary
-                    : colors.textSecondary,
-              }}
-            >
-              Phát hàng (
-              {
-                deliveryItems.filter((h) => h.status === 0 || h.status === 1)
-                  .length
-              }
-              )
-            </Text>
-          </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -1567,6 +1603,8 @@ export default function ProgressForReliefScreen({
             {sortedMyMemberTasks.map((memberTask, index) => {
               const selected =
                 activeMemberTask?.memberTaskId === memberTask.memberTaskId;
+              const campaignTaskTitle =
+                memberTask.campaignTaskTitle || 'Chưa rõ';
               return (
                 <TouchableOpacity
                   key={`${memberTask.memberTaskId}-${memberTask.campaignTaskId}-${index}`}
@@ -1593,23 +1631,58 @@ export default function ProgressForReliefScreen({
                     className="mt-1 text-[11px]"
                     style={{ color: colors.textSecondary }}
                   >
-                    Nhiệm vụ chung:{' '}
-                    {(memberTask as any).campaignTaskTitle || 'Chưa rõ'}
+                    Nhiệm vụ chung: {campaignTaskTitle}
                   </Text>
                   <Text
-                    className="mt-1 text-xs"
+                    className="mt-1 text-[11px]"
                     style={{ color: colors.textSecondary }}
                   >
-                    {memberTask.status === MemberTaskStatus.Completed
-                      ? 'Đã hoàn thành'
-                      : memberTask.status === MemberTaskStatus.InProgress
-                        ? 'Đang làm'
-                        : memberTask.status === MemberTaskStatus.Assigned
-                          ? 'Đã giao'
-                          : memberTask.status === MemberTaskStatus.Failed
-                            ? 'Thất bại'
-                            : 'Đã hủy'}
+                    {memberTask.failureReason?.trim()
+                      ? `Lý do lỗi: ${memberTask.failureReason}`
+                      : 'Chạm để xem và cập nhật tiến độ'}
                   </Text>
+                  <View
+                    className="mt-2 self-start rounded-full px-2.5 py-1"
+                    style={{
+                      backgroundColor: `${
+                        memberTask.status === MemberTaskStatus.Completed
+                          ? colors.status.completed
+                          : memberTask.status === MemberTaskStatus.InProgress
+                            ? colors.secondary
+                            : memberTask.status === MemberTaskStatus.Assigned
+                              ? colors.textSecondary
+                              : memberTask.status === MemberTaskStatus.Failed
+                                ? colors.status.error
+                                : colors.textSecondary
+                      }18`,
+                    }}
+                  >
+                    <Text
+                      className="text-[11px] font-bold"
+                      style={{
+                        color:
+                          memberTask.status === MemberTaskStatus.Completed
+                            ? colors.status.completed
+                            : memberTask.status === MemberTaskStatus.InProgress
+                              ? colors.secondary
+                              : memberTask.status === MemberTaskStatus.Assigned
+                                ? colors.textSecondary
+                                : memberTask.status === MemberTaskStatus.Failed
+                                  ? colors.status.error
+                                  : colors.textSecondary,
+                      }}
+                    >
+                      {memberTask.status === MemberTaskStatus.Completed
+                        ? 'Đã hoàn thành'
+                        : memberTask.status === MemberTaskStatus.InProgress
+                          ? 'Đang làm'
+                          : memberTask.status === MemberTaskStatus.Assigned
+                            ? 'Đã giao'
+                            : memberTask.status === MemberTaskStatus.Failed
+                              ? 'Thất bại'
+                              : 'Đã hủy'}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -1717,6 +1790,60 @@ export default function ProgressForReliefScreen({
   );
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <Modal
+        visible={showFailureReasonModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFailureReasonModal(false)}
+      >
+        <View className="flex-1 items-center justify-center bg-black/40 px-4">
+          <View
+            className="w-full max-w-[420px] rounded-2xl border p-4"
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          >
+            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              Lý do thất bại
+            </Text>
+            <Text
+              className="mt-1 text-sm"
+              style={{ color: colors.textSecondary }}
+            >
+              Vui lòng nhập lý do trước khi đánh dấu subtask là thất bại.
+            </Text>
+            <TextInput
+              value={failureReasonInput}
+              onChangeText={setFailureReasonInput}
+              placeholder="Ví dụ: Không tiếp cận được khu vực, thiếu vật lực hoặc điều kiện thời tiết không cho phép..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              textAlignVertical="top"
+              className="mt-4 min-h-[120px] rounded-xl border p-3"
+              style={{
+                borderColor: colors.border,
+                color: colors.text,
+                backgroundColor: colors.background,
+              }}
+            />
+            <View className="mt-4 flex-row justify-end gap-2">
+              <TouchableOpacity
+                onPress={() => setShowFailureReasonModal(false)}
+                className="rounded-lg border px-4 py-2"
+                style={{ borderColor: colors.border }}
+              >
+                <Text style={{ color: colors.textSecondary }}>Để sau</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSubmitSubtaskStatus}
+                className="rounded-lg px-4 py-2"
+                style={{ backgroundColor: colors.status.error }}
+              >
+                <Text className="font-bold text-white">Xác nhận thất bại</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ScreenHeader
         title="Cập nhật tiến độ"
         onBack={onBack ?? (() => router.back())}
@@ -1737,6 +1864,32 @@ export default function ProgressForReliefScreen({
           {/* Status Selection */}
           {activeMemberTask ? (
             <View>
+              {activeMemberTask.campaignTaskStatus ===
+              CampaignTaskStatus.Blocked ? (
+                <View
+                  className="mx-4 mt-4 rounded-xl border p-4"
+                  style={{
+                    backgroundColor: `${colors.status.error}10`,
+                    borderColor: `${colors.status.error}35`,
+                  }}
+                >
+                  <Text
+                    className="text-sm font-bold"
+                    style={{ color: colors.status.error }}
+                  >
+                    Nhiệm vụ chính đang bị chặn
+                  </Text>
+                  <Text
+                    className="mt-1 text-sm"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Có nhiệm vụ con đang thất bại. Bạn có thể mở lại xử lý bằng
+                    cách chuyển trạng thái về "Đang tiến hành", hoặc liên hệ
+                    trưởng nhóm để giao lại hay hủy nhiệm vụ con.
+                  </Text>
+                </View>
+              ) : null}
+
               <View
                 className="mx-4 mt-4 rounded-xl border p-4"
                 style={{
@@ -2282,141 +2435,142 @@ export default function ProgressForReliefScreen({
                     handlePressDeliveryCard(household, false, group.key)
                   }
                 >
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1">
-                    <View className="flex-row flex-wrap items-center gap-2">
-                      {isPending ? (
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => toggleSelectHousehold(group.key)}
-                        >
-                          <Ionicons
-                            name={
-                              selectedHouseholdKeys.includes(group.key)
-                                ? 'checkbox'
-                                : 'square-outline'
-                            }
-                            size={20}
-                            color={
-                              selectedHouseholdKeys.includes(group.key)
-                                ? colors.primary
-                                : colors.textSecondary
-                            }
-                          />
-                        </TouchableOpacity>
-                      ) : null}
-                      <Text
-                        className="font-bold"
-                        style={{ color: colors.text }}
-                      >
-                        {household.headOfHouseholdName}
-                      </Text>
-                      <View
-                        className="rounded-full px-2 py-0.5"
-                        style={{
-                          backgroundColor: isDone
-                            ? `${colors.status.completed}18`
-                            : `${colors.status.pending}18`,
-                        }}
-                      >
-                        <Text
-                          className="text-xs font-bold"
-                          style={{
-                            color: isDone
-                              ? colors.status.completed
-                              : colors.status.pending,
-                          }}
-                        >
-                          {statusLabel}
-                        </Text>
-                      </View>
-                      {pendingPackageItems.length > 0 ? (
-                        <View
-                          className="rounded-full px-2 py-0.5"
-                          style={{ backgroundColor: `${colors.primary}12` }}
-                        >
-                          <Text
-                            className="text-xs font-bold"
-                            style={{ color: colors.primary }}
+                  <View className="flex-row items-start justify-between gap-3">
+                    <View className="flex-1">
+                      <View className="flex-row flex-wrap items-center gap-2">
+                        {isPending ? (
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => toggleSelectHousehold(group.key)}
                           >
-                            Đã chọn {selectedPendingPackageCount}/
-                            {pendingPackageItems.length} gói
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <View
-                      className="mt-3 rounded-xl border px-3 py-2"
-                      style={{
-                        borderColor: `${colors.primary}18`,
-                        backgroundColor: `${colors.primary}06`,
-                      }}
-                    >
-                      <View className="flex-row items-center justify-between gap-2">
+                            <Ionicons
+                              name={
+                                selectedHouseholdKeys.includes(group.key)
+                                  ? 'checkbox'
+                                  : 'square-outline'
+                              }
+                              size={20}
+                              color={
+                                selectedHouseholdKeys.includes(group.key)
+                                  ? colors.primary
+                                  : colors.textSecondary
+                              }
+                            />
+                          </TouchableOpacity>
+                        ) : null}
                         <Text
-                          className="flex-1 text-sm font-bold"
+                          className="font-bold"
                           style={{ color: colors.text }}
                         >
                           {household.headOfHouseholdName}
                         </Text>
+                        <View
+                          className="rounded-full px-2 py-0.5"
+                          style={{
+                            backgroundColor: isDone
+                              ? `${colors.status.completed}18`
+                              : `${colors.status.pending}18`,
+                          }}
+                        >
+                          <Text
+                            className="text-xs font-bold"
+                            style={{
+                              color: isDone
+                                ? colors.status.completed
+                                : colors.status.pending,
+                            }}
+                          >
+                            {statusLabel}
+                          </Text>
+                        </View>
+                        {pendingPackageItems.length > 0 ? (
+                          <View
+                            className="rounded-full px-2 py-0.5"
+                            style={{ backgroundColor: `${colors.primary}12` }}
+                          >
+                            <Text
+                              className="text-xs font-bold"
+                              style={{ color: colors.primary }}
+                            >
+                              Đã chọn {selectedPendingPackageCount}/
+                              {pendingPackageItems.length} gói
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <View
+                        className="mt-3 rounded-xl border px-3 py-2"
+                        style={{
+                          borderColor: `${colors.primary}18`,
+                          backgroundColor: `${colors.primary}06`,
+                        }}
+                      >
+                        <View className="flex-row items-center justify-between gap-2">
+                          <Text
+                            className="flex-1 text-sm font-bold"
+                            style={{ color: colors.text }}
+                          >
+                            {household.headOfHouseholdName}
+                          </Text>
+                          <Text
+                            className="text-xs font-semibold"
+                            style={{ color: colors.textSecondary }}
+                          >
+                            {household.householdCode || 'Chưa rõ mã hộ'}
+                          </Text>
+                        </View>
                         <Text
-                          className="text-xs font-semibold"
+                          className="mt-1 text-xs"
                           style={{ color: colors.textSecondary }}
                         >
-                          {household.householdCode || 'Chưa rõ mã hộ'}
+                          {group.items.length} gói •{' '}
+                          {selectedPendingPackageCount}/
+                          {pendingPackageItems.length} gói đang chọn
                         </Text>
                       </View>
-                      <Text
-                        className="mt-1 text-xs"
-                        style={{ color: colors.textSecondary }}
-                      >
-                        {group.items.length} gói • {selectedPendingPackageCount}/
-                        {pendingPackageItems.length} gói đang chọn
-                      </Text>
+                      <HouseholdPackageSummaryCard
+                        colors={colors}
+                        householdCode={household.householdCode}
+                        itemCount={group.items.length}
+                        packageGroups={group.packageGroups}
+                        getStatusTone={getStatusTone}
+                        getPackageIcon={getPackageIcon}
+                      />
+                      <HouseholdDeliveryPlanCard
+                        colors={colors}
+                        deliveredCount={
+                          group.items.filter(
+                            (item) =>
+                              item.status ===
+                              HouseholdFulfillmentStatus.Delivered,
+                          ).length
+                        }
+                        totalCount={group.items.length}
+                        distributionPointName={
+                          household.distributionPointName || 'Chưa rõ'
+                        }
+                        deliveryMode={household.deliveryMode}
+                        deliveryModeDescription={getDeliveryModeDescription(
+                          household.deliveryMode,
+                        )}
+                        scheduledAt={household.scheduledAt}
+                      />
+                      <HouseholdProofStatusCard
+                        colors={colors}
+                        proofCount={group.proofCount}
+                        cashSupportAmount={group.cashSupportAmount}
+                        helperText={
+                          isPending
+                            ? selectedHouseholdKeys.includes(group.key)
+                              ? 'Đã chọn. Bấm lại để bỏ chọn, kéo xuống để xem chi tiết.'
+                              : 'Bấm vào thẻ để chọn và xem chi tiết.'
+                            : isExpanded
+                              ? 'Đang hiển thị chi tiết hộ dân.'
+                              : 'Bấm vào thẻ để xem chi tiết hộ dân.'
+                        }
+                      />
                     </View>
-                    <HouseholdPackageSummaryCard
-                      colors={colors}
-                      householdCode={household.householdCode}
-                      itemCount={group.items.length}
-                      packageGroups={group.packageGroups}
-                      getStatusTone={getStatusTone}
-                      getPackageIcon={getPackageIcon}
-                    />
-                    <HouseholdDeliveryPlanCard
-                      colors={colors}
-                      deliveredCount={
-                        group.items.filter(
-                          (item) =>
-                            item.status ===
-                            HouseholdFulfillmentStatus.Delivered,
-                        ).length
-                      }
-                      totalCount={group.items.length}
-                      distributionPointName={
-                        household.distributionPointName || 'Chưa rõ'
-                      }
-                      deliveryMode={household.deliveryMode}
-                      deliveryModeDescription={getDeliveryModeDescription(
-                        household.deliveryMode,
-                      )}
-                      scheduledAt={household.scheduledAt}
-                    />
-                    <HouseholdProofStatusCard
-                      colors={colors}
-                      proofCount={group.proofCount}
-                      cashSupportAmount={group.cashSupportAmount}
-                      helperText={
-                        isPending
-                          ? selectedHouseholdKeys.includes(group.key)
-                            ? 'Đã chọn. Bấm lại để bỏ chọn, kéo xuống để xem chi tiết.'
-                            : 'Bấm vào thẻ để chọn và xem chi tiết.'
-                          : isExpanded
-                            ? 'Đang hiển thị chi tiết hộ dân.'
-                            : 'Bấm vào thẻ để xem chi tiết hộ dân.'
-                      }
-                    />
                   </View>
-                </View>
                 </TouchableOpacity>
 
                 {isExpanded ? (
@@ -2530,13 +2684,13 @@ export default function ProgressForReliefScreen({
                                 borderColor: isDeliveredPackage
                                   ? `${colors.status.completed}30`
                                   : checked
-                                  ? colors.primary
-                                  : colors.border,
+                                    ? colors.primary
+                                    : colors.border,
                                 backgroundColor: isDeliveredPackage
                                   ? `${colors.status.completed}08`
                                   : checked
-                                  ? `${colors.primary}10`
-                                  : colors.background,
+                                    ? `${colors.primary}10`
+                                    : colors.background,
                                 opacity: isDeliveredPackage ? 0.65 : 1,
                               }}
                             >
@@ -2553,8 +2707,8 @@ export default function ProgressForReliefScreen({
                                   isDeliveredPackage
                                     ? colors.status.completed
                                     : checked
-                                    ? colors.primary
-                                    : colors.textSecondary
+                                      ? colors.primary
+                                      : colors.textSecondary
                                 }
                               />
                               <View
@@ -2727,7 +2881,9 @@ export default function ProgressForReliefScreen({
                         setExpandedDeliveryId(household.householdDeliveryId);
                         openProofPicker(household.householdDeliveryId);
                       }}
-                      disabled={submittingDeliveryId === household.householdDeliveryId}
+                      disabled={
+                        submittingDeliveryId === household.householdDeliveryId
+                      }
                       className="flex-row items-center justify-center gap-1 rounded-lg border px-4 py-2.5"
                       style={{
                         borderColor: colors.primary,
@@ -2747,7 +2903,9 @@ export default function ProgressForReliefScreen({
                         className="text-sm font-bold"
                         style={{ color: colors.primary }}
                       >
-                        {hasProofForHousehold ? 'Cập nhật bằng chứng' : 'Thêm bằng chứng'}
+                        {hasProofForHousehold
+                          ? 'Cập nhật bằng chứng'
+                          : 'Thêm bằng chứng'}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -2850,16 +3008,25 @@ export default function ProgressForReliefScreen({
                   </ScrollView>
                 )}
 
-                {isPending && (!hasProofForHousehold || selectedPendingPackageCount === 0) ? (
+                {isPending &&
+                (!hasProofForHousehold || selectedPendingPackageCount === 0) ? (
                   <View className="mt-2 gap-1">
                     {!hasProofForHousehold ? (
-                      <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                        Bạn cần thêm ít nhất 1 ảnh/video minh chứng trước khi phát.
+                      <Text
+                        className="text-xs"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Bạn cần thêm ít nhất 1 ảnh/video minh chứng trước khi
+                        phát.
                       </Text>
                     ) : null}
                     {selectedPendingPackageCount === 0 ? (
-                      <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                        Hãy chọn ít nhất 1 gói chưa phát để dùng nút Phát gói đã chọn.
+                      <Text
+                        className="text-xs"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Hãy chọn ít nhất 1 gói chưa phát để dùng nút Phát gói đã
+                        chọn.
                       </Text>
                     ) : null}
                   </View>
