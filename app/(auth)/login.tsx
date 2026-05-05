@@ -3,7 +3,7 @@ import { AppDialog } from '@/src/components/common/AppDialog';
 import { SosFloatingButton } from '@/src/components/common/SosFloatingButton';
 import { useLogin } from '@/src/hooks/useAuthActions';
 import { getScreenScaleConfig } from '@/src/utils/responsive';
-import { showErrorToast, showInfoToast } from '@/src/utils/toast';
+import { showErrorToast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -86,10 +86,6 @@ export default function LoginScreen() {
       setInlineError(msg);
       showErrorToast('Có lỗi xảy ra', msg);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    showInfoToast('Thông báo', 'Tính năng đang được phát triển');
   };
 
   return (
@@ -288,40 +284,6 @@ export default function LoginScreen() {
                   </Text>
                 )}
               </TouchableOpacity>
-
-              <View className="mt-6 items-center">
-                <View className="mb-4 w-full items-center justify-center">
-                  <View
-                    className="h-px w-full"
-                    style={{ backgroundColor: neutralLine }}
-                  />
-                  <Text
-                    className="absolute px-3 text-sm"
-                    style={{ color: '#6B7280', backgroundColor: '#FFFFFF' }}
-                  >
-                    Hoặc đăng nhập
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  className="h-12 w-full flex-row items-center justify-center rounded-xl"
-                  style={{
-                    borderColor: neutralLine,
-                    borderWidth: 1,
-                    backgroundColor: '#FFFFFF',
-                  }}
-                  onPress={handleGoogleLogin}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="logo-google" size={20} color={dangerRed} />
-                  <Text
-                    className="ml-2 text-base font-semibold"
-                    style={{ color: '#1F2937' }}
-                  >
-                    Tiếp tục với Google
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             <Pressable
