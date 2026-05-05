@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
+import { queryClient } from '../lib/queryClient';
 import type { AuthTokens, StoredAuthTokens, User } from '../types/auth';
 
 export interface AuthState {
@@ -9,7 +10,10 @@ export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  setTokens: (accessToken: string, refreshToken: string | null) => Promise<void>;
+  setTokens: (
+    accessToken: string,
+    refreshToken: string | null,
+  ) => Promise<void>;
   setUser: (user: User) => Promise<void>;
   setLoading: (isLoading: boolean) => void;
   logout: () => Promise<void>;
@@ -77,90 +81,96 @@ async function loadTokens(): Promise<StoredAuthTokens> {
   }
 }
 
-export const useAuthStore = create<AuthState>((set: (partial: Partial<AuthState>) => void) => ({
-  accessToken: null,
-  refreshToken: null,
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
+export const useAuthStore = create<AuthState>(
+  (set: (partial: Partial<AuthState>) => void) => ({
+    accessToken: null,
+    refreshToken: null,
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
 
-  setTokens: async (accessToken: string, refreshToken: string | null) => {
-    try {
-      await saveTokens({ accessToken, refreshToken });
-      set({
-        accessToken,
-        refreshToken,
-        isAuthenticated: Boolean(accessToken),
-      });
-    } catch {
-      set({ isAuthenticated: Boolean(accessToken) });
-    }
-  },
+    setTokens: async (accessToken: string, refreshToken: string | null) => {
+      try {
+        await saveTokens({ accessToken, refreshToken });
+        set({
+          accessToken,
+          refreshToken,
+          isAuthenticated: Boolean(accessToken),
+        });
+      } catch {
+        set({ isAuthenticated: Boolean(accessToken) });
+      }
+    },
 
-  setUser: async (user: User) => {
-    try {
-      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-      set({ user });
-    } catch {
-      set({ user });
-    }
-  },
-
-  setLoading: (isLoading: boolean) => {
-    set({ isLoading });
-  },
-
-  logout: async () => {
-    try {
-      await Promise.all([
-        secureRemoveItem(STORAGE_KEY),
-        AsyncStorage.removeItem(USER_STORAGE_KEY),
-      ]);
-
-      set({
-        accessToken: null,
-        refreshToken: null,
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-    } catch {
-      set({
-        accessToken: null,
-        refreshToken: null,
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-    }
-  },
-
-  hydrateAuth: async () => {
-    try {
-      const [{ accessToken, refreshToken }, userData] = await Promise.all([
-        loadTokens(),
-        AsyncStorage.getItem(USER_STORAGE_KEY),
-      ]);
-
-      set({
-        accessToken,
-        refreshToken,
-        isAuthenticated: Boolean(accessToken),
-      });
-
-      if (userData) {
-        const user = JSON.parse(userData) as User;
+    setUser: async (user: User) => {
+      try {
+        await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+        set({ user });
+      } catch {
         set({ user });
       }
-    } catch {
-      set({
-        accessToken: null,
-        refreshToken: null,
-        user: null,
-        isAuthenticated: false,
-      });
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-}));
+    },
+
+    setLoading: (isLoading: boolean) => {
+      set({ isLoading });
+    },
+
+    logout: async () => {
+      try {
+        await Promise.all([
+          secureRemoveItem(STORAGE_KEY),
+          AsyncStorage.removeItem(USER_STORAGE_KEY),
+        ]);
+
+        queryClient.clear();
+
+        set({
+          accessToken: null,
+          refreshToken: null,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      } catch {
+        queryClient.clear();
+
+        set({
+          accessToken: null,
+          refreshToken: null,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      }
+    },
+
+    hydrateAuth: async () => {
+      try {
+        const [{ accessToken, refreshToken }, userData] = await Promise.all([
+          loadTokens(),
+          AsyncStorage.getItem(USER_STORAGE_KEY),
+        ]);
+
+        set({
+          accessToken,
+          refreshToken,
+          isAuthenticated: Boolean(accessToken),
+        });
+
+        if (userData) {
+          const user = JSON.parse(userData) as User;
+          set({ user });
+        }
+      } catch {
+        set({
+          accessToken: null,
+          refreshToken: null,
+          user: null,
+          isAuthenticated: false,
+        });
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+  }),
+);
