@@ -1,5 +1,4 @@
 import '@/global.css';
-import AppBottomSheet from '@/src/components/common/AppBottomSheet';
 import ImageUploader from '@/src/components/common/ImageUploader';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import WebViewMap from '@/src/components/common/WebViewMap';
@@ -8,22 +7,22 @@ import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useRescueTeamActions } from '@/src/hooks/useRescueTeamActions';
 import { useTeamTasksController } from '@/src/hooks/useTeamTasksController';
 import {
-  RescueBatchItem as BaseRescueBatchItem,
-  RescueActiveBatchResponse,
-  rescueTeamService,
+    RescueBatchItem as BaseRescueBatchItem,
+    RescueActiveBatchResponse,
+    rescueTeamService,
 } from '@/src/services/rescueTeamService';
 import { getPrimaryVehicleLabel, getVehicleLabels } from '@/src/utils/vehicle';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useEffect, useRef } from 'react';
 import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import TeamTasksMap from './TeamTasksMap';
 
@@ -90,6 +89,7 @@ export default function RescueMissionCenterScreen({
     actionSubmitting,
     uploadingImages,
     lastHeartbeatError,
+    userLocation,
     loadData,
     displayBatch,
     filteredItems,
@@ -499,184 +499,225 @@ export default function RescueMissionCenterScreen({
         ) : null}
 
         {mapStyle ? (
-          <View className="flex-1">
+          <View style={{ flex: 1 }}>
             {supportsNativeMap ? (
-              <TeamTasksMap
-                batch={batch}
-                selectedMission={selectedMission}
-                currentMission={currentMission}
-                routeCoordinates={routeCoordinates}
-                mapStyle={mapStyle}
-                onSelectMission={setSelectedMission}
-              />
+              <View style={{ height: '46%' }}>
+                <TeamTasksMap
+                  batch={batch}
+                  selectedMission={selectedMission}
+                  currentMission={currentMission}
+                  teamCoordinate={
+                    userLocation
+                      ? [userLocation.longitude, userLocation.latitude]
+                      : null
+                  }
+                  routeCoordinates={routeCoordinates}
+                  mapStyle={mapStyle}
+                  onSelectMission={setSelectedMission}
+                />
+              </View>
             ) : (
-              <FallbackMapPreview
-                batch={batch}
-                selectedMission={selectedMission}
-                routeCoordinates={routeCoordinates}
-                colors={colors}
-              />
+              <View style={{ height: '46%' }}>
+                <FallbackMapPreview
+                  batch={batch}
+                  selectedMission={selectedMission}
+                  teamCoordinate={
+                    userLocation
+                      ? [userLocation.longitude, userLocation.latitude]
+                      : null
+                  }
+                  routeCoordinates={routeCoordinates}
+                  colors={colors}
+                />
+              </View>
             )}
 
             {selectedMission ? (
-              <AppBottomSheet
-                open
-                snapPoints={['52%', '76%']}
-                allowCloseByPanDown={false}
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.card,
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                  overflow: 'hidden',
+                }}
               >
-                <Text
-                  className="text-xl font-bold"
-                  style={{ color: colors.text }}
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+                  showsVerticalScrollIndicator={false}
                 >
-                  {selectedMission.description}
-                </Text>
-
-                <View className="mt-4 flex-row flex-wrap gap-2">
-                  <MetaBadge
-                    icon="alert-circle-outline"
-                    label={typeBadge(selectedMission.rescueRequestType).label}
-                    bg={typeBadge(selectedMission.rescueRequestType).bg}
-                    text={typeBadge(selectedMission.rescueRequestType).text}
-                  />
-                  <MetaBadge
-                    icon="time-outline"
-                    label={`${formatMinutes(selectedMission.estimatedMinutes)} phút`}
-                    bg={`${colors.info}22`}
-                    text={colors.info}
-                  />
-                  <MetaBadge
-                    icon="navigate-outline"
-                    label={`${formatDistanceKm(selectedMission.distanceKm)} km`}
-                    bg={colors.surface}
-                    text={colors.textSecondary}
-                  />
-                  <MetaBadge
-                    icon="flag-outline"
-                    label={
-                      statusBadge(
-                        getMissionDisplayStatus(selectedMission) || undefined,
-                      ).label
-                    }
-                    bg={
-                      statusBadge(
-                        getMissionDisplayStatus(selectedMission) || undefined,
-                      ).bg
-                    }
-                    text={
-                      statusBadge(
-                        getMissionDisplayStatus(selectedMission) || undefined,
-                      ).text
-                    }
-                  />
-                </View>
-
-                <View
-                  className="mt-4 rounded-xl border px-4 py-3"
-                  style={{
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  }}
-                >
-                  <Text
-                    className="text-xs font-semibold"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Phương tiện
-                  </Text>
-                  <View className="mt-1 flex-row items-center gap-2">
+                  <View className="mb-3 items-center">
                     <View
-                      className="rounded-full px-2 py-1"
-                      style={{ backgroundColor: `${colors.primary}22` }}
+                      className="h-1.5 w-12 rounded-full"
+                      style={{ backgroundColor: colors.border }}
+                    />
+                  </View>
+
+                  <Text
+                    className="text-xl font-bold"
+                    style={{ color: colors.text }}
+                  >
+                    {selectedMission.description}
+                  </Text>
+
+                  <View className="mt-4 flex-row flex-wrap gap-2">
+                    <MetaBadge
+                      icon="alert-circle-outline"
+                      label={typeBadge(selectedMission.rescueRequestType).label}
+                      bg={typeBadge(selectedMission.rescueRequestType).bg}
+                      text={typeBadge(selectedMission.rescueRequestType).text}
+                    />
+                    <MetaBadge
+                      icon="time-outline"
+                      label={`${formatMinutes(selectedMission.estimatedMinutes)} phút`}
+                      bg={`${colors.info}22`}
+                      text={colors.info}
+                    />
+                    <MetaBadge
+                      icon="navigate-outline"
+                      label={`${formatDistanceKm(selectedMission.distanceKm)} km`}
+                      bg={colors.surface}
+                      text={colors.textSecondary}
+                    />
+                    <MetaBadge
+                      icon="flag-outline"
+                      label={
+                        statusBadge(
+                          getMissionDisplayStatus(selectedMission) || undefined,
+                        ).label
+                      }
+                      bg={
+                        statusBadge(
+                          getMissionDisplayStatus(selectedMission) || undefined,
+                        ).bg
+                      }
+                      text={
+                        statusBadge(
+                          getMissionDisplayStatus(selectedMission) || undefined,
+                        ).text
+                      }
+                    />
+                  </View>
+
+                  <View
+                    className="mt-4 rounded-xl border px-4 py-3"
+                    style={{
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                    }}
+                  >
+                    <Text
+                      className="text-xs font-semibold"
+                      style={{ color: colors.textSecondary }}
                     >
-                      <Text
-                        className="text-[10px] font-bold uppercase"
-                        style={{ color: colors.primary }}
+                      Phương tiện
+                    </Text>
+                    <View className="mt-1 flex-row items-center gap-2">
+                      <View
+                        className="rounded-full px-2 py-1"
+                        style={{ backgroundColor: `${colors.primary}22` }}
                       >
-                        Chính
+                        <Text
+                          className="text-[10px] font-bold uppercase"
+                          style={{ color: colors.primary }}
+                        >
+                          Chính
+                        </Text>
+                      </View>
+                      <Text
+                        className="text-sm font-semibold"
+                        style={{ color: colors.text }}
+                      >
+                        {getPrimaryVehicleLabel(selectedMission)}
                       </Text>
                     </View>
-                    <Text
-                      className="text-sm font-semibold"
-                      style={{ color: colors.text }}
-                    >
-                      {getPrimaryVehicleLabel(selectedMission)}
-                    </Text>
-                  </View>
-                  {selectedMission.vehicles?.length ? (
-                    <View className="mt-3 gap-2">
-                      <Text
-                        className="text-xs font-semibold uppercase tracking-wide"
-                        style={{ color: colors.textSecondary }}
-                      >
-                        Xe phụ
-                      </Text>
-                      {getVehicleLabels(selectedMission.vehicles)
-                        .filter((vehicle) => !vehicle.isPrimary)
-                        .map((vehicle) => (
-                          <View
-                            key={`${vehicle.label}-${vehicle.isPrimary}`}
-                            className="flex-row items-center justify-between rounded-lg px-3 py-2"
-                            style={{ backgroundColor: colors.card }}
-                          >
-                            <Text
-                              className="text-sm font-medium"
-                              style={{ color: colors.text }}
-                            >
-                              {vehicle.label}
-                            </Text>
+                    {selectedMission.vehicles?.length ? (
+                      <View className="mt-3 gap-2">
+                        <Text
+                          className="text-xs font-semibold uppercase tracking-wide"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Xe phụ
+                        </Text>
+                        {getVehicleLabels(selectedMission.vehicles)
+                          .filter((vehicle) => !vehicle.isPrimary)
+                          .map((vehicle) => (
                             <View
-                              className="rounded-full px-2 py-1"
-                              style={{
-                                backgroundColor: `${colors.textSecondary}22`,
-                              }}
+                              key={`${vehicle.label}-${vehicle.isPrimary}`}
+                              className="flex-row items-center justify-between rounded-lg px-3 py-2"
+                              style={{ backgroundColor: colors.card }}
                             >
                               <Text
-                                className="text-[10px] font-bold"
-                                style={{ color: colors.textSecondary }}
+                                className="text-sm font-medium"
+                                style={{ color: colors.text }}
                               >
-                                Phụ
+                                {vehicle.label}
                               </Text>
+                              <View
+                                className="rounded-full px-2 py-1"
+                                style={{
+                                  backgroundColor: `${colors.textSecondary}22`,
+                                }}
+                              >
+                                <Text
+                                  className="text-[10px] font-bold"
+                                  style={{ color: colors.textSecondary }}
+                                >
+                                  Phụ
+                                </Text>
+                              </View>
                             </View>
-                          </View>
-                        ))}
-                    </View>
-                  ) : null}
-                </View>
+                          ))}
+                      </View>
+                    ) : null}
+                  </View>
 
-                <View className="mt-4 flex-row gap-3">
-                  <TouchableOpacity
-                    onPress={() => callReporter(selectedMission.reporterPhone)}
-                    className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
-                    style={{ borderColor: colors.border }}
-                  >
-                    <Ionicons
-                      name="call-outline"
-                      size={18}
-                      color={colors.primary}
-                    />
-                    <Text
-                      className="font-semibold"
-                      style={{ color: colors.text }}
+                  <View className="mt-4 flex-row gap-3">
+                    <TouchableOpacity
+                      onPress={() =>
+                        callReporter(selectedMission.reporterPhone)
+                      }
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
+                      style={{ borderColor: colors.border }}
                     >
-                      Gọi người báo tin
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() =>
-                      rescueTeamService.openExternalNavigation(selectedMission)
-                    }
-                    className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
-                    style={{ backgroundColor: colors.primary }}
-                  >
-                    <Ionicons name="navigate-outline" size={18} color="#fff" />
-                    <Text className="font-semibold text-white">Dẫn đường</Text>
-                  </TouchableOpacity>
-                </View>
+                      <Ionicons
+                        name="call-outline"
+                        size={18}
+                        color={colors.primary}
+                      />
+                      <Text
+                        className="font-semibold"
+                        style={{ color: colors.text }}
+                      >
+                        Gọi người báo tin
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() =>
+                        rescueTeamService.openExternalNavigation(
+                          selectedMission,
+                        )
+                      }
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
+                      style={{ backgroundColor: colors.primary }}
+                    >
+                      <Ionicons
+                        name="navigate-outline"
+                        size={18}
+                        color="#fff"
+                      />
+                      <Text className="font-semibold text-white">
+                        Dẫn đường
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
 
-                {isLeader && isCurrentMissionSelected
-                  ? renderLeaderMissionActions(selectedMission)
-                  : null}
-              </AppBottomSheet>
+                  {isLeader && isCurrentMissionSelected
+                    ? renderLeaderMissionActions(selectedMission)
+                    : null}
+                </ScrollView>
+              </View>
             ) : null}
           </View>
         ) : (
@@ -1353,34 +1394,50 @@ function StepGroup({
 function FallbackMapPreview({
   batch,
   selectedMission,
+  teamCoordinate,
   routeCoordinates,
   colors,
 }: {
   batch: RescueActiveBatchResponse | null;
   selectedMission: RescueBatchItem | null;
+  teamCoordinate: [number, number] | null;
   routeCoordinates: [number, number][];
   colors: any;
 }) {
-  const markers = (batch?.items ?? [])
-    .map((item) => {
-      const coordinate = rescueTeamService.toMapCoordinate(item);
-      if (!coordinate) return null;
-      const emergency = item.rescueRequestType === 'Emergency';
-      return {
-        id: item.rescueBatchItemId,
-        coordinate,
-        color: emergency ? colors.error : colors.info,
-        size: 14,
-      };
-    })
-    .filter(Boolean) as {
+  const markers = [
+    teamCoordinate
+      ? {
+          id: 'team-location',
+          coordinate: teamCoordinate,
+          color: colors.success,
+          size: 30,
+          icon: '👥',
+        }
+      : null,
+    ...(batch?.items ?? [])
+      .map((item) => {
+        const coordinate = rescueTeamService.toMapCoordinate(item);
+        if (!coordinate) return null;
+        const emergency = item.rescueRequestType === 'Emergency';
+        return {
+          id: item.rescueBatchItemId,
+          coordinate,
+          color: emergency ? colors.error : colors.info,
+          size: 18,
+          icon: emergency ? '⚠️' : '📍',
+        };
+      })
+      .filter(Boolean),
+  ].filter(Boolean) as {
     id: string;
     coordinate: [number, number];
     color: string;
     size?: number;
+    icon?: string;
   }[];
 
   const center =
+    teamCoordinate ||
     (selectedMission && rescueTeamService.toMapCoordinate(selectedMission)) ||
     markers[0]?.coordinate ||
     ([106.629, 10.724] as const);
@@ -1389,7 +1446,7 @@ function FallbackMapPreview({
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
       <WebViewMap
         center={center}
-        zoom={13}
+        zoom={15}
         markers={markers}
         routeCoordinates={routeCoordinates}
         routeColor={colors.info}

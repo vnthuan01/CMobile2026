@@ -1,5 +1,4 @@
 import '@/global.css';
-import AppBottomSheet from '@/src/components/common/AppBottomSheet';
 import ImageUploader from '@/src/components/common/ImageUploader';
 import ScreenHeader from '@/src/components/common/ScreenHeader';
 import WebViewMap from '@/src/components/common/WebViewMap';
@@ -8,25 +7,25 @@ import { useBottomContentInset } from '@/src/hooks/useBottomContentInset';
 import { useRescueTeamActions } from '@/src/hooks/useRescueTeamActions';
 import { useTeamTasksController } from '@/src/hooks/useTeamTasksController';
 import {
-  RescueBatchItem as BaseRescueBatchItem,
-  RescueActiveBatchResponse,
-  rescueTeamService,
+    RescueBatchItem as BaseRescueBatchItem,
+    RescueActiveBatchResponse,
+    rescueTeamService,
 } from '@/src/services/rescueTeamService';
 import {
-  formatVehicleLabel,
-  getPrimaryVehicleLabel,
+    formatVehicleLabel,
+    getPrimaryVehicleLabel,
 } from '@/src/utils/vehicle';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useEffect, useRef } from 'react';
 import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import TeamTasksMap from './TeamTasksMap';
 
@@ -93,6 +92,7 @@ export default function TeamTasksScreen({
     actionSubmitting,
     uploadingImages,
     lastHeartbeatError,
+    userLocation,
     loadData,
     displayBatch,
     filteredItems,
@@ -502,176 +502,217 @@ export default function TeamTasksScreen({
         ) : null}
 
         {mapStyle ? (
-          <View className="flex-1">
+          <View style={{ flex: 1 }}>
             {supportsNativeMap ? (
-              <TeamTasksMap
-                batch={batch}
-                selectedMission={selectedMission}
-                currentMission={currentMission}
-                routeCoordinates={routeCoordinates}
-                mapStyle={mapStyle}
-                onSelectMission={setSelectedMission}
-              />
+              <View style={{ height: '46%' }}>
+                <TeamTasksMap
+                  batch={batch}
+                  selectedMission={selectedMission}
+                  currentMission={currentMission}
+                  teamCoordinate={
+                    userLocation
+                      ? [userLocation.longitude, userLocation.latitude]
+                      : null
+                  }
+                  routeCoordinates={routeCoordinates}
+                  mapStyle={mapStyle}
+                  onSelectMission={setSelectedMission}
+                />
+              </View>
             ) : (
-              <FallbackMapPreview
-                batch={batch}
-                selectedMission={selectedMission}
-                routeCoordinates={routeCoordinates}
-                colors={colors}
-              />
+              <View style={{ height: '46%' }}>
+                <FallbackMapPreview
+                  batch={batch}
+                  selectedMission={selectedMission}
+                  teamCoordinate={
+                    userLocation
+                      ? [userLocation.longitude, userLocation.latitude]
+                      : null
+                  }
+                  routeCoordinates={routeCoordinates}
+                  colors={colors}
+                />
+              </View>
             )}
 
             {selectedMission ? (
-              <AppBottomSheet
-                open
-                snapPoints={['52%', '76%']}
-                allowCloseByPanDown={false}
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.card,
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                  overflow: 'hidden',
+                }}
               >
-                <Text
-                  className="text-xl font-bold"
-                  style={{ color: colors.text }}
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+                  showsVerticalScrollIndicator={false}
                 >
-                  {selectedMission.description}
-                </Text>
+                  <View className="mb-3 items-center">
+                    <View
+                      className="h-1.5 w-12 rounded-full"
+                      style={{ backgroundColor: colors.border }}
+                    />
+                  </View>
 
-                <View className="mt-4 flex-row flex-wrap gap-2">
-                  <MetaBadge
-                    icon="alert-circle-outline"
-                    label={typeBadge(selectedMission.rescueRequestType).label}
-                    bg={typeBadge(selectedMission.rescueRequestType).bg}
-                    text={typeBadge(selectedMission.rescueRequestType).text}
-                  />
-                  <MetaBadge
-                    icon="time-outline"
-                    label={`${formatMinutes(selectedMission.estimatedMinutes)} phút`}
-                    bg={`${colors.info}22`}
-                    text={colors.info}
-                  />
-                  <MetaBadge
-                    icon="navigate-outline"
-                    label={`${formatDistanceKm(selectedMission.distanceKm)} km`}
-                    bg={colors.surface}
-                    text={colors.textSecondary}
-                  />
-                  <MetaBadge
-                    icon="flag-outline"
-                    label={
-                      statusBadge(
-                        getMissionDisplayStatus(selectedMission) || undefined,
-                      ).label
-                    }
-                    bg={
-                      statusBadge(
-                        getMissionDisplayStatus(selectedMission) || undefined,
-                      ).bg
-                    }
-                    text={
-                      statusBadge(
-                        getMissionDisplayStatus(selectedMission) || undefined,
-                      ).text
-                    }
-                  />
-                </View>
-
-                <View
-                  className="mt-4 rounded-xl border px-4 py-3"
-                  style={{
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  }}
-                >
                   <Text
-                    className="text-xs font-semibold"
-                    style={{ color: colors.textSecondary }}
+                    className="text-xl font-bold"
+                    style={{ color: colors.text }}
                   >
-                    Xe chính
+                    {selectedMission.description}
                   </Text>
-                  <View className="mt-3 gap-2">
+
+                  <View className="mt-4 flex-row flex-wrap gap-2">
+                    <MetaBadge
+                      icon="alert-circle-outline"
+                      label={typeBadge(selectedMission.rescueRequestType).label}
+                      bg={typeBadge(selectedMission.rescueRequestType).bg}
+                      text={typeBadge(selectedMission.rescueRequestType).text}
+                    />
+                    <MetaBadge
+                      icon="time-outline"
+                      label={`${formatMinutes(selectedMission.estimatedMinutes)} phút`}
+                      bg={`${colors.info}22`}
+                      text={colors.info}
+                    />
+                    <MetaBadge
+                      icon="navigate-outline"
+                      label={`${formatDistanceKm(selectedMission.distanceKm)} km`}
+                      bg={colors.surface}
+                      text={colors.textSecondary}
+                    />
+                    <MetaBadge
+                      icon="flag-outline"
+                      label={
+                        statusBadge(
+                          getMissionDisplayStatus(selectedMission) || undefined,
+                        ).label
+                      }
+                      bg={
+                        statusBadge(
+                          getMissionDisplayStatus(selectedMission) || undefined,
+                        ).bg
+                      }
+                      text={
+                        statusBadge(
+                          getMissionDisplayStatus(selectedMission) || undefined,
+                        ).text
+                      }
+                    />
+                  </View>
+
+                  <View
+                    className="mt-4 rounded-xl border px-4 py-3"
+                    style={{
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                    }}
+                  >
                     <Text
-                      className="text-xs font-semibold uppercase tracking-wide"
+                      className="text-xs font-semibold"
                       style={{ color: colors.textSecondary }}
                     >
-                      Danh sách xe
+                      Xe chính
                     </Text>
-                    {selectedMission.vehicles?.length ? (
-                      selectedMission.vehicles.map((vehicle) => (
-                        <View
-                          key={vehicle.vehicleId}
-                          className="flex-row items-center justify-between rounded-lg px-3 py-2"
-                          style={{ backgroundColor: colors.card }}
-                        >
-                          <Text
-                            className="text-sm font-medium"
-                            style={{ color: colors.text }}
-                          >
-                            {formatVehicleLabel(vehicle)}
-                          </Text>
-                          <View
-                            className="rounded-full px-2 py-1"
-                            style={{
-                              backgroundColor: vehicle.isPrimary
-                                ? `${colors.primary}22`
-                                : `${colors.textSecondary}22`,
-                            }}
-                          >
-                            <Text
-                              className="text-[10px] font-bold"
-                              style={{
-                                color: vehicle.isPrimary
-                                  ? colors.primary
-                                  : colors.textSecondary,
-                              }}
-                            >
-                              {vehicle.isPrimary ? 'Chính' : 'Phụ'}
-                            </Text>
-                          </View>
-                        </View>
-                      ))
-                    ) : (
+                    <View className="mt-3 gap-2">
                       <Text
-                        className="text-sm"
+                        className="text-xs font-semibold uppercase tracking-wide"
                         style={{ color: colors.textSecondary }}
                       >
-                        Chưa có xe được phân công
+                        Danh sách xe
                       </Text>
-                    )}
+                      {selectedMission.vehicles?.length ? (
+                        selectedMission.vehicles.map((vehicle) => (
+                          <View
+                            key={vehicle.vehicleId}
+                            className="flex-row items-center justify-between rounded-lg px-3 py-2"
+                            style={{ backgroundColor: colors.card }}
+                          >
+                            <Text
+                              className="text-sm font-medium"
+                              style={{ color: colors.text }}
+                            >
+                              {formatVehicleLabel(vehicle)}
+                            </Text>
+                            <View
+                              className="rounded-full px-2 py-1"
+                              style={{
+                                backgroundColor: vehicle.isPrimary
+                                  ? `${colors.primary}22`
+                                  : `${colors.textSecondary}22`,
+                              }}
+                            >
+                              <Text
+                                className="text-[10px] font-bold"
+                                style={{
+                                  color: vehicle.isPrimary
+                                    ? colors.primary
+                                    : colors.textSecondary,
+                                }}
+                              >
+                                {vehicle.isPrimary ? 'Chính' : 'Phụ'}
+                              </Text>
+                            </View>
+                          </View>
+                        ))
+                      ) : (
+                        <Text
+                          className="text-sm"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Chưa có xe được phân công
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                </View>
 
-                <View className="mt-4 flex-row gap-3">
-                  <TouchableOpacity
-                    onPress={() => callReporter(selectedMission.reporterPhone)}
-                    className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
-                    style={{ borderColor: colors.border }}
-                  >
-                    <Ionicons
-                      name="call-outline"
-                      size={18}
-                      color={colors.primary}
-                    />
-                    <Text
-                      className="font-semibold"
-                      style={{ color: colors.text }}
+                  <View className="mt-4 flex-row gap-3">
+                    <TouchableOpacity
+                      onPress={() =>
+                        callReporter(selectedMission.reporterPhone)
+                      }
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3"
+                      style={{ borderColor: colors.border }}
                     >
-                      Gọi người báo tin
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() =>
-                      rescueTeamService.openExternalNavigation(selectedMission)
-                    }
-                    className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
-                    style={{ backgroundColor: colors.primary }}
-                  >
-                    <Ionicons name="navigate-outline" size={18} color="#fff" />
-                    <Text className="font-semibold text-white">Dẫn đường</Text>
-                  </TouchableOpacity>
-                </View>
+                      <Ionicons
+                        name="call-outline"
+                        size={18}
+                        color={colors.primary}
+                      />
+                      <Text
+                        className="font-semibold"
+                        style={{ color: colors.text }}
+                      >
+                        Gọi người báo tin
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() =>
+                        rescueTeamService.openExternalNavigation(
+                          selectedMission,
+                        )
+                      }
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
+                      style={{ backgroundColor: colors.primary }}
+                    >
+                      <Ionicons
+                        name="navigate-outline"
+                        size={18}
+                        color="#fff"
+                      />
+                      <Text className="font-semibold text-white">
+                        Dẫn đường
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
 
-                {isLeader && isCurrentMissionSelected
-                  ? renderLeaderMissionActions(selectedMission)
-                  : null}
-              </AppBottomSheet>
+                  {isLeader && isCurrentMissionSelected
+                    ? renderLeaderMissionActions(selectedMission)
+                    : null}
+                </ScrollView>
+              </View>
             ) : null}
           </View>
         ) : (

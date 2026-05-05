@@ -2,6 +2,7 @@ import '@/global.css';
 import { AppDialog, useDialog } from '@/src/components/common/AppDialog';
 import Header from '@/src/components/header/header';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useMyRescueRequests } from '@/src/hooks/useMyRescueRequests';
 import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
 import { usePriorityCriteria } from '@/src/hooks/useRescueMeta';
 import { useSubmitRescueRequest } from '@/src/hooks/useSubmitRescueRequest';
@@ -81,6 +82,15 @@ const getCriteriaCategory = (code?: string): CriteriaCategory | null => {
   return null;
 };
 
+const isTerminalRescueRequestStatus = (status?: string | null) => {
+  const normalized = String(status ?? '')
+    .trim()
+    .toLowerCase();
+  return ['completed', 'cancelled', 'canceled', 'done', 'closed'].includes(
+    normalized,
+  );
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function RequestRescueScreen({
   onBack,
@@ -97,6 +107,10 @@ export default function RequestRescueScreen({
   const uploadImageMutation = useUploadImage();
   const submitRescueRequestMutation = useSubmitRescueRequest();
   const userProfileQuery = useUserProfile(isAuthenticated);
+  const myRescueRequestsQuery = useMyRescueRequests({
+    pageSize: 20,
+    enabled: isAuthenticated,
+  });
 
   // ── Form state ───────────────────────────────────────────────────────────
   const [rescueType, setRescueType] = useState<RescueType>(
@@ -138,6 +152,9 @@ export default function RequestRescueScreen({
 
   const userProfile = userProfileQuery.data?.profile;
   const profileContactLoading = isAuthenticated && userProfileQuery.isLoading;
+  const existingRescueRequest = (myRescueRequestsQuery.data ?? []).find(
+    (request) => !isTerminalRescueRequestStatus(request.rescueRequestStatus),
+  );
   const resolvedReporterFullName =
     userProfile?.displayName?.trim() || authUser?.user_name?.trim() || '';
   const resolvedReporterPhone = userProfile?.phoneNumber?.trim() || '';
@@ -145,6 +162,10 @@ export default function RequestRescueScreen({
   const hasLockedPhone = Boolean(resolvedReporterPhone);
   const needsProfileCompletion =
     isAuthenticated && (!resolvedReporterFullName || !resolvedReporterPhone);
+  const isCheckingExistingRequest =
+    isAuthenticated && myRescueRequestsQuery.isLoading;
+  const canSubmitNewRequest =
+    !existingRescueRequest && !isCheckingExistingRequest;
 
   useEffect(() => {
     if (detectedAddress && !address) {
@@ -288,6 +309,16 @@ export default function RequestRescueScreen({
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
+    if (!canSubmitNewRequest) {
+      showWarningToast(
+        'Không thể gửi yêu cầu mới',
+        existingRescueRequest
+          ? 'Bạn đang có một yêu cầu cứu hộ chưa được xử lý. Chỉ có thể gửi lại khi yêu cầu đó đã bị huỷ hoặc hoàn thành.'
+          : 'Đang kiểm tra trạng thái yêu cầu hiện tại. Vui lòng thử lại sau vài giây.',
+      );
+      return;
+    }
+
     if (!validate()) return;
     try {
       const base = {
@@ -936,13 +967,13 @@ export default function RequestRescueScreen({
       >
         <TouchableOpacity
           onPress={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || !canSubmitNewRequest}
           className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl shadow-lg"
           style={[
             {
               backgroundColor:
                 rescueType === 1 ? colors.status.error : colors.primary,
-              opacity: submitting ? 0.7 : 1,
+              opacity: submitting || !canSubmitNewRequest ? 0.7 : 1,
             },
           ]}
         >
@@ -989,6 +1020,22 @@ export default function RequestRescueScreen({
             </Text>
           </View>
         )}
+        {existingRescueRequest ? (
+          <View className="mt-2 flex-row items-center justify-center gap-1">
+            <Ionicons
+              name="alert-circle-outline"
+              size={13}
+              color={colors.status.pending}
+            />
+            <Text
+              className="text-center text-xs font-medium"
+              style={{ color: colors.status.pending }}
+            >
+              Bạn đang có yêu cầu đang xử lý. Chỉ gửi mới sau khi yêu cầu đó đã
+              bị huỷ hoặc hoàn thành.
+            </Text>
+          </View>
+        ) : null}
       </View>
       <AppDialog {...dialogProps} />
     </View>
