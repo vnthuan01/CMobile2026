@@ -1,13 +1,7 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import WebView, { WebViewMessageEvent } from 'react-native-webview';
 
 // ─────────────────────────────────────────────
@@ -19,6 +13,7 @@ export interface MapMarker {
   coordinate: [number, number]; // [lng, lat]
   color: string;
   size?: number;
+  icon?: string;
 }
 
 export interface WebViewMapProps {
@@ -64,17 +59,50 @@ function buildMapHtml(
     .maplibregl-ctrl-logo,
     .maplibregl-ctrl-attrib { display: none !important; }
     .custom-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 50%;
       cursor: pointer;
       border: 2px solid rgba(255,255,255,0.85);
       box-shadow: 0 2px 6px rgba(0,0,0,0.35);
       transition: transform 0.15s ease;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
     }
     .custom-marker:hover { transform: scale(1.15); }
+    .zoom-controls {
+      position: absolute;
+      right: 14px;
+      bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 2;
+    }
+    .zoom-btn {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.96);
+      color: #0f172a;
+      font-size: 22px;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      cursor: pointer;
+    }
+    .zoom-btn:active { transform: scale(0.96); }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div class="zoom-controls">
+    <button id="zoom-in" class="zoom-btn" type="button" aria-label="Zoom in">+</button>
+    <button id="zoom-out" class="zoom-btn" type="button" aria-label="Zoom out">-</button>
+  </div>
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script>
     (function () {
@@ -107,6 +135,21 @@ function buildMapHtml(
 
       // Remove Mapbox/MapLibre logo & attribution
       map.addControl(new maplibregl.AttributionControl({ compact: true }));
+
+      var zoomInBtn = document.getElementById('zoom-in');
+      var zoomOutBtn = document.getElementById('zoom-out');
+
+      if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', function () {
+          map.zoomIn({ duration: 220 });
+        });
+      }
+
+      if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', function () {
+          map.zoomOut({ duration: 220 });
+        });
+      }
 
       map.on('load', function () {
         // ── Route layer ──────────────────────────────────────
@@ -147,6 +190,9 @@ function buildMapHtml(
           el.style.width  = size + 'px';
           el.style.height = size + 'px';
           el.style.backgroundColor = m.color;
+          if (m.icon) {
+            el.textContent = m.icon;
+          }
 
           el.addEventListener('click', function () {
             if (window.ReactNativeWebView) {
