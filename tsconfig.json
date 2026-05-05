@@ -17,8 +17,5 @@
     "expo-env.d.ts",
     "nativewind-env.d.ts"
   ],
-  "exclude": [
-    "trsh",
-    "node_modules"
-  ]
+  "exclude": ["trsh", "node_modules"]
 }

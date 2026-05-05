@@ -115,8 +115,8 @@ export default function ReliefPlanSection({
   );
   const snapPoints = useMemo(() => ['18%', '50%', '84%'], []);
   const sortedIsolatedHouseholds = useMemo(
-    () => [...(summary?.isolatedHouseholdItems ?? [])].sort(
-      (a, b) => {
+    () =>
+      [...(summary?.isolatedHouseholdItems ?? [])].sort((a, b) => {
         const scoreA =
           (a.isolationSeverityLevel ?? 0) * 100 +
           (a.floodSeverityLevel ?? 0) * 10 +
@@ -131,8 +131,7 @@ export default function ReliefPlanSection({
           (b.householdSize ?? 0);
 
         return scoreB - scoreA;
-      },
-    ),
+      }),
     [summary?.isolatedHouseholdItems],
   );
   const selectedAreaHouseholds = useMemo(() => {

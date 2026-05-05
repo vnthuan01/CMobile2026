@@ -6,6 +6,7 @@ import { useCurrentRescueLocation } from '@/src/hooks/useRescueLocation';
 import { usePriorityCriteria } from '@/src/hooks/useRescueMeta';
 import { useSubmitRescueRequest } from '@/src/hooks/useSubmitRescueRequest';
 import { useUploadImage } from '@/src/hooks/useUploadImage';
+import { useUserProfile } from '@/src/hooks/useUserProfile';
 import {
   DisasterType,
   RescueAttachment,
@@ -88,10 +89,12 @@ export default function RequestRescueScreen({
   const screenScale = getScreenScaleConfig(width, height, fontScale);
   const addPhotoSize = Math.max(80, scaleSize(88, screenScale));
   const { colors } = useTheme();
+  const authUser = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { dialogProps, showDialog } = useDialog();
   const uploadImageMutation = useUploadImage();
   const submitRescueRequestMutation = useSubmitRescueRequest();
+  const { data: userProfileData } = useUserProfile(isAuthenticated);
 
   // ── Form state ───────────────────────────────────────────────────────────
   const [rescueType, setRescueType] = useState<RescueType>(
@@ -137,6 +140,27 @@ export default function RequestRescueScreen({
       setAddress(detectedAddress);
     }
   }, [address, detectedAddress]);
+
+  useEffect(() => {
+    const profilePhone = userProfileData?.profile?.phoneNumber?.trim();
+    if (!profilePhone || reporterPhone.trim()) return;
+
+    setReporterPhone(profilePhone);
+  }, [reporterPhone, userProfileData?.profile?.phoneNumber]);
+
+  useEffect(() => {
+    const profileName =
+      userProfileData?.profile?.displayName?.trim() ||
+      authUser?.user_name?.trim();
+
+    if (!profileName || reporterFullName.trim()) return;
+
+    setReporterFullName(profileName);
+  }, [
+    authUser?.user_name,
+    reporterFullName,
+    userProfileData?.profile?.displayName,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated && rescueType === 0) {

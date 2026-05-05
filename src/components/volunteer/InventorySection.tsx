@@ -12,7 +12,7 @@ import type {
   ReliefPackageDefinitionResponse,
   SupplyShortageItemRequest,
   SupplyShortageRequestQueryRequest,
-  SupplyShortageRequestResponse
+  SupplyShortageRequestResponse,
 } from '@/src/types/reliefDistribution';
 import {
   SupplyShortageRequestStatus,
@@ -25,7 +25,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -69,13 +68,16 @@ export default function InventorySection({
   // State for shortage modal and form
   const [showShortageModal, setShowShortageModal] = useState(false);
   const [shortageReason, setShortageReason] = useState('');
-  const [selectedDistributionPointId, setSelectedDistributionPointId] = useState<string>(
-    defaultDistributionPointId || ''
-  );
-  const [shortageDraftItems, setShortageDraftItems] = useState<ShortageDraftItem[]>([]);
+  const [selectedDistributionPointId, setSelectedDistributionPointId] =
+    useState<string>(defaultDistributionPointId || '');
+  const [shortageDraftItems, setShortageDraftItems] = useState<
+    ShortageDraftItem[]
+  >([]);
 
   // State for status filter
-  const [statusFilter, setStatusFilter] = useState<SupplyShortageRequestStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    SupplyShortageRequestStatus | 'all'
+  >('all');
 
   const createShortageRequestMutation = useCreateShortageRequest();
 
@@ -84,10 +86,8 @@ export default function InventorySection({
     pageSize: 50,
   };
 
-  const { data: campaignPackagesData, isLoading: isPackagesLoading } = useCampaignPackages(
-    campaignId,
-    packagesQuery
-  );
+  const { data: campaignPackagesData, isLoading: isPackagesLoading } =
+    useCampaignPackages(campaignId, packagesQuery);
   const { data: inventoryBalanceData, isLoading: isInventoryBalanceLoading } =
     useInventoryBalance(campaignId);
 
@@ -103,10 +103,8 @@ export default function InventorySection({
     shortageRequestsQuery.status = statusFilter as SupplyShortageRequestStatus;
   }
 
-  const { data: shortageRequestsData, isLoading: isShortageRequestsLoading } = useShortageRequests(
-    campaignId,
-    shortageRequestsQuery
-  );
+  const { data: shortageRequestsData, isLoading: isShortageRequestsLoading } =
+    useShortageRequests(campaignId, shortageRequestsQuery);
 
   const campaignPackages = campaignPackagesData?.items ?? [];
   const shortageRequests = shortageRequestsData?.items ?? [];
@@ -114,9 +112,7 @@ export default function InventorySection({
 
   const inventoryBalanceMap = useMemo(
     () =>
-      new Map(
-        inventoryBalanceItems.map((item) => [item.supplyItemId, item]),
-      ),
+      new Map(inventoryBalanceItems.map((item) => [item.supplyItemId, item])),
     [inventoryBalanceItems],
   );
 
@@ -160,12 +156,15 @@ export default function InventorySection({
   // Initialize draft items when packages change
   const updateDraftItems = (items: typeof availableSupplyItems) => {
     setShortageDraftItems((current) => {
-      const currentMap = new Map(current.map((item) => [item.supplyItemId, item]));
+      const currentMap = new Map(
+        current.map((item) => [item.supplyItemId, item]),
+      );
       return items.map((item) => ({
         supplyItemId: item.supplyItemId,
         supplyItemName: item.supplyItemName,
         unit: item.unit,
-        quantityRequested: currentMap.get(item.supplyItemId)?.quantityRequested ?? '',
+        quantityRequested:
+          currentMap.get(item.supplyItemId)?.quantityRequested ?? '',
       }));
     });
   };
@@ -184,7 +183,7 @@ export default function InventorySection({
   const resetShortageForm = () => {
     setShortageReason('');
     setShortageDraftItems((current) =>
-      current.map((item) => ({ ...item, quantityRequested: '' }))
+      current.map((item) => ({ ...item, quantityRequested: '' })),
     );
   };
 
@@ -195,15 +194,18 @@ export default function InventorySection({
       current.map((item) =>
         item.supplyItemId === supplyItemId
           ? { ...item, quantityRequested: normalized }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
   // Submit handler
   const handleSubmitShortageRequest = async () => {
     if (!campaignId) {
-      showErrorToast('Thiếu chiến dịch', 'Không xác định được chiến dịch hiện tại.');
+      showErrorToast(
+        'Thiếu chiến dịch',
+        'Không xác định được chiến dịch hiện tại.',
+      );
       return;
     }
 
@@ -212,10 +214,16 @@ export default function InventorySection({
         supplyItemId: item.supplyItemId,
         quantityRequested: Number(item.quantityRequested || 0),
       }))
-      .filter((item) => Number.isFinite(item.quantityRequested) && item.quantityRequested > 0);
+      .filter(
+        (item) =>
+          Number.isFinite(item.quantityRequested) && item.quantityRequested > 0,
+      );
 
     if (!items.length) {
-      showErrorToast('Thiếu vật tư', 'Nhập số lượng cần bổ sung cho ít nhất 1 vật tư.');
+      showErrorToast(
+        'Thiếu vật tư',
+        'Nhập số lượng cần bổ sung cho ít nhất 1 vật tư.',
+      );
       return;
     }
 
@@ -229,7 +237,10 @@ export default function InventorySection({
           items,
         },
       });
-      showSuccessToast('Đã gửi yêu cầu', 'Yêu cầu bổ sung vật tư đã được gửi lên kho chiến dịch.');
+      showSuccessToast(
+        'Đã gửi yêu cầu',
+        'Yêu cầu bổ sung vật tư đã được gửi lên kho chiến dịch.',
+      );
       setShowShortageModal(false);
       resetShortageForm();
     } catch (error: any) {
@@ -255,22 +266,34 @@ export default function InventorySection({
             <Text className="font-bold" style={{ color: colors.text }}>
               {pkg.name}
             </Text>
-            <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+            <Text
+              className="mt-1 text-sm"
+              style={{ color: colors.textSecondary }}
+            >
               {pkg.description || 'Không có mô tả gói phát hàng.'}
             </Text>
-            <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+            <Text
+              className="mt-1 text-xs"
+              style={{ color: colors.textSecondary }}
+            >
               {pkg.items.length} vật phẩm trong gói này
             </Text>
           </View>
           <View
             className="rounded-full px-3 py-1"
             style={{
-              backgroundColor: pkg.isActive ? `${colors.status.completed}18` : `${colors.status.pending}18`,
+              backgroundColor: pkg.isActive
+                ? `${colors.status.completed}18`
+                : `${colors.status.pending}18`,
             }}
           >
             <Text
               className="text-xs font-bold"
-              style={{ color: pkg.isActive ? colors.status.completed : colors.status.pending }}
+              style={{
+                color: pkg.isActive
+                  ? colors.status.completed
+                  : colors.status.pending,
+              }}
             >
               {pkg.isActive ? 'Đang áp dụng' : 'Tạm ngưng'}
             </Text>
@@ -278,7 +301,9 @@ export default function InventorySection({
         </View>
 
         <View className="mt-3 flex-row flex-wrap gap-2">
-          {pkg.isDefault ? <StatusPill label="Gói mặc định" color={colors.primary} /> : null}
+          {pkg.isDefault ? (
+            <StatusPill label="Gói mặc định" color={colors.primary} />
+          ) : null}
           {pkg.outputSupplyItemName ? (
             <StatusPill
               label={`Đầu ra: ${pkg.outputSupplyItemName}${pkg.outputUnit ? ` (${pkg.outputUnit})` : ''}`}
@@ -297,7 +322,10 @@ export default function InventorySection({
           className="mt-3 rounded-xl px-3 py-3"
           style={{ backgroundColor: `${colors.primary}08` }}
         >
-          <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
+          <Text
+            className="text-sm font-semibold"
+            style={{ color: colors.primary }}
+          >
             Gói này gồm {pkg.items.length} vật phẩm để phát hàng.
           </Text>
         </View>
@@ -321,13 +349,22 @@ export default function InventorySection({
         >
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              <Text
+                className="text-lg font-bold"
+                style={{ color: colors.text }}
+              >
                 Tồn kho chiến dịch
               </Text>
-              <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+              <Text
+                className="mt-1 text-sm"
+                style={{ color: colors.textSecondary }}
+              >
                 Bấm để xem chi tiết tổng các mặt hàng trong tồn kho chiến dịch.
               </Text>
-              <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }}>
+              <Text
+                className="mt-2 text-xs"
+                style={{ color: colors.textSecondary }}
+              >
                 {inventoryBalanceItems.length
                   ? `${inventoryBalanceItems.length} mặt hàng trong kho • ${outOfStockCount} hết hàng • ${lowStockCount} cần chú ý`
                   : 'Chưa có dữ liệu tồn kho chiến dịch'}
@@ -346,7 +383,9 @@ export default function InventorySection({
           className="mt-4 items-center rounded-2xl py-3"
           style={{ backgroundColor: colors.primary }}
         >
-          <Text className="text-base font-bold text-white">Yêu cầu thêm hàng</Text>
+          <Text className="text-base font-bold text-white">
+            Yêu cầu thêm hàng
+          </Text>
         </TouchableOpacity>
 
         {showInventoryDetails ? (
@@ -378,7 +417,10 @@ export default function InventorySection({
                             : 'transparent',
                     }}
                   >
-                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                    <Text
+                      className="text-sm font-semibold"
+                      style={{ color: colors.text }}
+                    >
                       {item.supplyItemName}
                     </Text>
                     <Text
@@ -387,13 +429,19 @@ export default function InventorySection({
                     >
                       {getInventoryBalanceText(item, item)}
                     </Text>
-                    
+
                     {stockState === 'out' ? (
-                      <Text className="mt-1 text-xs font-bold" style={{ color: colors.status.error }}>
+                      <Text
+                        className="mt-1 text-xs font-bold"
+                        style={{ color: colors.status.error }}
+                      >
                         Hết hàng
                       </Text>
                     ) : stockState === 'low' ? (
-                      <Text className="mt-1 text-xs font-bold" style={{ color: colors.status.pending }}>
+                      <Text
+                        className="mt-1 text-xs font-bold"
+                        style={{ color: colors.status.pending }}
+                      >
                         Sắp hết hàng
                       </Text>
                     ) : null}
@@ -461,19 +509,33 @@ export default function InventorySection({
           Danh sách yêu cầu đã gửi
         </Text>
         <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-          Theo dõi các yêu cầu bổ sung vật tư bạn đã gửi cho chiến dịch hiện tại.
+          Theo dõi các yêu cầu bổ sung vật tư bạn đã gửi cho chiến dịch hiện
+          tại.
         </Text>
 
         {/* Status filter */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mt-3"
+        >
           <View className="flex-row gap-2">
             {(
               [
                 { value: 'all' as const, label: 'Tất cả' },
-                { value: SupplyShortageRequestStatus.Pending, label: 'Chờ duyệt' },
-                { value: SupplyShortageRequestStatus.Approved, label: 'Đã duyệt' },
+                {
+                  value: SupplyShortageRequestStatus.Pending,
+                  label: 'Chờ duyệt',
+                },
+                {
+                  value: SupplyShortageRequestStatus.Approved,
+                  label: 'Đã duyệt',
+                },
                 // { value: SupplyShortageRequestStatus.Fulfilled, label: 'Đã cấp' },
-                { value: SupplyShortageRequestStatus.Rejected, label: 'Từ chối' },
+                {
+                  value: SupplyShortageRequestStatus.Rejected,
+                  label: 'Từ chối',
+                },
                 // { value: SupplyShortageRequestStatus.Cancelled, label: 'Đã hủy' },
               ] as const
             ).map((option) => {
@@ -484,9 +546,13 @@ export default function InventorySection({
                   onPress={() => setStatusFilter(option.value)}
                   className="rounded-full px-4 py-2"
                   style={{
-                    backgroundColor: selected ? colors.primary : `${colors.primary}10`,
+                    backgroundColor: selected
+                      ? colors.primary
+                      : `${colors.primary}10`,
                     borderWidth: 1,
-                    borderColor: selected ? colors.primary : `${colors.primary}22`,
+                    borderColor: selected
+                      ? colors.primary
+                      : `${colors.primary}22`,
                   }}
                 >
                   <Text
@@ -517,10 +583,18 @@ export default function InventorySection({
                 >
                   <View className="flex-row items-start justify-between gap-3">
                     <View className="flex-1">
-                      <Text className="font-bold" style={{ color: colors.text }}>
-                        {request.distributionPointName || request.campaignTeamName || 'Yêu cầu bổ sung vật tư'}
+                      <Text
+                        className="font-bold"
+                        style={{ color: colors.text }}
+                      >
+                        {request.distributionPointName ||
+                          request.campaignTeamName ||
+                          'Yêu cầu bổ sung vật tư'}
                       </Text>
-                      <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
+                      <Text
+                        className="mt-1 text-sm"
+                        style={{ color: colors.textSecondary }}
+                      >
                         Gửi lúc {formatDateTime(request.requestedAt)}
                       </Text>
                     </View>
@@ -528,14 +602,20 @@ export default function InventorySection({
                       className="rounded-full px-3 py-1"
                       style={{ backgroundColor: `${statusColor}18` }}
                     >
-                      <Text className="text-xs font-bold" style={{ color: statusColor }}>
+                      <Text
+                        className="text-xs font-bold"
+                        style={{ color: statusColor }}
+                      >
                         {SupplyShortageRequestStatusLabels[request.status]}
                       </Text>
                     </View>
                   </View>
 
                   {request.reason ? (
-                    <Text className="mt-3 text-sm" style={{ color: colors.text }}>
+                    <Text
+                      className="mt-3 text-sm"
+                      style={{ color: colors.text }}
+                    >
                       Lý do: {request.reason}
                     </Text>
                   ) : null}
@@ -548,16 +628,27 @@ export default function InventorySection({
                         style={{ backgroundColor: `${colors.primary}08` }}
                       >
                         <View className="flex-row items-center justify-between gap-3">
-                          <Text className="flex-1 text-sm" style={{ color: colors.text }}>
+                          <Text
+                            className="flex-1 text-sm"
+                            style={{ color: colors.text }}
+                          >
                             {item.supplyItemName}
                           </Text>
-                          <Text className="text-sm font-bold" style={{ color: colors.primary }}>
+                          <Text
+                            className="text-sm font-bold"
+                            style={{ color: colors.primary }}
+                          >
                             Xin {item.quantityRequested}
-                            {item.quantityApproved != null ? ` / duyệt ${item.quantityApproved}` : ''}
+                            {item.quantityApproved != null
+                              ? ` / duyệt ${item.quantityApproved}`
+                              : ''}
                           </Text>
                         </View>
                         {item.note ? (
-                          <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                          <Text
+                            className="mt-1 text-xs"
+                            style={{ color: colors.textSecondary }}
+                          >
                             {item.note}
                           </Text>
                         ) : null}
@@ -566,7 +657,10 @@ export default function InventorySection({
                   </View>
 
                   {request.reviewNote ? (
-                    <Text className="mt-3 text-xs" style={{ color: colors.textSecondary }}>
+                    <Text
+                      className="mt-3 text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
                       Ghi chú duyệt: {request.reviewNote}
                     </Text>
                   ) : null}
@@ -594,15 +688,28 @@ export default function InventorySection({
         onRequestClose={() => setShowShortageModal(false)}
       >
         <KeyboardAvoidingView behavior="padding" className="flex-1">
-          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
-            <View className="rounded-t-3xl px-4 pt-4" style={{ backgroundColor: colors.card, height: '94%' }}>
+          <View
+            className="flex-1 justify-end"
+            style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          >
+            <View
+              className="rounded-t-3xl px-4 pt-4"
+              style={{ backgroundColor: colors.card, height: '94%' }}
+            >
               <View className="flex-row items-start justify-between gap-3">
                 <View className="flex-1">
-                  <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                  <Text
+                    className="text-lg font-bold"
+                    style={{ color: colors.text }}
+                  >
                     Gửi yêu cầu nhập thêm hàng
                   </Text>
-                  <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-                    Chọn vật tư đang thiếu khi đi phát tại điểm phát hoặc hỗ trợ hộ dân bị cô lập.
+                  <Text
+                    className="mt-1 text-sm"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Chọn vật tư đang thiếu khi đi phát tại điểm phát hoặc hỗ trợ
+                    hộ dân bị cô lập.
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -610,7 +717,11 @@ export default function InventorySection({
                   className="rounded-full p-2"
                   style={{ backgroundColor: colors.background }}
                 >
-                  <Ionicons name="close" size={18} color={colors.textSecondary} />
+                  <Ionicons
+                    name="close"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -621,159 +732,226 @@ export default function InventorySection({
                   contentContainerStyle={{ paddingBottom: 32 }}
                 >
                   <View className="gap-4 pb-6">
-                <View>
-                  <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
-                    Điểm phát áp dụng
-                  </Text>
-                  <Text className="mb-2 text-xs" style={{ color: colors.textSecondary }}>
-                    Kéo ngang để xem thêm điểm phát
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
-                    <View className="flex-row gap-2">
-                      {distributionPoints.map((point) => {
-                        const selected = point.distributionPointId === selectedDistributionPointId;
-                        return (
-                          <TouchableOpacity
-                            key={point.distributionPointId}
-                            onPress={() => setSelectedDistributionPointId(point.distributionPointId)}
-                            className="rounded-full px-4 py-2"
-                            style={{
-                              backgroundColor: selected ? colors.primary : `${colors.primary}10`,
-                              borderWidth: 1,
-                              borderColor: selected ? colors.primary : `${colors.primary}22`,
-                            }}
-                          >
-                            <Text
-                              className="text-sm font-semibold"
-                              style={{ color: selected ? '#fff' : colors.primary }}
-                            >
-                              {point.name}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </ScrollView>
-                  {!distributionPoints.length ? (
-                    <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }}>
-                      Không có điểm phát nào, yêu cầu sẽ được gắn theo đội chiến dịch.
-                    </Text>
-                  ) : (
-                    <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }}>
-                      Đang chọn: {distributionPoints.find((p) => p.distributionPointId === selectedDistributionPointId)?.name || 'Chưa chọn'}
-                    </Text>
-                  )}
-                </View>
-
-                <View>
-                  <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
-                    Lý do thiếu hàng
-                  </Text>
-                  <TextInput
-                    value={shortageReason}
-                    onChangeText={setShortageReason}
-                    placeholder="Ví dụ: số hộ nhận tăng đột xuất, phát cho khu cô lập..."
-                    placeholderTextColor={colors.textSecondary}
-                    multiline
-                    className="rounded-2xl border px-4 py-3"
-                    style={{
-                      borderColor: colors.border,
-                      color: colors.text,
-                      backgroundColor: colors.background,
-                      minHeight: 92,
-                      textAlignVertical: 'top',
-                    }}
-                  />
-                </View>
-
-                <View>
-                  <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
-                    Vật tư cần bổ sung
-                  </Text>
-                  <View className="gap-3">
-                    {shortageDraftItems.length > 0 ? (
-                      shortageDraftItems.map((item) => (
-                        <View
-                          key={item.supplyItemId}
-                          className="rounded-2xl border p-3"
-                          style={{ borderColor: colors.border }}
-                        >
-                          <Text className="font-semibold" style={{ color: colors.text }}>
-                            {item.supplyItemName}
-                          </Text>
-                          <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                            Đơn vị: {item.unit || 'Chưa xác định'}
-                          </Text>
-                          {inventoryBalanceMap.has(item.supplyItemId) ? (
-                            <Text
-                              className="mt-1 text-xs"
-                              style={{
-                                color: getInventoryBalanceColor(
-                                  colors,
-                                  inventoryBalanceMap.get(item.supplyItemId),
-                                ),
-                              }}
-                            >
-                              {getInventoryBalanceText(
-                                inventoryBalanceMap.get(item.supplyItemId),
-                                item,
-                              )}
-                            </Text>
-                          ) : null}
-                          {(() => {
-                            const balance = inventoryBalanceMap.get(item.supplyItemId);
-                            if (!balance || balance.availableQuantity > 0) return null;
+                    <View>
+                      <Text
+                        className="mb-2 text-sm font-semibold"
+                        style={{ color: colors.text }}
+                      >
+                        Điểm phát áp dụng
+                      </Text>
+                      <Text
+                        className="mb-2 text-xs"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Kéo ngang để xem thêm điểm phát
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+                      >
+                        <View className="flex-row gap-2">
+                          {distributionPoints.map((point) => {
+                            const selected =
+                              point.distributionPointId ===
+                              selectedDistributionPointId;
                             return (
-                              <View
-                                className="mt-2 rounded-xl px-3 py-2"
-                                style={{ backgroundColor: `${colors.status.error}12` }}
+                              <TouchableOpacity
+                                key={point.distributionPointId}
+                                onPress={() =>
+                                  setSelectedDistributionPointId(
+                                    point.distributionPointId,
+                                  )
+                                }
+                                className="rounded-full px-4 py-2"
+                                style={{
+                                  backgroundColor: selected
+                                    ? colors.primary
+                                    : `${colors.primary}10`,
+                                  borderWidth: 1,
+                                  borderColor: selected
+                                    ? colors.primary
+                                    : `${colors.primary}22`,
+                                }}
                               >
                                 <Text
-                                  className="text-xs font-bold"
-                                  style={{ color: colors.status.error }}
+                                  className="text-sm font-semibold"
+                                  style={{
+                                    color: selected ? '#fff' : colors.primary,
+                                  }}
                                 >
-                                  Vật tư này đã hết hàng trong kho chiến dịch. Hãy kiểm tra kỹ trước khi gửi yêu cầu.
+                                  {point.name}
                                 </Text>
-                              </View>
+                              </TouchableOpacity>
                             );
-                          })()}
-                          <TextInput
-                            value={item.quantityRequested}
-                            onChangeText={(value) => updateShortageDraftQuantity(item.supplyItemId, value)}
-                            placeholder="Nhập số lượng cần xin"
-                            placeholderTextColor={colors.textSecondary}
-                            keyboardType="numeric"
-                            className="mt-3 rounded-xl border px-4 py-3"
-                            style={{
-                              borderColor: colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background,
-                            }}
-                          />
+                          })}
                         </View>
-                      ))
-                    ) : (
-                      <View
-                        className="rounded-xl border border-dashed p-4"
-                        style={{ borderColor: colors.border }}
-                      >
-                        <Text style={{ color: colors.textSecondary }}>
-                          Chưa có vật tư nào từ danh sách gói phát để chọn.
+                      </ScrollView>
+                      {!distributionPoints.length ? (
+                        <Text
+                          className="mt-2 text-xs"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Không có điểm phát nào, yêu cầu sẽ được gắn theo đội
+                          chiến dịch.
                         </Text>
+                      ) : (
+                        <Text
+                          className="mt-2 text-xs"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Đang chọn:{' '}
+                          {distributionPoints.find(
+                            (p) =>
+                              p.distributionPointId ===
+                              selectedDistributionPointId,
+                          )?.name || 'Chưa chọn'}
+                        </Text>
+                      )}
+                    </View>
+
+                    <View>
+                      <Text
+                        className="mb-2 text-sm font-semibold"
+                        style={{ color: colors.text }}
+                      >
+                        Lý do thiếu hàng
+                      </Text>
+                      <TextInput
+                        value={shortageReason}
+                        onChangeText={setShortageReason}
+                        placeholder="Ví dụ: số hộ nhận tăng đột xuất, phát cho khu cô lập..."
+                        placeholderTextColor={colors.textSecondary}
+                        multiline
+                        className="rounded-2xl border px-4 py-3"
+                        style={{
+                          borderColor: colors.border,
+                          color: colors.text,
+                          backgroundColor: colors.background,
+                          minHeight: 92,
+                          textAlignVertical: 'top',
+                        }}
+                      />
+                    </View>
+
+                    <View>
+                      <Text
+                        className="mb-2 text-sm font-semibold"
+                        style={{ color: colors.text }}
+                      >
+                        Vật tư cần bổ sung
+                      </Text>
+                      <View className="gap-3">
+                        {shortageDraftItems.length > 0 ? (
+                          shortageDraftItems.map((item) => (
+                            <View
+                              key={item.supplyItemId}
+                              className="rounded-2xl border p-3"
+                              style={{ borderColor: colors.border }}
+                            >
+                              <Text
+                                className="font-semibold"
+                                style={{ color: colors.text }}
+                              >
+                                {item.supplyItemName}
+                              </Text>
+                              <Text
+                                className="mt-1 text-xs"
+                                style={{ color: colors.textSecondary }}
+                              >
+                                Đơn vị: {item.unit || 'Chưa xác định'}
+                              </Text>
+                              {inventoryBalanceMap.has(item.supplyItemId) ? (
+                                <Text
+                                  className="mt-1 text-xs"
+                                  style={{
+                                    color: getInventoryBalanceColor(
+                                      colors,
+                                      inventoryBalanceMap.get(
+                                        item.supplyItemId,
+                                      ),
+                                    ),
+                                  }}
+                                >
+                                  {getInventoryBalanceText(
+                                    inventoryBalanceMap.get(item.supplyItemId),
+                                    item,
+                                  )}
+                                </Text>
+                              ) : null}
+                              {(() => {
+                                const balance = inventoryBalanceMap.get(
+                                  item.supplyItemId,
+                                );
+                                if (!balance || balance.availableQuantity > 0)
+                                  return null;
+                                return (
+                                  <View
+                                    className="mt-2 rounded-xl px-3 py-2"
+                                    style={{
+                                      backgroundColor: `${colors.status.error}12`,
+                                    }}
+                                  >
+                                    <Text
+                                      className="text-xs font-bold"
+                                      style={{ color: colors.status.error }}
+                                    >
+                                      Vật tư này đã hết hàng trong kho chiến
+                                      dịch. Hãy kiểm tra kỹ trước khi gửi yêu
+                                      cầu.
+                                    </Text>
+                                  </View>
+                                );
+                              })()}
+                              <TextInput
+                                value={item.quantityRequested}
+                                onChangeText={(value) =>
+                                  updateShortageDraftQuantity(
+                                    item.supplyItemId,
+                                    value,
+                                  )
+                                }
+                                placeholder="Nhập số lượng cần xin"
+                                placeholderTextColor={colors.textSecondary}
+                                keyboardType="numeric"
+                                className="mt-3 rounded-xl border px-4 py-3"
+                                style={{
+                                  borderColor: colors.border,
+                                  color: colors.text,
+                                  backgroundColor: colors.background,
+                                }}
+                              />
+                            </View>
+                          ))
+                        ) : (
+                          <View
+                            className="rounded-xl border border-dashed p-4"
+                            style={{ borderColor: colors.border }}
+                          >
+                            <Text style={{ color: colors.textSecondary }}>
+                              Chưa có vật tư nào từ danh sách gói phát để chọn.
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                    )}
-                  </View>
-                </View>
+                    </View>
 
                     {hasOutOfStockItems ? (
-                      <Text className="text-center text-xs font-semibold" style={{ color: colors.status.error }}>
-                        Có vật tư đang hết hàng. Kiểm tra kỹ số lượng cần xin để ưu tiên bổ sung khẩn cấp.
+                      <Text
+                        className="text-center text-xs font-semibold"
+                        style={{ color: colors.status.error }}
+                      >
+                        Có vật tư đang hết hàng. Kiểm tra kỹ số lượng cần xin để
+                        ưu tiên bổ sung khẩn cấp.
                       </Text>
                     ) : null}
                   </View>
                 </ScrollView>
               </View>
-              <View className="gap-3 border-t pt-4 pb-6" style={{ borderColor: colors.border }}>
+              <View
+                className="gap-3 border-t pb-6 pt-4"
+                style={{ borderColor: colors.border }}
+              >
                 <TouchableOpacity
                   onPress={handleSubmitShortageRequest}
                   disabled={createShortageRequestMutation.isPending}
@@ -786,7 +964,9 @@ export default function InventorySection({
                   }}
                 >
                   <Text className="text-base font-bold text-white">
-                    {createShortageRequestMutation.isPending ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                    {createShortageRequestMutation.isPending
+                      ? 'Đang gửi...'
+                      : 'Gửi yêu cầu'}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -794,7 +974,10 @@ export default function InventorySection({
                   className="items-center rounded-2xl border py-3"
                   style={{ borderColor: colors.border }}
                 >
-                  <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                  <Text
+                    className="text-base font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     Đóng
                   </Text>
                 </TouchableOpacity>

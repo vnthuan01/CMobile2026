@@ -20,7 +20,9 @@ export function useTeamTrackingLatest(
       const result = await teamService.getLatestTracking(teamId!, limit);
 
       if (!result.success) {
-        throw new Error(result.message ?? 'Không thể tải lịch sử tracking team.');
+        throw new Error(
+          result.message ?? 'Không thể tải lịch sử tracking team.',
+        );
       }
 
       return {
@@ -46,7 +48,9 @@ export function useSendTeamTrackingHeartbeat() {
       teamId: string;
       payload: TeamTrackingHeartbeatRequest;
     }) => teamService.sendTrackingHeartbeat(teamId, payload),
-    onSuccess: (result: Awaited<ReturnType<typeof teamService.sendTrackingHeartbeat>>) => {
+    onSuccess: (
+      result: Awaited<ReturnType<typeof teamService.sendTrackingHeartbeat>>,
+    ) => {
       queryClient.invalidateQueries({ queryKey: teamTrackingKeys.all });
       if (!result?.success) {
         showApiResultToast(result, {

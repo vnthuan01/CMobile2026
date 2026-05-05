@@ -226,7 +226,8 @@ export default function MyVehicleScreen({ onBack }: MyVehicleScreenProps) {
               </Text>
               <View className="mt-4 gap-1">
                 <Text className="text-sm" style={{ color: colors.text }}>
-                  Loại phương tiện: {myVehicle.vehicleTypeName || 'Chưa rõ loại xe'}
+                  Loại phương tiện:{' '}
+                  {myVehicle.vehicleTypeName || 'Chưa rõ loại xe'}
                 </Text>
                 <Text className="text-sm" style={{ color: colors.text }}>
                   Trạng thái điều phối:{' '}

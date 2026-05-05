@@ -177,9 +177,13 @@ export default function NewSOSForVolunteerScreen({
         setLatitude(current.latitude);
         setLongitude(current.longitude);
         const detectedAddress =
-          current.address || current.displayLabel || 'Chưa xác định được vị trí';
+          current.address ||
+          current.displayLabel ||
+          'Chưa xác định được vị trí';
         setGpsAddress(detectedAddress);
-        setLocationId(resolveLocationIdFromAddress(detectedAddress, locationCandidates));
+        setLocationId(
+          resolveLocationIdFromAddress(detectedAddress, locationCandidates),
+        );
       } catch (error: any) {
         if (!mounted) return;
         setGpsAddress('Không xác định được vị trí hiện tại');
@@ -282,8 +286,12 @@ export default function NewSOSForVolunteerScreen({
             <Text className="text-lg font-bold" style={{ color: colors.text }}>
               Ghi nhận hộ dân mới cần cứu trợ
             </Text>
-            <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
-              Chỉ cần nhập tên chủ hộ và số người trong hộ. Hệ thống sẽ tự lấy vị trí hiện tại cho bạn.
+            <Text
+              className="mt-2 text-sm"
+              style={{ color: colors.textSecondary }}
+            >
+              Chỉ cần nhập tên chủ hộ và số người trong hộ. Hệ thống sẽ tự lấy
+              vị trí hiện tại cho bạn.
             </Text>
           </View>
 
@@ -291,7 +299,10 @@ export default function NewSOSForVolunteerScreen({
             className="rounded-[28px] border p-4"
             style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
-            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+            <Text
+              className="text-sm font-semibold"
+              style={{ color: colors.text }}
+            >
               Loại hỗ trợ cần ưu tiên
             </Text>
             <View className="mt-3 flex-row gap-3">
@@ -311,12 +322,22 @@ export default function NewSOSForVolunteerScreen({
                       className="h-10 w-10 items-center justify-center rounded-full"
                       style={{ backgroundColor: item.bg }}
                     >
-                      <Ionicons name={item.icon as any} size={18} color={item.tint} />
+                      <Ionicons
+                        name={item.icon as any}
+                        size={18}
+                        color={item.tint}
+                      />
                     </View>
-                    <Text className="mt-3 text-sm font-bold" style={{ color: colors.text }}>
+                    <Text
+                      className="mt-3 text-sm font-bold"
+                      style={{ color: colors.text }}
+                    >
                       {item.label}
                     </Text>
-                    <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                    <Text
+                      className="mt-1 text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
                       {item.hint}
                     </Text>
                   </TouchableOpacity>
@@ -329,12 +350,18 @@ export default function NewSOSForVolunteerScreen({
             className="rounded-[28px] border p-4"
             style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
-            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+            <Text
+              className="text-sm font-semibold"
+              style={{ color: colors.text }}
+            >
               Thông tin cơ bản
             </Text>
             <View className="mt-3 gap-3">
               <View>
-                <Text className="mb-2 text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mb-2 text-xs font-semibold"
+                  style={{ color: colors.textSecondary }}
+                >
                   Tên chủ hộ
                 </Text>
                 <TextInput
@@ -343,12 +370,19 @@ export default function NewSOSForVolunteerScreen({
                   placeholder="Nhập tên chủ hộ hoặc người cần hỗ trợ"
                   placeholderTextColor={colors.textSecondary}
                   className="rounded-xl border px-4 py-3"
-                  style={{ borderColor: colors.border, color: colors.text, backgroundColor: colors.background }}
+                  style={{
+                    borderColor: colors.border,
+                    color: colors.text,
+                    backgroundColor: colors.background,
+                  }}
                 />
               </View>
 
               <View>
-                <Text className="mb-2 text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mb-2 text-xs font-semibold"
+                  style={{ color: colors.textSecondary }}
+                >
                   Số người trong hộ
                 </Text>
                 <TextInput
@@ -358,12 +392,19 @@ export default function NewSOSForVolunteerScreen({
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="numeric"
                   className="rounded-xl border px-4 py-3"
-                  style={{ borderColor: colors.border, color: colors.text, backgroundColor: colors.background }}
+                  style={{
+                    borderColor: colors.border,
+                    color: colors.text,
+                    backgroundColor: colors.background,
+                  }}
                 />
               </View>
 
               <View>
-                <Text className="mb-2 text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mb-2 text-xs font-semibold"
+                  style={{ color: colors.textSecondary }}
+                >
                   Số điện thoại (không bắt buộc)
                 </Text>
                 <TextInput
@@ -373,7 +414,11 @@ export default function NewSOSForVolunteerScreen({
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="phone-pad"
                   className="rounded-xl border px-4 py-3"
-                  style={{ borderColor: colors.border, color: colors.text, backgroundColor: colors.background }}
+                  style={{
+                    borderColor: colors.border,
+                    color: colors.text,
+                    backgroundColor: colors.background,
+                  }}
                 />
               </View>
             </View>
@@ -384,8 +429,15 @@ export default function NewSOSForVolunteerScreen({
             style={{ borderColor: colors.border, backgroundColor: colors.card }}
           >
             <View className="flex-row items-center gap-2">
-              <Ionicons name="location-outline" size={16} color={colors.primary} />
-              <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+              <Ionicons
+                name="location-outline"
+                size={16}
+                color={colors.primary}
+              />
+              <Text
+                className="text-sm font-semibold"
+                style={{ color: colors.text }}
+              >
                 Vị trí hiện tại
               </Text>
             </View>
@@ -393,7 +445,10 @@ export default function NewSOSForVolunteerScreen({
             {isResolvingLocation ? (
               <View className="mt-3 flex-row items-center gap-2">
                 <ActivityIndicator size="small" color={colors.primary} />
-                <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="text-sm"
+                  style={{ color: colors.textSecondary }}
+                >
                   Đang lấy GPS và địa chỉ gần đúng...
                 </Text>
               </View>
@@ -402,7 +457,10 @@ export default function NewSOSForVolunteerScreen({
                 <Text className="mt-3 text-sm" style={{ color: colors.text }}>
                   {gpsAddress || 'Không xác định được vị trí hiện tại'}
                 </Text>
-                <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mt-1 text-xs"
+                  style={{ color: colors.textSecondary }}
+                >
                   {latitude != null && longitude != null
                     ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
                     : 'Tọa độ chưa sẵn sàng'}
@@ -413,7 +471,9 @@ export default function NewSOSForVolunteerScreen({
 
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={reportNewHouseholdMutation.isPending || isResolvingLocation}
+            disabled={
+              reportNewHouseholdMutation.isPending || isResolvingLocation
+            }
             className="items-center rounded-2xl py-3"
             style={{
               backgroundColor: colors.primary,

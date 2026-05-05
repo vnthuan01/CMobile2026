@@ -1,13 +1,13 @@
-import api from './api';
-import { extractApiErrorMessage } from '../utils/apiError';
 import type {
   AssignCampaignVehicleDriverRequest,
   CampaignAssignedVehicle,
   HandoffCampaignVehicleRequest,
-  ReturnCampaignVehicleToCoordinatorRequest,
   ReleaseCampaignVehicleRequest,
+  ReturnCampaignVehicleToCoordinatorRequest,
   UpdateCampaignVehicleAssignmentRequest,
 } from '../types/vehicle';
+import { extractApiErrorMessage } from '../utils/apiError';
+import api from './api';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -45,7 +45,10 @@ export const campaignVehicleService = {
     campaignId: string,
     campaignTeamId?: string | null,
   ): Promise<ApiResponse<CampaignAssignedVehicle[]>> => {
-    const routes = [`/campaigns/${campaignId}/vehicles`, `/api/campaigns/${campaignId}/vehicles`];
+    const routes = [
+      `/campaigns/${campaignId}/vehicles`,
+      `/api/campaigns/${campaignId}/vehicles`,
+    ];
 
     return tryRoutes(
       routes,
@@ -84,7 +87,10 @@ export const campaignVehicleService = {
           success: false,
           data: null,
           status: error?.response?.status,
-          message: extractApiErrorMessage(error, 'Không thể tải phương tiện đang được giao.'),
+          message: extractApiErrorMessage(
+            error,
+            'Không thể tải phương tiện đang được giao.',
+          ),
         };
       }
     }
@@ -110,7 +116,10 @@ export const campaignVehicleService = {
     return tryRoutes(
       routes,
       async (route) => {
-        const response = await api.patch<CampaignAssignedVehicle>(route, request);
+        const response = await api.patch<CampaignAssignedVehicle>(
+          route,
+          request,
+        );
         return response.data;
       },
       'Không thể cập nhật điều phối phương tiện.',
@@ -130,7 +139,10 @@ export const campaignVehicleService = {
     return tryRoutes(
       routes,
       async (route) => {
-        const response = await api.patch<CampaignAssignedVehicle>(route, request);
+        const response = await api.patch<CampaignAssignedVehicle>(
+          route,
+          request,
+        );
         return response.data;
       },
       'Không thể chỉ định người lái cho phương tiện.',
@@ -150,7 +162,10 @@ export const campaignVehicleService = {
     return tryRoutes(
       routes,
       async (route) => {
-        const response = await api.patch<CampaignAssignedVehicle>(route, request);
+        const response = await api.patch<CampaignAssignedVehicle>(
+          route,
+          request,
+        );
         return response.data;
       },
       'Không thể trả phương tiện về đội.',
@@ -170,7 +185,10 @@ export const campaignVehicleService = {
     return tryRoutes(
       routes,
       async (route) => {
-        const response = await api.patch<CampaignAssignedVehicle>(route, request);
+        const response = await api.patch<CampaignAssignedVehicle>(
+          route,
+          request,
+        );
         return response.data;
       },
       'Không thể bàn giao phương tiện cho thành viên khác.',
@@ -190,7 +208,10 @@ export const campaignVehicleService = {
     return tryRoutes(
       routes,
       async (route) => {
-        const response = await api.patch<CampaignAssignedVehicle>(route, request);
+        const response = await api.patch<CampaignAssignedVehicle>(
+          route,
+          request,
+        );
         return response.data;
       },
       'Không thể trả hẳn phương tiện về điều phối trung tâm.',

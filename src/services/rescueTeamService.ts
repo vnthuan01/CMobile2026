@@ -1,19 +1,23 @@
 import type {
-    RescueActiveBatchResponse,
-    RescueBatchItem,
-    RescueTeamHistoryResponse,
+  RescueActiveBatchResponse,
+  RescueBatchItem,
+  RescueTeamHistoryResponse,
 } from '../types/team';
 import {
-    decodePolyline,
-    fetchDirectionsPolyline,
-    getMapStyleUrl,
-    toMapCoordinate,
+  decodePolyline,
+  fetchDirectionsPolyline,
+  getMapStyleUrl,
+  toMapCoordinate,
 } from '../utils/geo';
 import { openCallReporter, openExternalNavigation } from '../utils/linking';
 import api from './api';
 
 export type {
-    RescueActiveBatchResponse, RescueBatchItem, RescueTeamHistoryBatch, RescueTeamHistoryRequestItem, RescueTeamHistoryResponse
+  RescueActiveBatchResponse,
+  RescueBatchItem,
+  RescueTeamHistoryBatch,
+  RescueTeamHistoryRequestItem,
+  RescueTeamHistoryResponse
 } from '../types/team';
 
 export const rescueTeamService = {

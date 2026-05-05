@@ -1,11 +1,13 @@
-import ProgressForReliefScreen from './ProgressForReliefScreen';
 import { useRouter } from 'expo-router';
+import ProgressForReliefScreen from './ProgressForReliefScreen';
 
 interface MyProgressForReliefScreenProps {
   onBack?: () => void;
 }
 
-export default function MyProgressForReliefScreen({ onBack }: MyProgressForReliefScreenProps) {
+export default function MyProgressForReliefScreen({
+  onBack,
+}: MyProgressForReliefScreenProps) {
   const router = useRouter();
 
   return (

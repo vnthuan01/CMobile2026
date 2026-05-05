@@ -1,34 +1,34 @@
-import api from './api';
 import { extractApiErrorMessage } from '../utils/apiError';
+import api from './api';
 
 import type {
-  CreateCampaignTaskRequest,
-  UpdateCampaignTaskRequest,
+  AssignMemberTaskRequest,
+  CampaignTaskDetailResponse,
+  CampaignTaskResponse,
+  CampaignTeamResponse,
   ChangeCampaignTaskStatusRequest,
   ChangeMemberTaskStatusRequest,
-  AssignMemberTaskRequest,
-  CampaignTaskResponse,
-  CampaignTaskDetailResponse,
-  CampaignTeamResponse,
+  CreateCampaignTaskRequest,
   GetCampaignTasksQuery,
   GetMyMemberTasksQuery,
   MemberTaskResponse,
   MyMemberTaskResponse,
+  UpdateCampaignTaskRequest,
 } from '../types/leaderTask';
 
 export type {
-  CreateCampaignTaskRequest,
-  UpdateCampaignTaskRequest,
+  AssignMemberTaskRequest,
+  CampaignTaskDetailResponse,
+  CampaignTaskResponse,
+  CampaignTeamResponse,
   ChangeCampaignTaskStatusRequest,
   ChangeMemberTaskStatusRequest,
-  AssignMemberTaskRequest,
-  CampaignTaskResponse,
-  CampaignTaskDetailResponse,
-  CampaignTeamResponse,
+  CreateCampaignTaskRequest,
   GetCampaignTasksQuery,
   GetMyMemberTasksQuery,
   MemberTaskResponse,
   MyMemberTaskResponse,
+  UpdateCampaignTaskRequest
 } from '../types/leaderTask';
 
 export interface ApiResponse<T> {
@@ -74,8 +74,13 @@ const debugError = (label: string, error: any) => {
 
 export const leaderTaskService = {
   // Campaign Teams endpoints
-  getCampaignTeams: async (campaignId: string): Promise<ApiResponse<CampaignTeamResponse[]>> => {
-    const routes = [`/campaigns/${campaignId}/teams`, `/api/campaigns/${campaignId}/teams`];
+  getCampaignTeams: async (
+    campaignId: string,
+  ): Promise<ApiResponse<CampaignTeamResponse[]>> => {
+    const routes = [
+      `/campaigns/${campaignId}/teams`,
+      `/api/campaigns/${campaignId}/teams`,
+    ];
 
     for (const route of routes) {
       try {
@@ -91,7 +96,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể tải danh sách campaign teams.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể tải danh sách campaign teams.',
+            ),
           };
         }
       }
@@ -108,9 +116,12 @@ export const leaderTaskService = {
   // Campaign Tasks endpoints
   createCampaignTask: async (
     campaignId: string,
-    request: CreateCampaignTaskRequest
+    request: CreateCampaignTaskRequest,
   ): Promise<ApiResponse<CampaignTaskResponse>> => {
-    const routes = [`/campaigns/${campaignId}/tasks`, `/api/campaigns/${campaignId}/tasks`];
+    const routes = [
+      `/campaigns/${campaignId}/tasks`,
+      `/api/campaigns/${campaignId}/tasks`,
+    ];
 
     for (const route of routes) {
       try {
@@ -145,9 +156,12 @@ export const leaderTaskService = {
 
   getCampaignTasks: async (
     campaignId: string,
-    query?: GetCampaignTasksQuery
+    query?: GetCampaignTasksQuery,
   ): Promise<ApiResponse<PaginatedCampaignTaskResponse>> => {
-    const routes = [`/campaigns/${campaignId}/tasks`, `/api/campaigns/${campaignId}/tasks`];
+    const routes = [
+      `/campaigns/${campaignId}/tasks`,
+      `/api/campaigns/${campaignId}/tasks`,
+    ];
 
     for (const route of routes) {
       try {
@@ -165,7 +179,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể tải danh sách nhiệm vụ.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể tải danh sách nhiệm vụ.',
+            ),
           };
         }
       }
@@ -180,9 +197,12 @@ export const leaderTaskService = {
   },
 
   getCampaignTaskDetail: async (
-    campaignTaskId: string
+    campaignTaskId: string,
   ): Promise<ApiResponse<CampaignTaskDetailResponse>> => {
-    const routes = [`/campaigns/tasks/${campaignTaskId}`, `/api/campaigns/tasks/${campaignTaskId}`];
+    const routes = [
+      `/campaigns/tasks/${campaignTaskId}`,
+      `/api/campaigns/tasks/${campaignTaskId}`,
+    ];
 
     for (const route of routes) {
       try {
@@ -198,7 +218,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể tải chi tiết nhiệm vụ.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể tải chi tiết nhiệm vụ.',
+            ),
           };
         }
       }
@@ -214,9 +237,12 @@ export const leaderTaskService = {
 
   updateCampaignTask: async (
     campaignTaskId: string,
-    request: UpdateCampaignTaskRequest
+    request: UpdateCampaignTaskRequest,
   ): Promise<ApiResponse<CampaignTaskResponse>> => {
-    const routes = [`/campaigns/tasks/${campaignTaskId}`, `/api/campaigns/tasks/${campaignTaskId}`];
+    const routes = [
+      `/campaigns/tasks/${campaignTaskId}`,
+      `/api/campaigns/tasks/${campaignTaskId}`,
+    ];
 
     for (const route of routes) {
       try {
@@ -232,7 +258,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể cập nhật nhiệm vụ.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể cập nhật nhiệm vụ.',
+            ),
           };
         }
       }
@@ -248,7 +277,7 @@ export const leaderTaskService = {
 
   changeCampaignTaskStatus: async (
     campaignTaskId: string,
-    request: ChangeCampaignTaskStatusRequest
+    request: ChangeCampaignTaskStatusRequest,
   ): Promise<ApiResponse<void>> => {
     const routes = [
       `/campaigns/tasks/${campaignTaskId}/status`,
@@ -257,9 +286,15 @@ export const leaderTaskService = {
 
     for (const route of routes) {
       try {
-        debugLog('changeCampaignTaskStatus request', { route, campaignTaskId, request });
+        debugLog('changeCampaignTaskStatus request', {
+          route,
+          campaignTaskId,
+          request,
+        });
         const response = await api.patch<void>(route, request);
-        debugLog('changeCampaignTaskStatus success', { status: response.status });
+        debugLog('changeCampaignTaskStatus success', {
+          status: response.status,
+        });
         return {
           success: response.status >= 200 && response.status < 300,
           data: null,
@@ -272,7 +307,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể thay đổi trạng thái nhiệm vụ.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể thay đổi trạng thái nhiệm vụ.',
+            ),
           };
         }
       }
@@ -286,8 +324,13 @@ export const leaderTaskService = {
     };
   },
 
-  deleteCampaignTask: async (campaignTaskId: string): Promise<ApiResponse<void>> => {
-    const routes = [`/campaigns/tasks/${campaignTaskId}`, `/api/campaigns/tasks/${campaignTaskId}`];
+  deleteCampaignTask: async (
+    campaignTaskId: string,
+  ): Promise<ApiResponse<void>> => {
+    const routes = [
+      `/campaigns/tasks/${campaignTaskId}`,
+      `/api/campaigns/tasks/${campaignTaskId}`,
+    ];
 
     for (const route of routes) {
       try {
@@ -319,7 +362,7 @@ export const leaderTaskService = {
 
   assignMemberTask: async (
     campaignTaskId: string,
-    request: AssignMemberTaskRequest
+    request: AssignMemberTaskRequest,
   ): Promise<ApiResponse<void>> => {
     const routes = [
       `/campaigns/tasks/${campaignTaskId}/members`,
@@ -328,7 +371,11 @@ export const leaderTaskService = {
 
     for (const route of routes) {
       try {
-        debugLog('assignMemberTask request', { route, campaignTaskId, request });
+        debugLog('assignMemberTask request', {
+          route,
+          campaignTaskId,
+          request,
+        });
         const response = await api.post<void>(route, request);
         debugLog('assignMemberTask success', { status: response.status });
         return {
@@ -343,7 +390,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể giao nhiệm vụ cho thành viên.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể giao nhiệm vụ cho thành viên.',
+            ),
           };
         }
       }
@@ -359,9 +409,12 @@ export const leaderTaskService = {
 
   getMyMemberTasks: async (
     campaignId: string,
-    query?: GetMyMemberTasksQuery
+    query?: GetMyMemberTasksQuery,
   ): Promise<ApiResponse<PaginatedMyMemberTaskResponse>> => {
-    const routes = [`/api/campaigns/${campaignId}/member-tasks/me`, `/campaigns/${campaignId}/member-tasks/me`];
+    const routes = [
+      `/api/campaigns/${campaignId}/member-tasks/me`,
+      `/campaigns/${campaignId}/member-tasks/me`,
+    ];
 
     for (const route of routes) {
       try {
@@ -379,7 +432,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể tải danh sách nhiệm vụ của tôi.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể tải danh sách nhiệm vụ của tôi.',
+            ),
           };
         }
       }
@@ -404,8 +460,14 @@ export const leaderTaskService = {
 
     for (const route of routes) {
       try {
-        debugLog('bulkAssignMemberTasks request', { route, campaignTaskId, members });
-        const response = await api.post<MemberTaskResponse[]>(route, { members });
+        debugLog('bulkAssignMemberTasks request', {
+          route,
+          campaignTaskId,
+          members,
+        });
+        const response = await api.post<MemberTaskResponse[]>(route, {
+          members,
+        });
         debugLog('bulkAssignMemberTasks success', response.data);
         return {
           success: response.status >= 200 && response.status < 300,
@@ -419,7 +481,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể giao nhiều phần việc cho thành viên.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể giao nhiều phần việc cho thành viên.',
+            ),
           };
         }
       }
@@ -444,7 +509,11 @@ export const leaderTaskService = {
 
     for (const route of routes) {
       try {
-        debugLog('changeMemberTaskStatus request', { route, memberTaskId, request });
+        debugLog('changeMemberTaskStatus request', {
+          route,
+          memberTaskId,
+          request,
+        });
         const response = await api.patch<MemberTaskResponse>(route, request);
         debugLog('changeMemberTaskStatus success', response.data);
         return {
@@ -459,7 +528,10 @@ export const leaderTaskService = {
             success: false,
             data: null,
             status: error?.response?.status,
-            message: extractApiErrorMessage(error, 'Không thể cập nhật trạng thái nhiệm vụ con.'),
+            message: extractApiErrorMessage(
+              error,
+              'Không thể cập nhật trạng thái nhiệm vụ con.',
+            ),
           };
         }
       }

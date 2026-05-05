@@ -1,32 +1,32 @@
-import api from './api';
 import { extractApiErrorMessage } from '../utils/apiError';
+import api from './api';
 
 import type {
-  CampaignInventoryBalanceResponse,
+  BatchCompleteHouseholdDeliveryResponse,
   CampaignHouseholdResponse,
+  CampaignInventoryBalanceResponse,
   CampaignPackageQueryRequest,
+  CompleteHouseholdDeliveryBatchRequest,
+  CompleteHouseholdDeliveryRequest,
+  CompleteMemberTaskDeliveryWithDeliveryRequest,
+  CreateSupplyShortageRequestPayload,
+  DeliveryQueryRequest,
+  DistributionPointQueryRequest,
   DistributionPointResponse,
   HouseholdChecklistItemResponse,
-  DistributionPointQueryRequest,
-  DeliveryQueryRequest,
-  HouseholdQueryRequest,
-  UpdateCampaignHouseholdStatusRequest,
-  ReportNewReliefHouseholdRequest,
-  CreateSupplyShortageRequestPayload,
-  ReliefPackageDefinitionResponse,
-  SupplyShortageRequestResponse,
-  SupplyShortageRequestQueryRequest,
-  CompleteHouseholdDeliveryRequest,
   HouseholdDeliveryResponse,
-  CompleteHouseholdDeliveryBatchRequest,
-  BatchCompleteHouseholdDeliveryResponse,
-  ReliefCampaignPlanSummary,
+  HouseholdQueryRequest,
+  MemberTaskDeliveryQueryRequest,
+  MemberTaskDeliveryResponse,
   PaginatedResponse,
+  ReliefCampaignPlanSummary,
+  ReliefPackageDefinitionResponse,
+  ReportNewReliefHouseholdRequest,
+  SupplyShortageRequestQueryRequest,
+  SupplyShortageRequestResponse,
   TeamWorklistItemResponse,
   TeamWorklistQueryRequest,
-  MemberTaskDeliveryResponse,
-  MemberTaskDeliveryQueryRequest,
-  CompleteMemberTaskDeliveryWithDeliveryRequest,
+  UpdateCampaignHouseholdStatusRequest,
 } from '../types/reliefDistribution';
 
 const toPascalCasePackageParams = (query?: CampaignPackageQueryRequest) => {
@@ -66,8 +66,12 @@ const toPascalCaseHouseholdParams = (query?: HouseholdQueryRequest) => {
 
   return {
     ...(query.status !== undefined ? { Status: query.status } : {}),
-    ...(query.deliveryMode !== undefined ? { DeliveryMode: query.deliveryMode } : {}),
-    ...(query.distributionPointId ? { DistributionPointId: query.distributionPointId } : {}),
+    ...(query.deliveryMode !== undefined
+      ? { DeliveryMode: query.deliveryMode }
+      : {}),
+    ...(query.distributionPointId
+      ? { DistributionPointId: query.distributionPointId }
+      : {}),
     ...(query.campaignTeamId ? { CampaignTeamId: query.campaignTeamId } : {}),
     ...(query.isIsolated !== undefined ? { IsIsolated: query.isIsolated } : {}),
     ...(query.pageIndex !== undefined ? { PageIndex: query.pageIndex } : {}),
@@ -81,8 +85,12 @@ const toPascalCaseDeliveryParams = (query?: DeliveryQueryRequest) => {
 
   return {
     ...(query.status !== undefined ? { Status: query.status } : {}),
-    ...(query.deliveryMode !== undefined ? { DeliveryMode: query.deliveryMode } : {}),
-    ...(query.distributionPointId ? { DistributionPointId: query.distributionPointId } : {}),
+    ...(query.deliveryMode !== undefined
+      ? { DeliveryMode: query.deliveryMode }
+      : {}),
+    ...(query.distributionPointId
+      ? { DistributionPointId: query.distributionPointId }
+      : {}),
     ...(query.campaignTeamId ? { CampaignTeamId: query.campaignTeamId } : {}),
     ...(query.scheduledFrom ? { ScheduledFrom: query.scheduledFrom } : {}),
     ...(query.scheduledTo ? { ScheduledTo: query.scheduledTo } : {}),
@@ -97,8 +105,12 @@ const toPascalCaseTeamWorklistParams = (query?: TeamWorklistQueryRequest) => {
 
   return {
     ...(query.status !== undefined ? { Status: query.status } : {}),
-    ...(query.deliveryMode !== undefined ? { DeliveryMode: query.deliveryMode } : {}),
-    ...(query.distributionPointId ? { DistributionPointId: query.distributionPointId } : {}),
+    ...(query.deliveryMode !== undefined
+      ? { DeliveryMode: query.deliveryMode }
+      : {}),
+    ...(query.distributionPointId
+      ? { DistributionPointId: query.distributionPointId }
+      : {}),
     ...(query.campaignTeamId ? { CampaignTeamId: query.campaignTeamId } : {}),
     ...(query.scheduledFrom ? { ScheduledFrom: query.scheduledFrom } : {}),
     ...(query.scheduledTo ? { ScheduledTo: query.scheduledTo } : {}),
@@ -115,8 +127,12 @@ const toPascalCaseMemberTaskDeliveryParams = (
 
   return {
     ...(query.status !== undefined ? { Status: query.status } : {}),
-    ...(query.deliveryMode !== undefined ? { DeliveryMode: query.deliveryMode } : {}),
-    ...(query.distributionPointId ? { DistributionPointId: query.distributionPointId } : {}),
+    ...(query.deliveryMode !== undefined
+      ? { DeliveryMode: query.deliveryMode }
+      : {}),
+    ...(query.distributionPointId
+      ? { DistributionPointId: query.distributionPointId }
+      : {}),
     ...(query.campaignTeamId ? { CampaignTeamId: query.campaignTeamId } : {}),
     ...(query.memberTaskId ? { MemberTaskId: query.memberTaskId } : {}),
     ...(query.campaignTaskId ? { CampaignTaskId: query.campaignTaskId } : {}),
@@ -256,43 +272,137 @@ const extractInventoryBalanceItems = (payload: any) => {
   const matched = candidates.find((candidate) => Array.isArray(candidate));
   if (!Array.isArray(matched)) return [];
 
-  return matched
-    .map(normalizeInventoryBalanceItem)
-    .filter(Boolean);
+  return matched.map(normalizeInventoryBalanceItem).filter(Boolean);
 };
 
 const normalizePlanSummary = (payload: any): ReliefCampaignPlanSummary => ({
-  campaignId: String(pickFirstDefined(payload, ['campaignId', 'CampaignId']) || ''),
-  totalHouseholds: toNumberSafe(pickFirstDefined(payload, ['totalHouseholds', 'TotalHouseholds'])),
-  isolatedHouseholds: toNumberSafe(pickFirstDefined(payload, ['isolatedHouseholds', 'IsolatedHouseholds'])),
-  totalPopulation: toNumberSafe(pickFirstDefined(payload, ['totalPopulation', 'TotalPopulation'])),
-  averagePopulationDensity: toNumberSafe(pickFirstDefined(payload, ['averagePopulationDensity', 'AveragePopulationDensity'])),
-  highDensityAreaCount: toNumberSafe(pickFirstDefined(payload, ['highDensityAreaCount', 'HighDensityAreaCount'])),
-  mobileTeamPriorityAreaCount: toNumberSafe(pickFirstDefined(payload, ['mobileTeamPriorityAreaCount', 'MobileTeamPriorityAreaCount'])),
-  pickupPriorityAreaCount: toNumberSafe(pickFirstDefined(payload, ['pickupPriorityAreaCount', 'PickupPriorityAreaCount'])),
-  distributionPointCount: toNumberSafe(pickFirstDefined(payload, ['distributionPointCount', 'DistributionPointCount'])),
-  pendingHouseholds: toNumberSafe(pickFirstDefined(payload, ['pendingHouseholds', 'PendingHouseholds'])),
-  suggestedTeamCount: toNumberSafe(pickFirstDefined(payload, ['suggestedTeamCount', 'SuggestedTeamCount'])),
-  estimatedReliefPersonnel: toNumberSafe(pickFirstDefined(payload, ['estimatedReliefPersonnel', 'EstimatedReliefPersonnel'])),
-  estimatedLocalVolunteers: toNumberSafe(pickFirstDefined(payload, ['estimatedLocalVolunteers', 'EstimatedLocalVolunteers'])),
-  estimatedBoatCount: toNumberSafe(pickFirstDefined(payload, ['estimatedBoatCount', 'EstimatedBoatCount'])),
-  estimatedLifeJacketCount: toNumberSafe(pickFirstDefined(payload, ['estimatedLifeJacketCount', 'EstimatedLifeJacketCount'])),
+  campaignId: String(
+    pickFirstDefined(payload, ['campaignId', 'CampaignId']) || '',
+  ),
+  totalHouseholds: toNumberSafe(
+    pickFirstDefined(payload, ['totalHouseholds', 'TotalHouseholds']),
+  ),
+  isolatedHouseholds: toNumberSafe(
+    pickFirstDefined(payload, ['isolatedHouseholds', 'IsolatedHouseholds']),
+  ),
+  totalPopulation: toNumberSafe(
+    pickFirstDefined(payload, ['totalPopulation', 'TotalPopulation']),
+  ),
+  averagePopulationDensity: toNumberSafe(
+    pickFirstDefined(payload, [
+      'averagePopulationDensity',
+      'AveragePopulationDensity',
+    ]),
+  ),
+  highDensityAreaCount: toNumberSafe(
+    pickFirstDefined(payload, ['highDensityAreaCount', 'HighDensityAreaCount']),
+  ),
+  mobileTeamPriorityAreaCount: toNumberSafe(
+    pickFirstDefined(payload, [
+      'mobileTeamPriorityAreaCount',
+      'MobileTeamPriorityAreaCount',
+    ]),
+  ),
+  pickupPriorityAreaCount: toNumberSafe(
+    pickFirstDefined(payload, [
+      'pickupPriorityAreaCount',
+      'PickupPriorityAreaCount',
+    ]),
+  ),
+  distributionPointCount: toNumberSafe(
+    pickFirstDefined(payload, [
+      'distributionPointCount',
+      'DistributionPointCount',
+    ]),
+  ),
+  pendingHouseholds: toNumberSafe(
+    pickFirstDefined(payload, ['pendingHouseholds', 'PendingHouseholds']),
+  ),
+  suggestedTeamCount: toNumberSafe(
+    pickFirstDefined(payload, ['suggestedTeamCount', 'SuggestedTeamCount']),
+  ),
+  estimatedReliefPersonnel: toNumberSafe(
+    pickFirstDefined(payload, [
+      'estimatedReliefPersonnel',
+      'EstimatedReliefPersonnel',
+    ]),
+  ),
+  estimatedLocalVolunteers: toNumberSafe(
+    pickFirstDefined(payload, [
+      'estimatedLocalVolunteers',
+      'EstimatedLocalVolunteers',
+    ]),
+  ),
+  estimatedBoatCount: toNumberSafe(
+    pickFirstDefined(payload, ['estimatedBoatCount', 'EstimatedBoatCount']),
+  ),
+  estimatedLifeJacketCount: toNumberSafe(
+    pickFirstDefined(payload, [
+      'estimatedLifeJacketCount',
+      'EstimatedLifeJacketCount',
+    ]),
+  ),
   areas: Array.isArray(pickFirstDefined(payload, ['areas', 'Areas']))
     ? pickFirstDefined(payload, ['areas', 'Areas']).map((item: any) => {
         const areaName = String(
-          pickFirstDefined(item, ['areaName', 'AreaName']) || 'Chưa phân khu vực',
+          pickFirstDefined(item, ['areaName', 'AreaName']) ||
+            'Chưa phân khu vực',
         );
         const parsedCoordinates = extractCoordinatesFromAreaName(areaName);
         const latitudeValue =
-          pickFirstDefined(item, ['latitude', 'Latitude', 'lat', 'Lat', 'centerLatitude', 'CenterLatitude']) ??
-          pickNestedCoordinateValue(item, ['coordinate', 'Coordinate', 'center', 'Center', 'location', 'Location', 'geo', 'Geo'], ['latitude', 'Latitude', 'lat', 'Lat']);
+          pickFirstDefined(item, [
+            'latitude',
+            'Latitude',
+            'lat',
+            'Lat',
+            'centerLatitude',
+            'CenterLatitude',
+          ]) ??
+          pickNestedCoordinateValue(
+            item,
+            [
+              'coordinate',
+              'Coordinate',
+              'center',
+              'Center',
+              'location',
+              'Location',
+              'geo',
+              'Geo',
+            ],
+            ['latitude', 'Latitude', 'lat', 'Lat'],
+          );
         const longitudeValue =
-          pickFirstDefined(item, ['longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon', 'centerLongitude', 'CenterLongitude']) ??
-          pickNestedCoordinateValue(item, ['coordinate', 'Coordinate', 'center', 'Center', 'location', 'Location', 'geo', 'Geo'], ['longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon']);
+          pickFirstDefined(item, [
+            'longitude',
+            'Longitude',
+            'lng',
+            'Lng',
+            'lon',
+            'Lon',
+            'centerLongitude',
+            'CenterLongitude',
+          ]) ??
+          pickNestedCoordinateValue(
+            item,
+            [
+              'coordinate',
+              'Coordinate',
+              'center',
+              'Center',
+              'location',
+              'Location',
+              'geo',
+              'Geo',
+            ],
+            ['longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon'],
+          );
 
         return {
           areaName,
-          locationId: pickFirstDefined(item, ['locationId', 'LocationId']) ? String(pickFirstDefined(item, ['locationId', 'LocationId'])) : null,
+          locationId: pickFirstDefined(item, ['locationId', 'LocationId'])
+            ? String(pickFirstDefined(item, ['locationId', 'LocationId']))
+            : null,
           latitude:
             latitudeValue == null
               ? (parsedCoordinates?.latitude ?? null)
@@ -301,73 +411,269 @@ const normalizePlanSummary = (payload: any): ReliefCampaignPlanSummary => ({
             longitudeValue == null
               ? (parsedCoordinates?.longitude ?? null)
               : toNumberSafe(longitudeValue),
-          populationDensity: toNumberSafe(pickFirstDefined(item, ['populationDensity', 'PopulationDensity'])),
-          householdCount: toNumberSafe(pickFirstDefined(item, ['householdCount', 'HouseholdCount'])),
-          isolatedHouseholdCount: toNumberSafe(pickFirstDefined(item, ['isolatedHouseholdCount', 'IsolatedHouseholdCount'])),
-          population: toNumberSafe(pickFirstDefined(item, ['population', 'Population'])),
-          averageHouseholdSize: toNumberSafe(pickFirstDefined(item, ['averageHouseholdSize', 'AverageHouseholdSize'])),
-          pendingHouseholds: toNumberSafe(pickFirstDefined(item, ['pendingHouseholds', 'PendingHouseholds'])),
-          estimatedCoverageRadiusKm: toNumberSafe(pickFirstDefined(item, ['estimatedCoverageRadiusKm', 'EstimatedCoverageRadiusKm'])),
-          travelComplexityLabel: String(pickFirstDefined(item, ['travelComplexityLabel', 'TravelComplexityLabel']) || ''),
-          recommendedOperationalMode: String(pickFirstDefined(item, ['recommendedOperationalMode', 'RecommendedOperationalMode']) || ''),
-          recommendedDeliveryStrategy: String(pickFirstDefined(item, ['recommendedDeliveryStrategy', 'RecommendedDeliveryStrategy']) || ''),
-          suggestedDistributionPointCount: toNumberSafe(pickFirstDefined(item, ['suggestedDistributionPointCount', 'SuggestedDistributionPointCount'])),
-          suggestedMobileTeamCount: toNumberSafe(pickFirstDefined(item, ['suggestedMobileTeamCount', 'SuggestedMobileTeamCount'])),
-          suggestedTeamCount: toNumberSafe(pickFirstDefined(item, ['suggestedTeamCount', 'SuggestedTeamCount'])),
-          estimatedPackages: toNumberSafe(pickFirstDefined(item, ['estimatedPackages', 'EstimatedPackages'])),
-          estimatedBoatCount: toNumberSafe(pickFirstDefined(item, ['estimatedBoatCount', 'EstimatedBoatCount'])),
-          estimatedLifeJacketCount: toNumberSafe(pickFirstDefined(item, ['estimatedLifeJacketCount', 'EstimatedLifeJacketCount'])),
+          populationDensity: toNumberSafe(
+            pickFirstDefined(item, ['populationDensity', 'PopulationDensity']),
+          ),
+          householdCount: toNumberSafe(
+            pickFirstDefined(item, ['householdCount', 'HouseholdCount']),
+          ),
+          isolatedHouseholdCount: toNumberSafe(
+            pickFirstDefined(item, [
+              'isolatedHouseholdCount',
+              'IsolatedHouseholdCount',
+            ]),
+          ),
+          population: toNumberSafe(
+            pickFirstDefined(item, ['population', 'Population']),
+          ),
+          averageHouseholdSize: toNumberSafe(
+            pickFirstDefined(item, [
+              'averageHouseholdSize',
+              'AverageHouseholdSize',
+            ]),
+          ),
+          pendingHouseholds: toNumberSafe(
+            pickFirstDefined(item, ['pendingHouseholds', 'PendingHouseholds']),
+          ),
+          estimatedCoverageRadiusKm: toNumberSafe(
+            pickFirstDefined(item, [
+              'estimatedCoverageRadiusKm',
+              'EstimatedCoverageRadiusKm',
+            ]),
+          ),
+          travelComplexityLabel: String(
+            pickFirstDefined(item, [
+              'travelComplexityLabel',
+              'TravelComplexityLabel',
+            ]) || '',
+          ),
+          recommendedOperationalMode: String(
+            pickFirstDefined(item, [
+              'recommendedOperationalMode',
+              'RecommendedOperationalMode',
+            ]) || '',
+          ),
+          recommendedDeliveryStrategy: String(
+            pickFirstDefined(item, [
+              'recommendedDeliveryStrategy',
+              'RecommendedDeliveryStrategy',
+            ]) || '',
+          ),
+          suggestedDistributionPointCount: toNumberSafe(
+            pickFirstDefined(item, [
+              'suggestedDistributionPointCount',
+              'SuggestedDistributionPointCount',
+            ]),
+          ),
+          suggestedMobileTeamCount: toNumberSafe(
+            pickFirstDefined(item, [
+              'suggestedMobileTeamCount',
+              'SuggestedMobileTeamCount',
+            ]),
+          ),
+          suggestedTeamCount: toNumberSafe(
+            pickFirstDefined(item, [
+              'suggestedTeamCount',
+              'SuggestedTeamCount',
+            ]),
+          ),
+          estimatedPackages: toNumberSafe(
+            pickFirstDefined(item, ['estimatedPackages', 'EstimatedPackages']),
+          ),
+          estimatedBoatCount: toNumberSafe(
+            pickFirstDefined(item, [
+              'estimatedBoatCount',
+              'EstimatedBoatCount',
+            ]),
+          ),
+          estimatedLifeJacketCount: toNumberSafe(
+            pickFirstDefined(item, [
+              'estimatedLifeJacketCount',
+              'EstimatedLifeJacketCount',
+            ]),
+          ),
         };
       })
     : [],
-  isolatedHouseholdItems: Array.isArray(pickFirstDefined(payload, ['isolatedHouseholdItems', 'IsolatedHouseholdItems']))
-    ? pickFirstDefined(payload, ['isolatedHouseholdItems', 'IsolatedHouseholdItems']).map((item: any) => ({
-        campaignHouseholdId: String(pickFirstDefined(item, ['campaignHouseholdId', 'CampaignHouseholdId']) || ''),
-        householdCode: String(pickFirstDefined(item, ['householdCode', 'HouseholdCode']) || ''),
-        headOfHouseholdName: String(pickFirstDefined(item, ['headOfHouseholdName', 'HeadOfHouseholdName']) || ''),
+  isolatedHouseholdItems: Array.isArray(
+    pickFirstDefined(payload, [
+      'isolatedHouseholdItems',
+      'IsolatedHouseholdItems',
+    ]),
+  )
+    ? pickFirstDefined(payload, [
+        'isolatedHouseholdItems',
+        'IsolatedHouseholdItems',
+      ]).map((item: any) => ({
+        campaignHouseholdId: String(
+          pickFirstDefined(item, [
+            'campaignHouseholdId',
+            'CampaignHouseholdId',
+          ]) || '',
+        ),
+        householdCode: String(
+          pickFirstDefined(item, ['householdCode', 'HouseholdCode']) || '',
+        ),
+        headOfHouseholdName: String(
+          pickFirstDefined(item, [
+            'headOfHouseholdName',
+            'HeadOfHouseholdName',
+          ]) || '',
+        ),
         address: pickFirstDefined(item, ['address', 'Address']) || null,
-        locationId: pickFirstDefined(item, ['locationId', 'LocationId']) ? String(pickFirstDefined(item, ['locationId', 'LocationId'])) : null,
+        locationId: pickFirstDefined(item, ['locationId', 'LocationId'])
+          ? String(pickFirstDefined(item, ['locationId', 'LocationId']))
+          : null,
         latitude: (() => {
           const value =
             pickFirstDefined(item, ['latitude', 'Latitude', 'lat', 'Lat']) ??
-            pickNestedCoordinateValue(item, ['coordinate', 'Coordinate', 'location', 'Location', 'geo', 'Geo'], ['latitude', 'Latitude', 'lat', 'Lat']);
+            pickNestedCoordinateValue(
+              item,
+              [
+                'coordinate',
+                'Coordinate',
+                'location',
+                'Location',
+                'geo',
+                'Geo',
+              ],
+              ['latitude', 'Latitude', 'lat', 'Lat'],
+            );
           return value == null ? null : toNumberSafe(value);
         })(),
         longitude: (() => {
           const value =
-            pickFirstDefined(item, ['longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon']) ??
-            pickNestedCoordinateValue(item, ['coordinate', 'Coordinate', 'location', 'Location', 'geo', 'Geo'], ['longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon']);
+            pickFirstDefined(item, [
+              'longitude',
+              'Longitude',
+              'lng',
+              'Lng',
+              'lon',
+              'Lon',
+            ]) ??
+            pickNestedCoordinateValue(
+              item,
+              [
+                'coordinate',
+                'Coordinate',
+                'location',
+                'Location',
+                'geo',
+                'Geo',
+              ],
+              ['longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon'],
+            );
           return value == null ? null : toNumberSafe(value);
         })(),
-        householdSize: toNumberSafe(pickFirstDefined(item, ['householdSize', 'HouseholdSize'])),
-        floodSeverityLevel: pickFirstDefined(item, ['floodSeverityLevel', 'FloodSeverityLevel']) ?? null,
-        isolationSeverityLevel: pickFirstDefined(item, ['isolationSeverityLevel', 'IsolationSeverityLevel']) ?? null,
-        requiresBoat: Boolean(pickFirstDefined(item, ['requiresBoat', 'RequiresBoat']) ?? false),
-        requiresLocalGuide: Boolean(pickFirstDefined(item, ['requiresLocalGuide', 'RequiresLocalGuide']) ?? false),
-        priorityLabel: String(pickFirstDefined(item, ['priorityLabel', 'PriorityLabel']) || 'Ưu tiên'),
-        suggestedSupportMode: String(pickFirstDefined(item, ['suggestedSupportMode', 'SuggestedSupportMode']) || 'Giao tận nơi'),
-        estimatedReliefPersonnel: toNumberSafe(pickFirstDefined(item, ['estimatedReliefPersonnel', 'EstimatedReliefPersonnel'])),
-        estimatedBoatCount: toNumberSafe(pickFirstDefined(item, ['estimatedBoatCount', 'EstimatedBoatCount'])),
-        estimatedLifeJacketCount: toNumberSafe(pickFirstDefined(item, ['estimatedLifeJacketCount', 'EstimatedLifeJacketCount'])),
-        campaignTeamName: pickFirstDefined(item, ['campaignTeamName', 'CampaignTeamName']) || null,
+        householdSize: toNumberSafe(
+          pickFirstDefined(item, ['householdSize', 'HouseholdSize']),
+        ),
+        floodSeverityLevel:
+          pickFirstDefined(item, [
+            'floodSeverityLevel',
+            'FloodSeverityLevel',
+          ]) ?? null,
+        isolationSeverityLevel:
+          pickFirstDefined(item, [
+            'isolationSeverityLevel',
+            'IsolationSeverityLevel',
+          ]) ?? null,
+        requiresBoat: Boolean(
+          pickFirstDefined(item, ['requiresBoat', 'RequiresBoat']) ?? false,
+        ),
+        requiresLocalGuide: Boolean(
+          pickFirstDefined(item, [
+            'requiresLocalGuide',
+            'RequiresLocalGuide',
+          ]) ?? false,
+        ),
+        priorityLabel: String(
+          pickFirstDefined(item, ['priorityLabel', 'PriorityLabel']) ||
+            'Ưu tiên',
+        ),
+        suggestedSupportMode: String(
+          pickFirstDefined(item, [
+            'suggestedSupportMode',
+            'SuggestedSupportMode',
+          ]) || 'Giao tận nơi',
+        ),
+        estimatedReliefPersonnel: toNumberSafe(
+          pickFirstDefined(item, [
+            'estimatedReliefPersonnel',
+            'EstimatedReliefPersonnel',
+          ]),
+        ),
+        estimatedBoatCount: toNumberSafe(
+          pickFirstDefined(item, ['estimatedBoatCount', 'EstimatedBoatCount']),
+        ),
+        estimatedLifeJacketCount: toNumberSafe(
+          pickFirstDefined(item, [
+            'estimatedLifeJacketCount',
+            'EstimatedLifeJacketCount',
+          ]),
+        ),
+        campaignTeamName:
+          pickFirstDefined(item, ['campaignTeamName', 'CampaignTeamName']) ||
+          null,
       }))
     : [],
-  distributionPoints: Array.isArray(pickFirstDefined(payload, ['distributionPoints', 'DistributionPoints']))
-    ? pickFirstDefined(payload, ['distributionPoints', 'DistributionPoints']).map((item: any) => ({
-        distributionPointId: String(pickFirstDefined(item, ['distributionPointId', 'DistributionPointId']) || ''),
+  distributionPoints: Array.isArray(
+    pickFirstDefined(payload, ['distributionPoints', 'DistributionPoints']),
+  )
+    ? pickFirstDefined(payload, [
+        'distributionPoints',
+        'DistributionPoints',
+      ]).map((item: any) => ({
+        distributionPointId: String(
+          pickFirstDefined(item, [
+            'distributionPointId',
+            'DistributionPointId',
+          ]) || '',
+        ),
         name: String(pickFirstDefined(item, ['name', 'Name']) || 'Điểm phát'),
         address: pickFirstDefined(item, ['address', 'Address']) || null,
-        assignedHouseholdCount: toNumberSafe(pickFirstDefined(item, ['assignedHouseholdCount', 'AssignedHouseholdCount'])),
-        pendingDeliveryCount: toNumberSafe(pickFirstDefined(item, ['pendingDeliveryCount', 'PendingDeliveryCount'])),
-        suggestedPersonnelCount: toNumberSafe(pickFirstDefined(item, ['suggestedPersonnelCount', 'SuggestedPersonnelCount'])),
-        suggestedLocalVolunteerCount: toNumberSafe(pickFirstDefined(item, ['suggestedLocalVolunteerCount', 'SuggestedLocalVolunteerCount'])),
+        assignedHouseholdCount: toNumberSafe(
+          pickFirstDefined(item, [
+            'assignedHouseholdCount',
+            'AssignedHouseholdCount',
+          ]),
+        ),
+        pendingDeliveryCount: toNumberSafe(
+          pickFirstDefined(item, [
+            'pendingDeliveryCount',
+            'PendingDeliveryCount',
+          ]),
+        ),
+        suggestedPersonnelCount: toNumberSafe(
+          pickFirstDefined(item, [
+            'suggestedPersonnelCount',
+            'SuggestedPersonnelCount',
+          ]),
+        ),
+        suggestedLocalVolunteerCount: toNumberSafe(
+          pickFirstDefined(item, [
+            'suggestedLocalVolunteerCount',
+            'SuggestedLocalVolunteerCount',
+          ]),
+        ),
       }))
     : [],
-  resourceRequirements: Array.isArray(pickFirstDefined(payload, ['resourceRequirements', 'ResourceRequirements']))
-    ? pickFirstDefined(payload, ['resourceRequirements', 'ResourceRequirements']).map((item: any) => ({
-        resourceType: String(pickFirstDefined(item, ['resourceType', 'ResourceType']) || ''),
-        resourceName: String(pickFirstDefined(item, ['resourceName', 'ResourceName']) || ''),
-        estimatedQuantity: toNumberSafe(pickFirstDefined(item, ['estimatedQuantity', 'EstimatedQuantity'])),
+  resourceRequirements: Array.isArray(
+    pickFirstDefined(payload, ['resourceRequirements', 'ResourceRequirements']),
+  )
+    ? pickFirstDefined(payload, [
+        'resourceRequirements',
+        'ResourceRequirements',
+      ]).map((item: any) => ({
+        resourceType: String(
+          pickFirstDefined(item, ['resourceType', 'ResourceType']) || '',
+        ),
+        resourceName: String(
+          pickFirstDefined(item, ['resourceName', 'ResourceName']) || '',
+        ),
+        estimatedQuantity: toNumberSafe(
+          pickFirstDefined(item, ['estimatedQuantity', 'EstimatedQuantity']),
+        ),
         notes: pickFirstDefined(item, ['notes', 'Notes']) || null,
       }))
     : [],
@@ -474,12 +780,17 @@ export const reliefDistributionService = {
       routes,
       async (route) => {
         debugLog('getInventoryBalance', { route, campaignId });
-        const resp = await api.get<CampaignInventoryBalanceResponse | any[]>(route);
+        const resp = await api.get<CampaignInventoryBalanceResponse | any[]>(
+          route,
+        );
         const items = extractInventoryBalanceItems(resp.data);
 
         return {
           campaignId,
-          updatedAt: pickFirstDefined(resp.data ?? {}, ['updatedAt', 'UpdatedAt']),
+          updatedAt: pickFirstDefined(resp.data ?? {}, [
+            'updatedAt',
+            'UpdatedAt',
+          ]),
           items,
         } as CampaignInventoryBalanceResponse;
       },
@@ -490,7 +801,9 @@ export const reliefDistributionService = {
   getCampaignPackages: async (
     campaignId: string,
     query?: CampaignPackageQueryRequest,
-  ): Promise<ApiResponse<PaginatedResponse<ReliefPackageDefinitionResponse>>> => {
+  ): Promise<
+    ApiResponse<PaginatedResponse<ReliefPackageDefinitionResponse>>
+  > => {
     const routes = [
       `/relief/campaigns/${campaignId}/packages`,
       `/api/relief/campaigns/${campaignId}/packages`,
@@ -500,7 +813,9 @@ export const reliefDistributionService = {
       async (route) => {
         const params = toPascalCasePackageParams(query);
         debugLog('getCampaignPackages', { route, campaignId, query, params });
-        const resp = await api.get<PaginatedResponse<ReliefPackageDefinitionResponse>>(route, {
+        const resp = await api.get<
+          PaginatedResponse<ReliefPackageDefinitionResponse>
+        >(route, {
           params,
         });
         return resp.data;
@@ -521,7 +836,9 @@ export const reliefDistributionService = {
       routes,
       async (route) => {
         debugLog('getDistributionPoints', { route, campaignId, query });
-        const resp = await api.get<PaginatedResponse<DistributionPointResponse>>(route, { params: query });
+        const resp = await api.get<
+          PaginatedResponse<DistributionPointResponse>
+        >(route, { params: query });
         return resp.data;
       },
       'Không thể tải danh sách điểm phát.',
@@ -543,7 +860,9 @@ export const reliefDistributionService = {
       async (route) => {
         const params = toPascalCaseHouseholdParams(query);
         debugLog('getCampaignHouseholds', { route, campaignId, query, params });
-        const resp = await api.get<PaginatedResponse<CampaignHouseholdResponse>>(route, { params });
+        const resp = await api.get<
+          PaginatedResponse<CampaignHouseholdResponse>
+        >(route, { params });
         return resp.data;
       },
       'Không thể tải danh sách hộ gia đình.',
@@ -572,7 +891,9 @@ export const reliefDistributionService = {
   getChecklist: async (
     campaignId: string,
     query?: DeliveryQueryRequest,
-  ): Promise<ApiResponse<PaginatedResponse<HouseholdChecklistItemResponse>>> => {
+  ): Promise<
+    ApiResponse<PaginatedResponse<HouseholdChecklistItemResponse>>
+  > => {
     const routes = [
       `/relief/campaigns/${campaignId}/checklist`,
       `/api/relief/campaigns/${campaignId}/checklist`,
@@ -582,7 +903,9 @@ export const reliefDistributionService = {
       async (route) => {
         const params = toPascalCaseDeliveryParams(query);
         debugLog('getChecklist', { route, campaignId, query, params });
-        const resp = await api.get<PaginatedResponse<HouseholdChecklistItemResponse>>(route, { params });
+        const resp = await api.get<
+          PaginatedResponse<HouseholdChecklistItemResponse>
+        >(route, { params });
         debugPackageSnapshot('getChecklist:package-fields', resp.data);
         return resp.data;
       },
@@ -603,7 +926,10 @@ export const reliefDistributionService = {
       async (route) => {
         const params = toPascalCaseTeamWorklistParams(query);
         debugLog('getTeamWorklist', { route, campaignId, query, params });
-        const resp = await api.get<PaginatedResponse<TeamWorklistItemResponse>>(route, { params });
+        const resp = await api.get<PaginatedResponse<TeamWorklistItemResponse>>(
+          route,
+          { params },
+        );
         debugPackageSnapshot('getTeamWorklist:package-fields', resp.data);
         return resp.data;
       },
@@ -622,13 +948,22 @@ export const reliefDistributionService = {
     for (const route of routes) {
       try {
         const params = toPascalCaseMemberTaskDeliveryParams(query);
-        debugLog('getMyMemberTaskDeliveries', { route, campaignId, query, params });
+        debugLog('getMyMemberTaskDeliveries', {
+          route,
+          campaignId,
+          query,
+          params,
+        });
         const resp = await api.get<
-          PaginatedResponse<MemberTaskDeliveryResponse> | MemberTaskDeliveryResponse[]
+          | PaginatedResponse<MemberTaskDeliveryResponse>
+          | MemberTaskDeliveryResponse[]
         >(route, { params });
 
         const payload = resp.data;
-        debugPackageSnapshot('getMyMemberTaskDeliveries:package-fields', payload);
+        debugPackageSnapshot(
+          'getMyMemberTaskDeliveries:package-fields',
+          payload,
+        );
         if (Array.isArray(payload)) {
           return {
             success: true,
@@ -658,7 +993,8 @@ export const reliefDistributionService = {
             success: false,
             data: null,
             status: 403,
-            message: 'Tài khoản hiện tại không được backend cho phép xem member-task-deliveries/me.',
+            message:
+              'Tài khoản hiện tại không được backend cho phép xem member-task-deliveries/me.',
           };
         }
         if (!error?.response) {
@@ -668,7 +1004,10 @@ export const reliefDistributionService = {
           success: false,
           data: null,
           status: error?.response?.status,
-          message: extractApiErrorMessage(error, 'Không thể tải delivery được giao cho tôi.'),
+          message: extractApiErrorMessage(
+            error,
+            'Không thể tải delivery được giao cho tôi.',
+          ),
         };
       }
     }
@@ -711,7 +1050,12 @@ export const reliefDistributionService = {
     return tryRoutes(
       routes,
       async (route) => {
-        debugLog('updateHouseholdStatus', { route, campaignId, campaignHouseholdId, request });
+        debugLog('updateHouseholdStatus', {
+          route,
+          campaignId,
+          campaignHouseholdId,
+          request,
+        });
         await api.patch(route, request);
       },
       'Không thể cập nhật trạng thái hộ gia đình.',
@@ -732,7 +1076,10 @@ export const reliefDistributionService = {
       routes,
       async (route) => {
         debugLog('createShortageRequest', { route, campaignId, request });
-        const resp = await api.post<SupplyShortageRequestResponse>(route, request);
+        const resp = await api.post<SupplyShortageRequestResponse>(
+          route,
+          request,
+        );
         return resp.data;
       },
       'Không thể tạo yêu cầu bổ sung vật tư.',
@@ -752,7 +1099,9 @@ export const reliefDistributionService = {
       async (route) => {
         const params = toPascalCaseShortageRequestParams(query);
         debugLog('getShortageRequests', { route, campaignId, query, params });
-        const resp = await api.get<PaginatedResponse<SupplyShortageRequestResponse>>(route, {
+        const resp = await api.get<
+          PaginatedResponse<SupplyShortageRequestResponse>
+        >(route, {
           params,
         });
         return resp.data;
@@ -775,9 +1124,17 @@ export const reliefDistributionService = {
     return tryRoutes(
       routes,
       async (route) => {
-        debugLog('completeDelivery', { route, campaignId, householdDeliveryId, request });
+        debugLog('completeDelivery', {
+          route,
+          campaignId,
+          householdDeliveryId,
+          request,
+        });
         try {
-          const resp = await api.post<HouseholdDeliveryResponse>(route, request);
+          const resp = await api.post<HouseholdDeliveryResponse>(
+            route,
+            request,
+          );
           return resp.data;
         } catch (error: any) {
           debugError('completeDeliveryFailed', {
@@ -810,7 +1167,10 @@ export const reliefDistributionService = {
       async (route) => {
         debugLog('completeDeliveryBatch', { route, campaignId, request });
         try {
-          const resp = await api.post<BatchCompleteHouseholdDeliveryResponse>(route, request);
+          const resp = await api.post<BatchCompleteHouseholdDeliveryResponse>(
+            route,
+            request,
+          );
           return resp.data;
         } catch (error: any) {
           debugError('completeDeliveryBatchFailed', {
@@ -840,14 +1200,17 @@ export const reliefDistributionService = {
     return tryRoutes(
       routes,
       async (route) => {
-        debugLog('completeMemberTaskDeliveryWithDelivery', { route, memberTaskDeliveryId, request });
+        debugLog('completeMemberTaskDeliveryWithDelivery', {
+          route,
+          memberTaskDeliveryId,
+          request,
+        });
         const resp = await api.post<MemberTaskDeliveryResponse>(route, request);
         return resp.data;
       },
       'Không thể hoàn tất delivery theo flow mobile.',
     );
   },
-
 
   getDeliveryById: async (
     campaignId: string,

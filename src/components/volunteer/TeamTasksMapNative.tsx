@@ -1,9 +1,9 @@
+import { useTheme } from '@/src/context/ThemeContext';
 import {
-  rescueTeamService,
   RescueActiveBatchResponse,
   RescueBatchItem,
+  rescueTeamService,
 } from '@/src/services/rescueTeamService';
-import { useTheme } from '@/src/context/ThemeContext';
 import { useEffect, useMemo, useRef } from 'react';
 import { Text, View } from 'react-native';
 
@@ -29,7 +29,7 @@ export default function TeamTasksMapNative({
 
   const Mapbox = useMemo(() => {
     try {
-      const module = eval('require')( '@rnmapbox/maps');
+      const module = eval('require')('@rnmapbox/maps');
       module.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '');
       return module;
     } catch {

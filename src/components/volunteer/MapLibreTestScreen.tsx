@@ -42,23 +42,35 @@ export default function MapLibreTestScreen({
 
       {!supportsNativeMap ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base" style={{ color: colors.textSecondary }}>
+          <Text
+            className="text-center text-base"
+            style={{ color: colors.textSecondary }}
+          >
             Bạn đang chạy Expo Go. Hãy mở bằng development build để test native
             map.
           </Text>
         </View>
       ) : nativeLoadError ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-lg font-bold" style={{ color: colors.error }}>
+          <Text
+            className="text-center text-lg font-bold"
+            style={{ color: colors.error }}
+          >
             MapLibre native load failed
           </Text>
-          <Text className="mt-3 text-center text-base" style={{ color: colors.textSecondary }}>
+          <Text
+            className="mt-3 text-center text-base"
+            style={{ color: colors.textSecondary }}
+          >
             {nativeLoadError}
           </Text>
         </View>
       ) : !mapStyle ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base" style={{ color: colors.textSecondary }}>
+          <Text
+            className="text-center text-base"
+            style={{ color: colors.textSecondary }}
+          >
             Thiếu EXPO_PUBLIC_GOONG_MAP_KEY.
           </Text>
         </View>

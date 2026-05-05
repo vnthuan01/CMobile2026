@@ -1,16 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { leaderTaskService } from '../services/leaderTaskService';
-import { teamKeys } from './useMyTeam';
-import { mobileQueryOptions } from './queryOptions';
 import type {
   AssignMemberTaskRequest,
   ChangeCampaignTaskStatusRequest,
   ChangeMemberTaskStatusRequest,
   CreateCampaignTaskRequest,
-  GetMyMemberTasksQuery,
   GetCampaignTasksQuery,
+  GetMyMemberTasksQuery,
   UpdateCampaignTaskRequest,
 } from '../types/leaderTask';
+import { mobileQueryOptions } from './queryOptions';
+import { teamKeys } from './useMyTeam';
 
 export const leaderTaskKeys = {
   all: ['leaderTasks'] as const,
@@ -85,7 +85,10 @@ export function useCampaignTasks(
   return useQuery({
     queryKey: leaderTaskKeys.tasks(campaignId || '', query),
     queryFn: async () => {
-      const result = await leaderTaskService.getCampaignTasks(campaignId || '', query);
+      const result = await leaderTaskService.getCampaignTasks(
+        campaignId || '',
+        query,
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
@@ -101,7 +104,10 @@ export function useMyMemberTasks(
   return useQuery({
     queryKey: leaderTaskKeys.myMemberTasks(campaignId || '', query),
     queryFn: async () => {
-      const result = await leaderTaskService.getMyMemberTasks(campaignId || '', query);
+      const result = await leaderTaskService.getMyMemberTasks(
+        campaignId || '',
+        query,
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
@@ -114,7 +120,9 @@ export function useCampaignTaskDetail(campaignTaskId?: string | null) {
   return useQuery({
     queryKey: leaderTaskKeys.taskDetail(campaignTaskId || ''),
     queryFn: async () => {
-      const result = await leaderTaskService.getCampaignTaskDetail(campaignTaskId || '');
+      const result = await leaderTaskService.getCampaignTaskDetail(
+        campaignTaskId || '',
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
@@ -126,8 +134,17 @@ export function useCampaignTaskDetail(campaignTaskId?: string | null) {
 export function useCreateCampaignTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ campaignId, request }: { campaignId: string; request: CreateCampaignTaskRequest }) => {
-      const result = await leaderTaskService.createCampaignTask(campaignId, request);
+    mutationFn: async ({
+      campaignId,
+      request,
+    }: {
+      campaignId: string;
+      request: CreateCampaignTaskRequest;
+    }) => {
+      const result = await leaderTaskService.createCampaignTask(
+        campaignId,
+        request,
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
@@ -143,8 +160,17 @@ export function useCreateCampaignTask() {
 export function useUpdateCampaignTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ campaignTaskId, request }: { campaignTaskId: string; request: UpdateCampaignTaskRequest }) => {
-      const result = await leaderTaskService.updateCampaignTask(campaignTaskId, request);
+    mutationFn: async ({
+      campaignTaskId,
+      request,
+    }: {
+      campaignTaskId: string;
+      request: UpdateCampaignTaskRequest;
+    }) => {
+      const result = await leaderTaskService.updateCampaignTask(
+        campaignTaskId,
+        request,
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
@@ -160,8 +186,17 @@ export function useUpdateCampaignTask() {
 export function useChangeCampaignTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ campaignTaskId, request }: { campaignTaskId: string; request: ChangeCampaignTaskStatusRequest }) => {
-      const result = await leaderTaskService.changeCampaignTaskStatus(campaignTaskId, request);
+    mutationFn: async ({
+      campaignTaskId,
+      request,
+    }: {
+      campaignTaskId: string;
+      request: ChangeCampaignTaskStatusRequest;
+    }) => {
+      const result = await leaderTaskService.changeCampaignTaskStatus(
+        campaignTaskId,
+        request,
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
@@ -191,8 +226,17 @@ export function useDeleteCampaignTask() {
 export function useAssignMemberTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ campaignTaskId, request }: { campaignTaskId: string; request: AssignMemberTaskRequest }) => {
-      const result = await leaderTaskService.assignMemberTask(campaignTaskId, request);
+    mutationFn: async ({
+      campaignTaskId,
+      request,
+    }: {
+      campaignTaskId: string;
+      request: AssignMemberTaskRequest;
+    }) => {
+      const result = await leaderTaskService.assignMemberTask(
+        campaignTaskId,
+        request,
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
@@ -208,8 +252,17 @@ export function useAssignMemberTask() {
 export function useBulkAssignMemberTasks() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ campaignTaskId, members }: { campaignTaskId: string; members: AssignMemberTaskRequest[] }) => {
-      const result = await leaderTaskService.bulkAssignMemberTasks(campaignTaskId, members);
+    mutationFn: async ({
+      campaignTaskId,
+      members,
+    }: {
+      campaignTaskId: string;
+      members: AssignMemberTaskRequest[];
+    }) => {
+      const result = await leaderTaskService.bulkAssignMemberTasks(
+        campaignTaskId,
+        members,
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },
@@ -225,8 +278,17 @@ export function useBulkAssignMemberTasks() {
 export function useChangeMemberTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ memberTaskId, request }: { memberTaskId: string; request: ChangeMemberTaskStatusRequest }) => {
-      const result = await leaderTaskService.changeMemberTaskStatus(memberTaskId, request);
+    mutationFn: async ({
+      memberTaskId,
+      request,
+    }: {
+      memberTaskId: string;
+      request: ChangeMemberTaskStatusRequest;
+    }) => {
+      const result = await leaderTaskService.changeMemberTaskStatus(
+        memberTaskId,
+        request,
+      );
       if (!result.success) throw new Error(result.message);
       return result.data;
     },

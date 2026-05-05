@@ -1,5 +1,3 @@
-import api from './api';
-import { extractApiErrorMessage } from '../utils/apiError';
 import type {
   AssignedCampaignSummary,
   TeamDetailResponse,
@@ -9,9 +7,13 @@ import type {
   TeamTrackingHeartbeatResponse,
   TeamTrackingPointResponse,
 } from '../types/team';
+import { extractApiErrorMessage } from '../utils/apiError';
+import api from './api';
 
 const normalizeTeamMode = (team: any): TeamMode => {
-  const rawTeamType = String(team?.teamType ?? team?.type ?? '').trim().toLowerCase();
+  const rawTeamType = String(team?.teamType ?? team?.type ?? '')
+    .trim()
+    .toLowerCase();
   const assignedCampaignSources = [
     ...(Array.isArray(team?.assignedCampaigns) ? team.assignedCampaigns : []),
     ...(Array.isArray(team?.campaignTeams) ? team.campaignTeams : []),
@@ -20,7 +22,9 @@ const normalizeTeamMode = (team: any): TeamMode => {
 
   const campaignTypes = assignedCampaignSources.length
     ? assignedCampaignSources.map((campaign: any) =>
-        String(campaign?.campaignType ?? campaign?.type ?? '').trim().toLowerCase(),
+        String(campaign?.campaignType ?? campaign?.type ?? '')
+          .trim()
+          .toLowerCase(),
       )
     : [];
 
@@ -28,7 +32,9 @@ const normalizeTeamMode = (team: any): TeamMode => {
     rawTeamType.includes('relief') ||
     rawTeamType.includes('cứu trợ') ||
     rawTeamType === '1' ||
-    campaignTypes.some((type: string) => type.includes('relief') || type === '1')
+    campaignTypes.some(
+      (type: string) => type.includes('relief') || type === '1',
+    )
   ) {
     return 'relief';
   }
@@ -71,7 +77,11 @@ const normalizeAssignedCampaigns = (team: any): AssignedCampaignSummary[] => {
       campaign?.campaignTeam?.campaignType ??
       campaign?.campaignTeam?.campaign?.campaignType ??
       null,
-    role: campaign?.role ?? campaign?.teamRole ?? campaign?.campaignTeam?.role ?? null,
+    role:
+      campaign?.role ??
+      campaign?.teamRole ??
+      campaign?.campaignTeam?.role ??
+      null,
     status: campaign?.status ?? null,
     startDate:
       campaign?.startDate ??
@@ -90,7 +100,8 @@ const normalizeAssignedCampaigns = (team: any): AssignedCampaignSummary[] => {
   return normalized
     .filter((campaign) => campaign.campaignId)
     .reduce<AssignedCampaignSummary[]>((acc, campaign) => {
-      if (acc.some((item) => item.campaignId === campaign.campaignId)) return acc;
+      if (acc.some((item) => item.campaignId === campaign.campaignId))
+        return acc;
       acc.push(campaign);
       return acc;
     }, []);
@@ -143,7 +154,9 @@ const normalizeTeamMembers = (team: any): TeamMemberSummary[] => {
         userId,
         displayName,
         email: member?.email ?? rawUser?.email ?? '',
-        volunteerProfileId: volunteerProfileId ? String(volunteerProfileId) : null,
+        volunteerProfileId: volunteerProfileId
+          ? String(volunteerProfileId)
+          : null,
         role: member?.role ?? member?.teamRole ?? rawUser?.role ?? 'Member',
         skills: Array.isArray(member?.skills)
           ? member.skills
@@ -158,10 +171,15 @@ const normalizeTeamMembers = (team: any): TeamMemberSummary[] => {
           new Date(0).toISOString(),
       } satisfies TeamMemberSummary;
     })
-    .filter((member) => member.userId || member.volunteerProfileId || member.displayName);
+    .filter(
+      (member) =>
+        member.userId || member.volunteerProfileId || member.displayName,
+    );
 };
 
-const normalizeTeam = (team: TeamDetailResponse | null): TeamDetailResponse | null => {
+const normalizeTeam = (
+  team: TeamDetailResponse | null,
+): TeamDetailResponse | null => {
   if (!team) return null;
   const normalized = team as TeamDetailResponse & Record<string, any>;
   return {
@@ -173,14 +191,14 @@ const normalizeTeam = (team: TeamDetailResponse | null): TeamDetailResponse | nu
 };
 
 export type {
-  TeamSkillResponse,
-  TeamUserSummary,
+  TeamDetailResponse,
   TeamLeaderSummary,
   TeamMemberSummary,
-  TeamDetailResponse,
+  TeamSkillResponse,
   TeamTrackingHeartbeatRequest,
   TeamTrackingHeartbeatResponse,
   TeamTrackingPointResponse,
+  TeamUserSummary
 } from '../types/team';
 
 export const teamService = {

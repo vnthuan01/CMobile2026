@@ -1,8 +1,8 @@
 import type {
-    NotificationsQueryParams,
-    NotificationsResponse,
-    RealtimeTokenResponse,
-    UnreadNotificationCountResponse,
+  NotificationsQueryParams,
+  NotificationsResponse,
+  RealtimeTokenResponse,
+  UnreadNotificationCountResponse,
 } from '../types/notification';
 import api from './api';
 
@@ -41,11 +41,15 @@ const isLikelyPrivateRealtimeEndpoint = (endpoint?: string | null) => {
 };
 
 const normalizeWsUrl = (value?: string | null): string => {
-  return String(value ?? '').trim().replace(/\/+$/, '');
+  return String(value ?? '')
+    .trim()
+    .replace(/\/+$/, '');
 };
 
 function resolveRealtimeEndpoint(endpoint?: string | null): string {
-  const envRealtimeUrl = normalizeWsUrl(process.env.EXPO_PUBLIC_REALTIME_WS_URL);
+  const envRealtimeUrl = normalizeWsUrl(
+    process.env.EXPO_PUBLIC_REALTIME_WS_URL,
+  );
   const sessionEndpoint = normalizeWsUrl(endpoint);
 
   if (!sessionEndpoint) {

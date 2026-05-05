@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
-import { FlatList, Modal, Pressable, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useState } from 'react';
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 interface DropdownItem {
   label: string;
@@ -62,7 +70,10 @@ export default function CustomDropdown({
           <View>
             <View
               className="rounded-t-3xl"
-              style={{ backgroundColor: colors.card, height: Math.min(height * 0.78, 640) }}
+              style={{
+                backgroundColor: colors.card,
+                height: Math.min(height * 0.78, 640),
+              }}
             >
               <View className="items-center pt-3">
                 <View
@@ -73,7 +84,10 @@ export default function CustomDropdown({
               {/* Header */}
               <View
                 className="p-5"
-                style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
+                style={{
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                }}
               >
                 <Text
                   className="font-inter text-lg font-bold"

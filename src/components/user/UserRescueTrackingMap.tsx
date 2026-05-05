@@ -11,7 +11,9 @@ export default function UserRescueTrackingMap(
   props: UserRescueTrackingMapProps,
 ) {
   const center =
-    props.teamCoordinate || props.victimCoordinate || ([106.629, 10.724] as const)
+    props.teamCoordinate ||
+    props.victimCoordinate ||
+    ([106.629, 10.724] as const);
 
   const markers = [
     props.victimCoordinate
@@ -31,11 +33,11 @@ export default function UserRescueTrackingMap(
         }
       : null,
   ].filter(Boolean) as Array<{
-    id: string
-    coordinate: [number, number]
-    color: string
-    size?: number
-  }>
+    id: string;
+    coordinate: [number, number];
+    color: string;
+    size?: number;
+  }>;
 
   return (
     <WebViewMap
@@ -46,5 +48,5 @@ export default function UserRescueTrackingMap(
       routeColor="#2E64FE"
       style={{ flex: 1 }}
     />
-  )
+  );
 }

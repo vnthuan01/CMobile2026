@@ -1,8 +1,8 @@
 import '@/global.css';
 import { useTheme } from '@/src/context/ThemeContext';
-import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useActiveAssignedCampaign } from '@/src/hooks/useActiveAssignedCampaign';
 import { useAssignedCampaigns } from '@/src/hooks/useAssignedCampaigns';
+import { useCampaignDetail } from '@/src/hooks/useDonation';
 import { useCampaignTasks, useCampaignTeams } from '@/src/hooks/useLeaderTasks';
 import { useSelectedCampaign } from '@/src/hooks/useSelectedCampaign';
 import {
@@ -11,7 +11,7 @@ import {
   type CampaignTeamResponse,
 } from '@/src/types/leaderTask';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 type Props = {
   team: any;
@@ -26,11 +26,12 @@ export default function ReliefHomeContent({ team }: Props) {
     team,
     fallbackAssignedCampaigns || [],
   );
-  const { activeCampaign, campaignId, assignedCampaigns } = useActiveAssignedCampaign(
-    team,
-    selectedCampaignId,
-    fallbackAssignedCampaigns || [],
-  );
+  const { activeCampaign, campaignId, assignedCampaigns } =
+    useActiveAssignedCampaign(
+      team,
+      selectedCampaignId,
+      fallbackAssignedCampaigns || [],
+    );
   const { data: campaignDetail } = useCampaignDetail(
     campaignId || undefined,
     !!campaignId,
@@ -107,15 +108,39 @@ export default function ReliefHomeContent({ team }: Props) {
         <Card colors={colors.border} bg={colors.card}>
           {isCampaignsLoading || isLoading ? (
             <View className="py-2">
-              <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
-                <View className="h-4 w-32 rounded-full" style={{ backgroundColor: `${colors.primary}14` }} />
-                <View className="mt-3 h-3 w-48 rounded-full" style={{ backgroundColor: `${colors.primary}10` }} />
+              <View
+                className="rounded-2xl border p-4"
+                style={{
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                }}
+              >
+                <View
+                  className="h-4 w-32 rounded-full"
+                  style={{ backgroundColor: `${colors.primary}14` }}
+                />
+                <View
+                  className="mt-3 h-3 w-48 rounded-full"
+                  style={{ backgroundColor: `${colors.primary}10` }}
+                />
                 <View className="mt-4 flex-row gap-3">
-                  <View className="h-16 flex-1 rounded-2xl" style={{ backgroundColor: `${colors.primary}10` }} />
-                  <View className="h-16 flex-1 rounded-2xl" style={{ backgroundColor: `${colors.primary}10` }} />
-                  <View className="h-16 flex-1 rounded-2xl" style={{ backgroundColor: `${colors.primary}10` }} />
+                  <View
+                    className="h-16 flex-1 rounded-2xl"
+                    style={{ backgroundColor: `${colors.primary}10` }}
+                  />
+                  <View
+                    className="h-16 flex-1 rounded-2xl"
+                    style={{ backgroundColor: `${colors.primary}10` }}
+                  />
+                  <View
+                    className="h-16 flex-1 rounded-2xl"
+                    style={{ backgroundColor: `${colors.primary}10` }}
+                  />
                 </View>
-                <View className="mt-4 h-28 rounded-2xl" style={{ backgroundColor: `${colors.primary}08` }} />
+                <View
+                  className="mt-4 h-28 rounded-2xl"
+                  style={{ backgroundColor: `${colors.primary}08` }}
+                />
               </View>
             </View>
           ) : (
@@ -137,7 +162,10 @@ export default function ReliefHomeContent({ team }: Props) {
                   className="mt-3 self-start rounded-full px-3 py-1.5"
                   style={{ backgroundColor: `${colors.primary}10` }}
                 >
-                  <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                  <Text
+                    className="text-xs font-semibold"
+                    style={{ color: colors.primary }}
+                  >
                     Chiến dịch hiện tại đã tự đồng bộ
                   </Text>
                 </View>
@@ -153,16 +181,23 @@ export default function ReliefHomeContent({ team }: Props) {
                   <View className="flex-row flex-wrap gap-2">
                     {assignedCampaigns.map((campaign) => {
                       const selected = campaign.campaignId === campaignId;
-                      const isCurrentCampaign = campaign.campaignId === campaignId;
-                      const campaignHasTasks = isCurrentCampaign ? hasTasks : null;
+                      const isCurrentCampaign =
+                        campaign.campaignId === campaignId;
+                      const campaignHasTasks = isCurrentCampaign
+                        ? hasTasks
+                        : null;
 
                       return (
                         <TouchableOpacity
                           key={campaign.campaignId}
-                          onPress={() => setSelectedCampaignId(campaign.campaignId)}
+                          onPress={() =>
+                            setSelectedCampaignId(campaign.campaignId)
+                          }
                           className="rounded-full border px-3 py-2"
                           style={{
-                            borderColor: selected ? colors.primary : colors.border,
+                            borderColor: selected
+                              ? colors.primary
+                              : colors.border,
                             backgroundColor: selected
                               ? `${colors.primary}12`
                               : colors.card,
@@ -190,8 +225,14 @@ export default function ReliefHomeContent({ team }: Props) {
                 </View>
               ) : null}
               {isLoading && campaignId ? (
-                <View className="mt-3 rounded-xl px-3 py-3" style={{ backgroundColor: `${colors.primary}08` }}>
-                  <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
+                <View
+                  className="mt-3 rounded-xl px-3 py-3"
+                  style={{ backgroundColor: `${colors.primary}08` }}
+                >
+                  <Text
+                    className="text-xs font-semibold"
+                    style={{ color: colors.primary }}
+                  >
                     Đang đồng bộ chiến dịch...
                   </Text>
                 </View>
@@ -236,7 +277,9 @@ export default function ReliefHomeContent({ team }: Props) {
                     className="mt-3 text-xs"
                     style={{ color: colors.textSecondary }}
                   >
-                    Bạn đang có {assignedCampaigns.length} chiến dịch được gán. Hiện màn này đang hiển thị chi tiết của 1 chiến dịch để bạn biết chiến dịch nào có việc và chiến dịch nào chưa có việc.
+                    Bạn đang có {assignedCampaigns.length} chiến dịch được gán.
+                    Hiện màn này đang hiển thị chi tiết của 1 chiến dịch để bạn
+                    biết chiến dịch nào có việc và chiến dịch nào chưa có việc.
                   </Text>
                 ) : null}
                 <TouchableOpacity

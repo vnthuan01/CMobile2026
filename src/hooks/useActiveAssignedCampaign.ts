@@ -1,5 +1,8 @@
+import type {
+  AssignedCampaignSummary,
+  TeamDetailResponse,
+} from '@/src/types/team';
 import { useMemo } from 'react';
-import type { AssignedCampaignSummary, TeamDetailResponse } from '@/src/types/team';
 
 export function useActiveAssignedCampaign(
   team?: TeamDetailResponse | null,
@@ -7,22 +10,26 @@ export function useActiveAssignedCampaign(
   fallbackAssignedCampaigns: AssignedCampaignSummary[] = [],
 ) {
   return useMemo(() => {
-    const assignedCampaigns = [...(team?.assignedCampaigns ?? []), ...fallbackAssignedCampaigns]
+    const assignedCampaigns = [
+      ...(team?.assignedCampaigns ?? []),
+      ...fallbackAssignedCampaigns,
+    ]
       .filter(
-      (campaign: AssignedCampaignSummary) =>
-        String(campaign?.campaignId ?? '').length > 0,
+        (campaign: AssignedCampaignSummary) =>
+          String(campaign?.campaignId ?? '').length > 0,
       )
       .reduce<AssignedCampaignSummary[]>((acc, campaign) => {
-        if (acc.some((item) => item.campaignId === campaign.campaignId)) return acc;
+        if (acc.some((item) => item.campaignId === campaign.campaignId))
+          return acc;
         acc.push(campaign);
         return acc;
       }, []);
 
     const selectedCampaign = selectedCampaignId
-      ? assignedCampaigns.find(
+      ? (assignedCampaigns.find(
           (campaign: AssignedCampaignSummary) =>
             campaign.campaignId === selectedCampaignId,
-        ) ?? null
+        ) ?? null)
       : null;
 
     const activeCampaign =
@@ -30,7 +37,8 @@ export function useActiveAssignedCampaign(
       assignedCampaigns.find(
         (campaign: AssignedCampaignSummary) =>
           String(campaign?.campaignId ?? '').length > 0,
-      ) ?? null;
+      ) ??
+      null;
 
     return {
       assignedCampaigns,
