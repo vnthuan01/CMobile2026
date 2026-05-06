@@ -38,8 +38,11 @@ export function useSelectedCampaign(
 
   useEffect(() => {
     if (!teamId || !selectedCampaignId) return;
-    if (storedCampaignId === selectedCampaignId) return;
-    setSelectedCampaignIdInStore(teamId, selectedCampaignId);
+    // Only auto-initialize the store if it's currently empty for this team.
+    // This prevents background components with filtered lists from overwriting a valid selection made elsewhere.
+    if (!storedCampaignId) {
+      setSelectedCampaignIdInStore(teamId, selectedCampaignId);
+    }
   }, [selectedCampaignId, setSelectedCampaignIdInStore, storedCampaignId, teamId]);
 
   const setSelectedCampaignId = useCallback(

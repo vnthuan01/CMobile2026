@@ -4,5 +4,5 @@ import { useRouter } from 'expo-router';
 export default function ProfileMyVehicleRoute() {
   const router = useRouter();
 
-  return <MyVehicleScreen onBack={() => router.back()} />;
+  return <MyVehicleScreen onBack={() => router.replace('/profile')} />;
 }

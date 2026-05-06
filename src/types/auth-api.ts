@@ -9,7 +9,7 @@ export interface RegisterRequest {
 }
 
 export interface LoginCredentials {
-  email: string;
+  identifier: string;
   password: string;
 }
 

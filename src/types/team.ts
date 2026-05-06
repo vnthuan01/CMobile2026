@@ -34,6 +34,7 @@ export interface AssignedCampaignSummary {
   campaignType?: string | number | null;
   role?: string | number | null;
   status?: string | number | null;
+  campaignStatus?: string | number | null;
   startDate?: string | null;
   endDate?: string | null;
 }

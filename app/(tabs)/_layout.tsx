@@ -6,7 +6,7 @@ import {
 import { useMyTeam } from '@/src/hooks/useMyTeam';
 import { useAuthStore } from '@/src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ type TabIconProps = {
 const ICON_SIZE = 24;
 
 export default function TabsLayout() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const role = (user?.role ?? '').toLowerCase();
   const { data: myTeamData } = useMyTeam(role === 'volunteer');
@@ -164,6 +165,11 @@ export default function TabsLayout() {
               <Ionicons name="person-outline" size={ICON_SIZE} color={color} />
             ),
           }}
+          listeners={{
+            tabPress: () => {
+              router.replace('/profile');
+            },
+          }}
         />
 
         {/* hidden routes */}
@@ -291,6 +297,11 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }: TabIconProps) => (
             <Ionicons name="person-outline" size={ICON_SIZE} color={color} />
           ),
+        }}
+        listeners={{
+          tabPress: () => {
+            router.replace('/profile');
+          },
         }}
       />
 

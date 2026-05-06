@@ -72,7 +72,18 @@ const normalizeAssignedCampaigns = (team: any): AssignedCampaignSummary[] => {
       campaign?.campaignTeam?.campaign?.campaignType ??
       null,
     role: campaign?.role ?? campaign?.teamRole ?? campaign?.campaignTeam?.role ?? null,
-    status: campaign?.status ?? null,
+    status:
+      campaign?.campaignStatus ??
+      campaign?.campaign?.status ??
+      campaign?.campaignTeam?.status ??
+      campaign?.campaignTeam?.campaign?.status ??
+      campaign?.status ??
+      null,
+    campaignStatus:
+      campaign?.campaignStatus ??
+      campaign?.campaign?.status ??
+      campaign?.campaignTeam?.campaign?.status ??
+      null,
     startDate:
       campaign?.startDate ??
       campaign?.campaign?.startDate ??
@@ -309,9 +320,12 @@ export const teamService = {
     for (const route of routes) {
       try {
         const response = await api.get<AssignedCampaignSummary[]>(route);
+        const assignedCampaigns = Array.isArray(response.data)
+          ? normalizeAssignedCampaigns({ assignedCampaigns: response.data })
+          : [];
         return {
           success: response.status === 200,
-          data: Array.isArray(response.data) ? response.data : [],
+          data: assignedCampaigns,
           message: 'Lấy danh sách chiến dịch được gán thành công',
         };
       } catch (error: any) {

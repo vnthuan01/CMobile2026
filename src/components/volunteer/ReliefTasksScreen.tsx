@@ -32,6 +32,7 @@ import {
   type CampaignTeamResponse,
   type MemberTaskResponse,
 } from '@/src/types/leaderTask';
+import type { AssignedCampaignSummary } from '@/src/types/team';
 import {
   DeliveryMode,
   DistributionPointResponse,
@@ -120,6 +121,20 @@ const dinhDangNgay = (value?: string | null) => {
   return date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 };
 
+const isCampaignCompleted = (campaign?: AssignedCampaignSummary | null) => {
+  const status = campaign?.campaignStatus ?? campaign?.status;
+  if (typeof status === 'number') return status === 3;
+  const normalizedStatus = String(status ?? '').trim().toLowerCase();
+  return normalizedStatus === '3' || normalizedStatus === 'completed';
+};
+
+const isLeaderRoleValue = (value: unknown) => {
+  if (typeof value === 'number') return value === 1;
+
+  const normalizedValue = String(value ?? '').trim().toLowerCase();
+  return normalizedValue === '1' || normalizedValue === 'leader';
+};
+
 const getVolunteerDisplayName = (
   memberTask: MemberTaskResponse,
   members?: { volunteerProfileId?: string | null; displayName: string }[],
@@ -142,40 +157,93 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
   const team = myTeamData?.team;
   const { data: fallbackAssignedCampaigns, isLoading: isCampaignsLoading } =
     useAssignedCampaigns(team?.teamId ?? '', !!team?.teamId);
-  const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
-    team,
-    fallbackAssignedCampaigns || [],
-  );
-  const { activeCampaign, campaignId, assignedCampaigns } =
-    useActiveAssignedCampaign(
-      team,
-      selectedCampaignId,
-      fallbackAssignedCampaigns || [],
-    );
-  const { data: campaignDetail } = useCampaignDetail(
-    campaignId || undefined,
-    !!campaignId,
+  const teamMode = myTeamData?.teamMode ?? 'rescue';
+  const roleCheckCampaignId =
+    team?.assignedCampaigns?.[0]?.campaignId || fallbackAssignedCampaigns[0]?.campaignId;
+  const { data: roleCheckCampaignTeams = [] } = useCampaignTeams(
+    teamMode === 'relief' ? roleCheckCampaignId || null : null,
   );
 
   const isLeader = useMemo(() => {
     if (!user?.id) return false;
+
+    if (String(user.role ?? '').trim().toLowerCase() === 'leader') {
+      return true;
+    }
 
     if (team?.leader?.userId && user.id === team.leader.userId) {
       return true;
     }
 
     const myMember = team?.members?.find((member) => member.userId === user.id);
-    const normalizedRole = String(
-      (myMember as any)?.role ?? (myMember as any)?.roleTeam ?? '',
-    ).toLowerCase();
-    return normalizedRole === 'leader';
-  }, [team?.leader?.userId, team?.members, user?.id]);
+    if (isLeaderRoleValue((myMember as any)?.role)) return true;
+    if (isLeaderRoleValue((myMember as any)?.roleTeam)) return true;
 
-  const teamMode = myTeamData?.teamMode ?? 'rescue';
+    const hasLeaderAssignedCampaignRole = [
+      ...(team?.assignedCampaigns || []),
+      ...fallbackAssignedCampaigns,
+    ].some((campaign) => isLeaderRoleValue(campaign?.role));
+    if (hasLeaderAssignedCampaignRole) return true;
 
+    const myCampaignTeamRole = roleCheckCampaignTeams.find(
+      (campaignTeam: CampaignTeamResponse) => campaignTeam.teamId === team?.teamId,
+    )?.teamRole;
+    if (isLeaderRoleValue(myCampaignTeamRole)) return true;
+
+    return false;
+  }, [fallbackAssignedCampaigns, roleCheckCampaignTeams, team?.assignedCampaigns, team?.leader?.userId, team?.members, team?.teamId, user?.id, user?.role]);
+
+  const canManageTasks = isLeader;
+  const visibleFallbackCampaigns = useMemo(
+    () =>
+      canManageTasks
+        ? fallbackAssignedCampaigns || []
+        : (fallbackAssignedCampaigns || []).filter(
+            (campaign) => !isCampaignCompleted(campaign),
+          ),
+    [canManageTasks, fallbackAssignedCampaigns],
+  );
+  const visibleTeam = useMemo(
+    () => ({
+      ...team,
+      assignedCampaigns: canManageTasks
+        ? team?.assignedCampaigns || []
+        : (team?.assignedCampaigns || []).filter(
+            (campaign: AssignedCampaignSummary) => !isCampaignCompleted(campaign),
+          ),
+    }),
+    [canManageTasks, team],
+  );
+  const allVisibleCampaigns = useMemo(() => {
+    const campaigns = [...(visibleTeam.assignedCampaigns || []), ...visibleFallbackCampaigns];
+    return campaigns
+      .filter((campaign) => String(campaign?.campaignId || '').length > 0)
+      .reduce<AssignedCampaignSummary[]>((acc, campaign) => {
+        if (!acc.some((item) => item.campaignId === campaign.campaignId)) {
+          acc.push(campaign);
+        }
+        return acc;
+      }, []);
+  }, [visibleTeam.assignedCampaigns, visibleFallbackCampaigns]);
+
+  const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
+    visibleTeam,
+    allVisibleCampaigns,
+  );
+  const { activeCampaign, campaignId, assignedCampaigns } =
+    useActiveAssignedCampaign(
+      visibleTeam,
+      selectedCampaignId,
+      visibleFallbackCampaigns,
+    );
+  const { data: campaignDetail } = useCampaignDetail(
+    campaignId || undefined,
+    !!campaignId,
+  );
   const { data: campaignTeams = [] } = useCampaignTeams(
     teamMode === 'relief' ? campaignId : null,
   );
+
   const myCampaignTeam =
     campaignTeams.find(
       (item: CampaignTeamResponse) => item.teamId === team?.teamId,
@@ -263,7 +331,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
     [teamWorklist],
   );
 
-  const tasks = useMemo(() => taskData?.items ?? [], [taskData?.items]);
+  const allTasks = useMemo(() => taskData?.items ?? [], [taskData?.items]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { data: taskDetail, isLoading: isDetailLoading } =
     useCampaignTaskDetail(selectedTaskId);
@@ -297,6 +365,16 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
     });
     return map;
   }, [myAssignedMemberTasks]);
+
+  const tasks = useMemo(
+    () =>
+      canManageTasks
+        ? allTasks
+        : allTasks.filter((task: CampaignTaskResponse) =>
+            myTaskByCampaignTaskId.has(task.campaignTaskId),
+          ),
+    [allTasks, canManageTasks, myTaskByCampaignTaskId],
+  );
 
   const myTaskByDistributionPointId = useMemo(() => {
     const map = new Map<string, (typeof myAssignedMemberTasks)[number]>();
@@ -389,6 +467,22 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
       })),
     [assignedCampaigns],
   );
+
+  useEffect(() => {
+    console.log('[ReliefTasksScreen] campaign selection debug', {
+      userRole: user?.role,
+      canManageTasks,
+      selectedCampaignId,
+      campaignId,
+      assignedCampaigns: assignedCampaigns.map((campaign) => ({
+        name: campaign.campaignName,
+        role: campaign.role,
+        status: campaign.status,
+        campaignStatus: campaign.campaignStatus,
+      })),
+    });
+  }, [assignedCampaigns, campaignId, canManageTasks, selectedCampaignId, user?.role]);
+
   const campaignName =
     campaignDetail?.name ||
     activeCampaign?.campaignName ||
@@ -455,9 +549,7 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
     return () => clearInterval(timer);
   }, [summaryItems.length]);
 
-  const canManageTasks = isLeader;
-  const shouldShowPersonalTaskPanels =
-    !canManageTasks && myMemberTasks.length > 0;
+  const shouldShowPersonalTaskPanels = false;
 
   const fallbackPlanSummary = useMemo<ReliefCampaignPlanSummary>(() => {
     const areaMap = new Map<
@@ -1387,7 +1479,9 @@ export default function ReliefTasksScreen({ onBack }: ReliefTasksScreenProps) {
                         style={{ borderColor: colors.border }}
                       >
                         <Text style={{ color: colors.textSecondary }}>
-                          Nhóm trưởng chưa tạo công việc nào cho đội này.
+                          {canManageTasks
+                            ? 'Nhóm trưởng chưa tạo công việc nào cho đội này.'
+                            : 'Bạn chưa có nhiệm vụ nào có phần việc được giao trong chiến dịch này.'}
                         </Text>
                       </View>
                     )}

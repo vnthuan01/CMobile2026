@@ -30,7 +30,7 @@ export default function LoginScreen() {
   const { width, height, fontScale } = useWindowDimensions();
   const screenScale = getScreenScaleConfig(width, height, fontScale);
   const loginMutation = useLogin();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
@@ -53,11 +53,37 @@ export default function LoginScreen() {
   const dangerRed = '#E52521';
   const neutralLine = '#E6E6E6';
 
+  const isValidEmail = (value: string) => {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailPattern.test(value.trim());
+  };
+
+  const isValidUsername = (value: string) => {
+    return value.trim().length > 0 && !/\s/.test(value.trim());
+  };
+
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      const msg = 'Vui lòng nhập đầy đủ email và mật khẩu.';
+    const trimmedIdentifier = identifier.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedIdentifier || !trimmedPassword) {
+      const msg = 'Vui lòng nhập đầy đủ email/tên tài khoản và mật khẩu.';
       setInlineError(msg);
       showErrorToast('Thiếu thông tin', msg);
+      return;
+    }
+
+    if (trimmedIdentifier.includes('@')) {
+      if (!isValidEmail(trimmedIdentifier)) {
+        const msg = 'Vui lòng nhập email hợp lệ hoặc tên tài khoản hợp lệ.';
+        setInlineError(msg);
+        showErrorToast('Thông tin đăng nhập không hợp lệ', msg);
+        return;
+      }
+    } else if (!isValidUsername(trimmedIdentifier)) {
+      const msg = 'Tên tài khoản không hợp lệ.';
+      setInlineError(msg);
+      showErrorToast('Thông tin đăng nhập không hợp lệ', msg);
       return;
     }
 
@@ -65,8 +91,8 @@ export default function LoginScreen() {
 
     try {
       const result = await loginMutation.mutateAsync({
-        email: email.trim(),
-        password: password.trim(),
+        identifier: trimmedIdentifier,
+        password: trimmedPassword,
       });
 
       if (result.success) {
@@ -165,7 +191,7 @@ export default function LoginScreen() {
                   className="mb-2 text-sm font-semibold"
                   style={{ color: '#111827' }}
                 >
-                  Email hoặc số điện thoại
+                  Email hoặc tên tài khoản
                 </Text>
                 <View
                   className="flex-row items-center px-3"
@@ -183,12 +209,14 @@ export default function LoginScreen() {
                       color: '#111827',
                       fontSize: fieldFontSize,
                     }}
-                    placeholder="Nhập email hoặc số điện thoại"
+                    placeholder="Nhập email hoặc tên tài khoản"
                     placeholderTextColor="#9CA3AF"
-                    value={email}
-                    onChangeText={setEmail}
+                    value={identifier}
+                    onChangeText={setIdentifier}
                     autoCapitalize="none"
-                    keyboardType="email-address"
+                    keyboardType="default"
+                    autoComplete="username"
+                    autoCorrect={false}
                     editable={!loading}
                   />
                 </View>
