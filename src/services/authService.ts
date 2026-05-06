@@ -7,7 +7,7 @@ import api from './api';
 export type { RegisterRequest, UserProfileResponse } from '../types/auth-api';
 
 interface LoginCredentials {
-  email: string;
+  identifier: string;
   password: string;
 }
 
@@ -73,8 +73,10 @@ const localizeAuthMessage = (message?: string | null, fallback?: string) => {
 
   if (
     normalized.includes('email or password is incorrect') ||
+    normalized.includes('username or password is incorrect') ||
     normalized.includes('invalid credentials') ||
-    normalized.includes('invalid email or password')
+    normalized.includes('invalid email or password') ||
+    normalized.includes('invalid email or username or password')
   ) {
     return 'Email hoặc mật khẩu không chính xác.';
   }
@@ -108,8 +110,40 @@ export const authService = {
         message: response.data.message,
       };
     } catch (error: any) {
+      const status = error?.response?.status ?? null;
+      const duplicateEmailErrors =
+        error?.response?.data?.errors?.DuplicateEmail ??
+        error?.response?.data?.errors?.Email;
+      const hasDuplicateEmailError = Array.isArray(duplicateEmailErrors)
+        ? duplicateEmailErrors.length > 0
+        : Boolean(duplicateEmailErrors);
+
+      const duplicateUserNameErrors =
+        error?.response?.data?.errors?.DuplicateUserName ??
+        error?.response?.data?.errors?.UserName;
+      const hasDuplicateUserNameError = Array.isArray(duplicateUserNameErrors)
+        ? duplicateUserNameErrors.length > 0
+        : Boolean(duplicateUserNameErrors);
+
+      if (status === 400 && hasDuplicateEmailError) {
+        return {
+          success: false,
+          status,
+          message: 'Email đã tồn tại. Vui lòng dùng email khác.',
+        };
+      }
+
+      if (status === 400 && hasDuplicateUserNameError) {
+        return {
+          success: false,
+          status,
+          message: 'Tên tài khoản đã tồn tại. Vui lòng chọn tên khác.',
+        };
+      }
+
       return {
         success: false,
+        status,
         message:
           error.response?.data?.message || error.message || 'Đăng ký thất bại',
       };
@@ -364,6 +398,11 @@ export const authService = {
         user,
       };
     } catch (error: any) {
+      console.error('[Login error response]:', {
+        status: error?.response?.status,
+        data: error?.response?.data,
+      });
+
       return {
         success: false,
         message: localizeAuthMessage(
