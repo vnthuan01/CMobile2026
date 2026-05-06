@@ -10,11 +10,20 @@ import {
   type CampaignTaskResponse,
   type CampaignTeamResponse,
 } from '@/src/types/leaderTask';
+import type { AssignedCampaignSummary } from '@/src/types/team';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 type Props = {
   team: any;
+};
+
+const isCampaignCompleted = (campaign?: AssignedCampaignSummary | null) => {
+  const status = campaign?.campaignStatus ?? campaign?.status;
+  if (typeof status === 'number') return status === 3;
+  const normalizedStatus = String(status ?? '').trim().toLowerCase();
+  return normalizedStatus === '3' || normalizedStatus === 'completed';
 };
 
 export default function ReliefHomeContent({ team }: Props) {
@@ -22,14 +31,30 @@ export default function ReliefHomeContent({ team }: Props) {
   const { colors } = useTheme();
   const { data: fallbackAssignedCampaigns, isLoading: isCampaignsLoading } =
     useAssignedCampaigns(team?.teamId ?? '', !!team?.teamId);
+  const visibleFallbackCampaigns = useMemo(
+    () =>
+      (fallbackAssignedCampaigns || []).filter(
+        (campaign) => !isCampaignCompleted(campaign),
+      ),
+    [fallbackAssignedCampaigns],
+  );
+  const visibleTeam = useMemo(
+    () => ({
+      ...team,
+      assignedCampaigns: (team?.assignedCampaigns || []).filter(
+        (campaign: AssignedCampaignSummary) => !isCampaignCompleted(campaign),
+      ),
+    }),
+    [team],
+  );
   const { selectedCampaignId, setSelectedCampaignId } = useSelectedCampaign(
-    team,
-    fallbackAssignedCampaigns || [],
+    visibleTeam,
+    visibleFallbackCampaigns,
   );
   const { activeCampaign, campaignId, assignedCampaigns } = useActiveAssignedCampaign(
-    team,
+    visibleTeam,
     selectedCampaignId,
-    fallbackAssignedCampaigns || [],
+    visibleFallbackCampaigns,
   );
   const { data: campaignDetail } = useCampaignDetail(
     campaignId || undefined,
@@ -241,13 +266,20 @@ export default function ReliefHomeContent({ team }: Props) {
                 ) : null}
                 <TouchableOpacity
                   onPress={() =>
+                    campaignId &&
                     router.push({
                       pathname: '/profile/tasks' as any,
                       params: { campaignId: campaignId || undefined },
                     })
                   }
+                  disabled={!campaignId}
                   className="mt-4 rounded-xl px-4 py-3"
-                  style={{ backgroundColor: colors.primary }}
+                  style={{
+                    backgroundColor: campaignId
+                      ? colors.primary
+                      : colors.textSecondary,
+                    opacity: campaignId ? 1 : 0.65,
+                  }}
                 >
                   <Text className="text-center font-semibold text-white">
                     Xem công việc tôi
