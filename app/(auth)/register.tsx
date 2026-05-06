@@ -46,6 +46,7 @@ export default function RegisterScreen() {
 
   const dangerRed = '#E52521';
   const neutralLine = '#E6E6E6';
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const hasUppercase = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
@@ -55,6 +56,15 @@ export default function RegisterScreen() {
     { label: 'Có ký tự đặc biệt', passed: hasSpecial },
   ];
   const isPasswordStrongEnough = hasUppercase && hasNumber && hasSpecial;
+
+  const normalizePhone = (value: string) => value.trim().replace(/[\s.-]/g, '');
+
+  const isValidEmail = (value: string) => emailPattern.test(value.trim());
+
+  const isValidPhone = (value: string) => {
+    const normalized = normalizePhone(value);
+    return /^(?:\+84|0)(?:3|5|7|8|9)\d{8}$/.test(normalized);
+  };
 
   const handleUsernameChange = (value: string) => {
     setUsername(value);
@@ -77,6 +87,21 @@ export default function RegisterScreen() {
       const msg = 'Vui lòng nhập đầy đủ thông tin.';
       setInlineError(msg);
       showErrorToast('Thiếu thông tin', msg);
+      return;
+    }
+
+    if (!isValidPhone(phone)) {
+      const msg =
+        'Số điện thoại không hợp lệ. Vui lòng nhập 10 số bắt đầu bằng 03, 05, 07, 08 hoặc 09.';
+      setInlineError(msg);
+      showErrorToast('Số điện thoại không hợp lệ', msg);
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      const msg = 'Email không hợp lệ. Vui lòng nhập đúng định dạng email.';
+      setInlineError(msg);
+      showErrorToast('Email không hợp lệ', msg);
       return;
     }
 
@@ -104,9 +129,11 @@ export default function RegisterScreen() {
     }
 
     try {
+      const normalizedPhone = normalizePhone(phone);
+
       const result = await registerMutation.mutateAsync({
         fullName,
-        phone,
+        phone: normalizedPhone,
         email,
         username,
         password,
@@ -114,9 +141,9 @@ export default function RegisterScreen() {
 
       if (!result.success) {
         console.error('[Register failed detail]:', result.message);
-        const msg = 'Đăng ký thất bại. Vui lòng thử lại.';
+        const msg = result.message || 'Đăng ký thất bại. Vui lòng thử lại.';
         setInlineError(msg);
-        showErrorToast('Đăng ký thất bại');
+        showErrorToast('Đăng ký thất bại', msg);
         return;
       }
 
